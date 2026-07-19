@@ -9,6 +9,19 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { ScraperModule } from './scraper/scraper.module';
+import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { CsrfModule } from './csrf/csrf.module';
+import { SearchModule } from './search/search.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { UserNotificationsModule } from './user-notifications/user-notifications.module';
+import { AdminModule } from './admin/admin.module';
+import { DataReliabilityModule } from './data-reliability/data-reliability.module';
 
 @Module({
   imports: [
@@ -40,6 +53,19 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
 
     // ── Application Modules ────────────────────────────────────
+    AuthModule,
+    UsersModule,
+    ScraperModule,
+    ExchangeRatesModule,
+    FavoritesModule,
+    PortfolioModule,
+    SearchModule,
+    NotificationsModule,
+    UserNotificationsModule,
+    AdminModule,
+    DataReliabilityModule,
+    MonitoringModule,
+    CsrfModule,
     PrismaModule,
   ],
   controllers: [AppController],

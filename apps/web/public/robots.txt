@@ -1,0 +1,11 @@
+# EthioBanksHub — Robots
+# https://ethiobankshub.com
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+# Sitemap
+Sitemap: https://ethiobankshub.com/sitemap.xml

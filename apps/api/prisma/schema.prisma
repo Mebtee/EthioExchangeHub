@@ -12,153 +12,728 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Enums ──────────────────────────────────────────────────────
-enum BankProvider {
-  CBE
-  AWIN
-  DASH
-  BOA
-  WB
-  UB
-  NIB
-  BIB
-  LIB
-  ZEMEN
-  AB
-  BUNNA
-  DB
-  ENAT
-  COOP
-  SM
-  HIB
-  TSB
-  AMHARA
-  GADA
-  OMO
-}
-
-enum AccountType {
-  SAVINGS
-  CHECKING
-  CREDIT
-  LOAN
-}
-
-enum TransactionType {
-  TRANSFER
-  PAYMENT
-  DEPOSIT
-  WITHDRAWAL
-  FEE
-  INTEREST
-  REFUND
-}
-
-enum TransactionStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  CANCELLED
-  REVERSED
-}
+// ==============================================================
+// ENUMS
+// ==============================================================
 
 enum Currency {
   ETB
   USD
   EUR
   GBP
+  SAR
+  AED
+  CNY
+  JPY
+  CHF
 }
 
-// ── User ───────────────────────────────────────────────────────
-model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
-  fullName      String    @map("full_name")
-  phoneNumber   String?   @map("phone_number")
-  avatarUrl     String?   @map("avatar_url")
-  isVerified    Boolean   @default(false) @map("is_verified")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  linkedAccounts BankAccount[]
-  sessions        Session[]
-
-  @@map("users")
+enum UserRole {
+  USER
+  ADMIN
 }
 
-// ── Bank Account ───────────────────────────────────────────────
-model BankAccount {
-  id                String       @id @default(uuid()) @db.Uuid
-  userId            String       @map("user_id") @db.Uuid
-  bankProvider      BankProvider @map("bank_provider")
-  accountNumber     String       @map("account_number")
-  accountHolderName String       @map("account_holder_name")
-  accountType       AccountType  @map("account_type")
-  currency          Currency     @default(ETB)
-  balance           Decimal      @default(0) @db.Decimal(18, 2)
-  isActive          Boolean      @default(true) @map("is_active")
-  isVerified        Boolean      @default(false) @map("is_verified")
-  lastSyncAt        DateTime?    @map("last_sync_at")
-  externalId        String?      @map("external_id")
-  metadata          Json?        @db.JsonB
-  createdAt         DateTime     @default(now()) @map("created_at")
-  updatedAt         DateTime     @updatedAt @map("updated_at")
+enum ServiceCategory {
+  ACCOUNT
+  LOAN
+  CREDIT_CARD
+  MOBILE_BANKING
+  INTERNET_BANKING
+  CURRENCY_EXCHANGE
+  MONEY_TRANSFER
+  SAVINGS
+  INVESTMENT
+  INSURANCE
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum ScrapeStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+enum RankCategory {
+  EXCHANGE_RATE
+  INTEREST_RATE
+  SERVICE_QUALITY
+  CUSTOMER_SATISFACTION
+  DIGITAL_BANKING
+  OVERALL
+}
+
+enum SubscriptionTier {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+// ==============================================================
+// REFRESH TOKENS — JWT refresh token store
+// ==============================================================
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  token     String    @unique // hashed refresh token
+  family    String?   // token family for rotation tracking
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  sentTransactions     Transaction[] @relation("sender")
-  receivedTransactions Transaction[] @relation("receiver")
-
-  @@unique([userId, bankProvider, accountNumber])
   @@index([userId])
-  @@index([bankProvider])
-  @@map("bank_accounts")
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
-// ── Transaction ────────────────────────────────────────────────
-model Transaction {
-  id             String            @id @default(uuid()) @db.Uuid
-  transactionId  String            @unique @map("transaction_id")
-  type           TransactionType
-  status         TransactionStatus @default(PENDING)
-  amount         Decimal           @db.Decimal(18, 2)
-  currency       Currency          @default(ETB)
-  fee            Decimal           @default(0) @db.Decimal(18, 2)
-  description    String?
-  reference      String?
-  fromAccountId  String?           @map("from_account_id") @db.Uuid
-  toAccountId    String?           @map("to_account_id") @db.Uuid
-  initiatedAt    DateTime          @default(now()) @map("initiated_at")
-  completedAt    DateTime?         @map("completed_at")
-  failedAt       DateTime?         @map("failed_at")
-  failureReason  String?           @map("failure_reason")
-  metadata       Json?             @db.JsonB
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
+// ==============================================================
+// BANKS — Master reference table for all Ethiopian banks
+// ==============================================================
+model Bank {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique // e.g. "CBE", "AWIN", "DASH"
+  name      String   // e.g. "Commercial Bank of Ethiopia"
+  swiftCode String?  @map("swift_code") // SWIFT/BIC code, e.g. "CBETETAA"
+  logoUrl   String?  @map("logo_url")
+  website   String?
+  phone     String?
+  email     String?
+  address   String?
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  fromAccount BankAccount? @relation("sender", fields: [fromAccountId], references: [id])
-  toAccount   BankAccount? @relation("receiver", fields: [toAccountId], references: [id])
+  // Relations
+  exchangeRates ExchangeRate[]
+  services      BankService[]
+  rateAlerts    RateAlert[]
+  rankings      Ranking[]
+  subscriptions Subscription[]
+  scrapeLogs    ScrapeLog[]
 
-  @@index([fromAccountId])
-  @@index([toAccountId])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("banks")
+}
+
+// ==============================================================
+// EXCHANGE RATES — Published rates per bank
+// ==============================================================
+model ExchangeRate {
+  id           String   @id @default(uuid()) @db.Uuid
+  bankId       String   @map("bank_id") @db.Uuid
+  currencyFrom Currency @default(ETB) @map("currency_from")
+  currencyTo   Currency @map("currency_to")
+  buyRate      Decimal  @map("buy_rate") @db.Decimal(12, 6)
+  sellRate     Decimal  @map("sell_rate") @db.Decimal(12, 6)
+  midRate      Decimal? @map("mid_rate") @db.Decimal(12, 6) // (buy + sell) / 2, computed
+  source       String   @default("scraped") // "manual" | "scraped" | "api"
+  effectiveDate DateTime @default(now()) @map("effective_date")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@unique([bankId, currencyFrom, currencyTo, effectiveDate])
+  @@index([bankId])
+  @@index([currencyTo])
+  @@index([effectiveDate])
+  @@index([bankId, currencyTo, effectiveDate])
+  @@map("exchange_rates")
+}
+
+// ==============================================================
+// USERS — Platform accounts
+// ==============================================================
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  fullName      String   @map("full_name")
+  phoneNumber   String?  @map("phone_number")
+  avatarUrl     String?  @map("avatar_url")
+  preferredLang String   @default("en") @map("preferred_lang")
+  role          UserRole @default(USER)
+  isVerified    Boolean  @default(false) @map("is_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  refreshTokens  RefreshToken[]
+  rateAlerts     RateAlert[]
+  subscriptions  Subscription[]
+  favorites      Favorite[]
+  portfolioItems PortfolioItem[]
+  notifications  UserNotification[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// ==============================================================
+// BANK SERVICES — Products offered by each bank
+// ==============================================================
+model BankService {
+  id           String          @id @default(uuid()) @db.Uuid
+  bankId       String          @map("bank_id") @db.Uuid
+  category     ServiceCategory
+  name         String
+  description  String?
+  interestRate Decimal?        @map("interest_rate") @db.Decimal(8, 4)
+  minBalance   Decimal?        @map("min_balance") @db.Decimal(18, 2)
+  maxAmount    Decimal?        @map("max_amount") @db.Decimal(18, 2)
+  fee          Decimal?        @db.Decimal(18, 2)
+  requirements String?
+  isActive     Boolean         @default(true) @map("is_active")
+  metadata     Json?           @db.JsonB
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  bank          Bank           @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@unique([bankId, category, name])
+  @@index([bankId])
+  @@index([category])
+  @@index([isActive])
+  @@index([bankId, category])
+  @@map("bank_services")
+}
+
+// ==============================================================
+// RATE ALERTS — User-configured threshold alerts
+// ==============================================================
+model RateAlert {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  bankId        String?        @map("bank_id") @db.Uuid // null = all banks
+  currencyFrom  Currency       @default(ETB) @map("currency_from")
+  currencyTo    Currency       @map("currency_to")
+  condition     AlertCondition
+  targetBuyRate Decimal?       @map("target_buy_rate") @db.Decimal(12, 6)
+  targetSellRate Decimal?      @map("target_sell_rate") @db.Decimal(12, 6)
+  isActive      Boolean        @default(true) @map("is_active")
+  lastTriggeredAt DateTime?    @map("last_triggered_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bank Bank? @relation(fields: [bankId], references: [id])
+
+  @@index([userId])
+  @@index([bankId])
+  @@index([isActive])
+  @@index([userId, isActive])
+  @@map("rate_alerts")
+}
+
+// ==============================================================
+// RANKINGS — Bank comparison rankings
+// ==============================================================
+model Ranking {
+  id              String       @id @default(uuid()) @db.Uuid
+  category        RankCategory
+  bankId          String       @map("bank_id") @db.Uuid
+  score           Decimal      @db.Decimal(8, 4)
+  rankPosition    Int          @map("rank_position")
+  previousRank    Int?         @map("previous_rank")
+  criteria        Json?        @db.JsonB // criteria breakdown
+  effectiveDate   DateTime     @map("effective_date")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@unique([category, bankId, effectiveDate])
+  @@index([category, rankPosition])
+  @@index([bankId])
+  @@index([effectiveDate])
+  @@map("rankings")
+}
+
+// ==============================================================
+// SUBSCRIPTIONS — User subscriptions & preferences
+// ==============================================================
+model Subscription {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  bankId           String?          @map("bank_id") @db.Uuid
+  serviceId        String?          @map("service_id") @db.Uuid
+  tier             SubscriptionTier @default(FREE)
+  notificationType NotificationType @default(EMAIL) @map("notification_type")
+  isActive         Boolean          @default(true) @map("is_active")
+  expiresAt        DateTime?        @map("expires_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bank    Bank?       @relation(fields: [bankId], references: [id])
+  service BankService? @relation(fields: [serviceId], references: [id])
+
+  @@index([userId])
+  @@index([bankId])
+  @@index([serviceId])
+  @@index([isActive])
+  @@index([userId, isActive])
+  @@map("subscriptions")
+}
+
+// ==============================================================
+// SCRAPE LOGS — Audit trail for data scraping operations
+// ==============================================================
+model ScrapeLog {
+  id              String       @id @default(uuid()) @db.Uuid
+  bankId          String?      @map("bank_id") @db.Uuid
+  sourceUrl       String?      @map("source_url")
+  status          ScrapeStatus
+  recordsCount    Int?         @map("records_count")
+  errorMessage    String?      @map("error_message") @db.Text
+  durationMs      Int?         @map("duration_ms")
+  validationStatus String?     @map("validation_status") // "passed" | "failed" | "partial"
+  rawResponse     String?      @map("raw_response") @db.Text
+  metadata        Json?        @db.JsonB
+  jobId           String?      @map("job_id") // BullMQ job ID for traceability
+  retryAttempt    Int          @default(0) @map("retry_attempt")
+  startedAt       DateTime     @default(now()) @map("started_at")
+  completedAt     DateTime?    @map("completed_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  bank Bank? @relation(fields: [bankId], references: [id])
+
+  @@index([bankId])
   @@index([status])
-  @@index([initiatedAt])
-  @@map("transactions")
+  @@index([startedAt])
+  @@index([jobId])
+  @@index([bankId, status, startedAt])
+  @@map("scrape_logs")
 }
 
-// ── Session ────────────────────────────────────────────────────
-model Session {
+// ==============================================================
+// FAVORITES — User-favorited banks and currencies
+// ==============================================================
+model Favorite {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
-  refreshToken String  @unique @map("refresh_token")
-  expiresAt   DateTime @map("expires_at")
+  type        String   // "BANK" | "CURRENCY"
+  referenceId String   @map("reference_id") // bank code or currency code
+  label       String?
   createdAt   DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, type, referenceId])
   @@index([userId])
-  @@index([expiresAt])
-  @@map("sessions")
+  @@index([type])
+  @@map("favorites")
+}
+
+// ==============================================================
+// PORTFOLIO ITEMS — User portfolio holdings
+// ==============================================================
+model PortfolioItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String   // "CURRENCY_HOLDING" | "BANK_ACCOUNT" | "INVESTMENT" | "OTHER"
+  currency    String   @default("ETB")
+  amount      Decimal  @db.Decimal(18, 4)
+  description String?
+  metadata    Json?    @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([currency])
+  @@map("portfolio_items")
+}
+
+// ==============================================================
+// USER NOTIFICATIONS — In-app notification history
+// ==============================================================
+model UserNotification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String   // "rate_alert" | "system" | "portfolio" | "favorite"
+  title     String
+  message   String   @db.Text
+  severity  String   @default("info") // "info" | "warning" | "error" | "success"
+  isRead    Boolean  @default(false) @map("is_read")
+  link      String?  // Optional deep link
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("user_notifications")
+}
+
+// ==============================================================
+// NBE REFERENCE RATES — National Bank of Ethiopia reference
+// ==============================================================
+model NbeReferenceRate {
+  id           String   @id @default(uuid()) @db.Uuid
+  currencyFrom Currency @default(ETB) @map("currency_from")
+  currencyTo   Currency @map("currency_to")
+  buyRate      Decimal  @map("buy_rate") @db.Decimal(12, 6)
+  sellRate     Decimal  @map("sell_rate") @db.Decimal(12, 6)
+  midRate      Decimal? @map("mid_rate") @db.Decimal(12, 6)
+  effectiveDate DateTime @default(now()) @map("effective_date")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([currencyFrom, currencyTo, effectiveDate])
+  @@index([currencyTo])
+  @@index([effectiveDate])
+  @@map("nbe_reference_rates")
+}
+
+// ==============================================================
+// DATA RELIABILITY — Enterprise Data Quality & Verification Engine
+// ==============================================================
+// These models form the two-stage storage pipeline:
+//   Raw Scrape → Validation → Confidence Scoring → Approval → Production
+// No data is written to exchange_rates without passing through this pipeline.
+// ==============================================================
+
+// ── Validation Rule Status ───────────────────────────────────────
+enum RuleStatus { PASS WARNING FAIL }
+
+// ── Anomaly Severity ─────────────────────────────────────────────
+enum AnomalySeverity { LOW MEDIUM HIGH CRITICAL }
+
+// ── Anomaly Status ───────────────────────────────────────────────
+enum AnomalyStatus { OPEN INVESTIGATING RESOLVED DISMISSED }
+
+// ── Approval Status ───────────────────────────────────────────────
+enum ApprovalStatus { PENDING VALIDATED APPROVED REJECTED ESTIMATED }
+
+// ── Scraper Health Status ────────────────────────────────────────
+enum HealthStatus { HEALTHY DEGRADED DOWN UNKNOWN }
+
+// ── STAGE 1: RAW SCRAPE DATA — Immutable, non-editable raw storage
+model RawScrapeData {
+  id              String   @id @default(uuid()) @db.Uuid
+  bankId          String?  @map("bank_id") @db.Uuid
+  sourceUrl       String   @map("source_url")
+  rawHtml         String?  @map("raw_html") @db.Text
+  rawJson         Json?    @map("raw_json") @db.JsonB
+  extractedValues Json?    @map("extracted_values") @db.JsonB
+  scraperVersion  String?  @map("scraper_version")
+  parserVersion   String?  @map("parser_version")
+  scrapeTimestamp  DateTime @default(now()) @map("scrape_timestamp")
+  responseTimeMs  Int?     @map("response_time_ms")
+  httpStatus      Int?     @map("http_status")
+  metadata        Json?    @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  screenshots   Screenshot[]
+  htmlArchives  HtmlArchive[]
+  validationRuns ValidationRun[]
+  confidenceScores ConfidenceScore[]
+  anomalyIncidents AnomalyIncident[]
+  approvalRecords ApprovalRecord[]
+  dataProvenance  DataProvenance[]
+
+  @@index([bankId])
+  @@index([scrapeTimestamp])
+  @@index([bankId, scrapeTimestamp])
+  @@map("raw_scrape_data")
+}
+
+// ── SCREENSHOTS — Evidence for every successful scrape
+model Screenshot {
+  id             String   @id @default(uuid()) @db.Uuid
+  rawScrapeDataId String  @map("raw_scrape_data_id") @db.Uuid
+  bankId         String   @map("bank_id") @db.Uuid
+  url            String
+  type           String   // "FULL_PAGE" | "CROPPED"
+  filePath       String   @map("file_path") // Cloudflare R2 path
+  fileSize       Int      @map("file_size") // bytes
+  mimeType       String   @default("image/png") @map("mime_type")
+  width          Int?
+  height         Int?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  rawScrapeData RawScrapeData @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
+
+  @@index([bankId])
+  @@index([rawScrapeDataId])
+  @@index([createdAt])
+  @@map("screenshots")
+}
+
+// ── HTML ARCHIVE — Compressed page source with retention
+model HtmlArchive {
+  id             String   @id @default(uuid()) @db.Uuid
+  rawScrapeDataId String  @map("raw_scrape_data_id") @db.Uuid
+  bankId         String   @map("bank_id") @db.Uuid
+  sourceUrl      String   @map("source_url")
+  compressedHtml Bytes    @map("compressed_html") // gzipped HTML
+  originalSize   Int      @map("original_size") // bytes
+  compressedSize Int      @map("compressed_size") // bytes
+  compressionAlgo String  @default("gzip") @map("compression_algo")
+  retentionUntil DateTime @map("retention_until") // 90 days from creation
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  rawScrapeData RawScrapeData @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
+
+  @@index([bankId])
+  @@index([retentionUntil])
+  @@index([rawScrapeDataId])
+  @@index([bankId, createdAt])
+  @@map("html_archives")
+}
+
+// ── VALIDATION RULES — Configurable rule definitions
+model ValidationRule {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  description String?
+  category  String   // "COMPARISON" | "FORMAT" | "CONSISTENCY" | "REFERENCE" | "STRUCTURE"
+  severity  String   @default("FAIL") // "WARNING" | "FAIL"
+  enabled   Boolean  @default(true)
+  config    Json?    @db.JsonB // Rule-specific configuration (maxSpread, maxChangePct, etc.)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  validationResults ValidationResult[]
+
+  @@index([enabled])
+  @@index([category])
+  @@map("validation_rules")
+}
+
+// ── VALIDATION RUN — A batch of validation checks per scrape
+model ValidationRun {
+  id              String   @id @default(uuid()) @db.Uuid
+  rawScrapeDataId String   @map("raw_scrape_data_id") @db.Uuid
+  bankId          String   @map("bank_id") @db.Uuid
+  totalRules      Int      @default(0) @map("total_rules")
+  passedCount     Int      @default(0) @map("passed_count")
+  warningCount    Int      @default(0) @map("warning_count")
+  failCount       Int      @default(0) @map("fail_count")
+  overallStatus   String   @default("PASS") @map("overall_status") // PASS | WARNING | FAIL
+  score           Int?     // 0-100 computed score
+  durationMs      Int?     @map("duration_ms")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  rawScrapeData RawScrapeData @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
+  results       ValidationResult[]
+
+  @@index([bankId])
+  @@index([overallStatus])
+  @@index([rawScrapeDataId])
+  @@index([bankId, createdAt])
+  @@map("validation_runs")
+}
+
+// ── VALIDATION RESULT — Individual rule check outcome
+model ValidationResult {
+  id              String    @id @default(uuid()) @db.Uuid
+  validationRunId String    @map("validation_run_id") @db.Uuid
+  ruleId          String    @map("rule_id") @db.Uuid
+  ruleName        String    @map("rule_name")
+  status          RuleStatus
+  currencyTo      String?   @map("currency_to")
+  message         String?   @db.Text
+  details         Json?     @db.JsonB // Extra data: actualValue, expectedValue, etc.
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  validationRun ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: Cascade)
+  rule          ValidationRule @relation(fields: [ruleId], references: [id])
+
+  @@index([validationRunId])
+  @@index([ruleId])
+  @@index([status])
+  @@map("validation_results")
+}
+
+// ── CONFIDENCE SCORE — Per-record quality score (0-100)
+model ConfidenceScore {
+  id              String  @id @default(uuid()) @db.Uuid
+  rawScrapeDataId String  @map("raw_scrape_data_id") @db.Uuid
+  exchangeRateId  String? @map("exchange_rate_id") @db.Uuid
+  bankId          String  @map("bank_id") @db.Uuid
+  currencyTo      String  @map("currency_to")
+  score           Int     // 0-100
+  breakdown       Json    @db.JsonB // { "parser_correct": 25, "html_stable": 15, ... }
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  rawScrapeData RawScrapeData @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
+
+  @@index([bankId])
+  @@index([score])
+  @@index([rawScrapeDataId])
+  @@index([exchangeRateId])
+  @@index([bankId, score])
+  @@map("confidence_scores")
+}
+
+// ── ANOMALY INCIDENT — Auto-detected anomalies requiring attention
+model AnomalyIncident {
+  id             String          @id @default(uuid()) @db.Uuid
+  type           String          // SPIKE | ABNORMAL_SPREAD | DUPLICATE | REPEATED_DATA | IMPOSSIBLE_VALUE | PARSER_FAILURE | HTML_CHANGE | MISSING_CURRENCY | HTTP_REDIRECT | CLOUDFLARE_BLOCK | CAPTCHA
+  severity       AnomalySeverity
+  status         AnomalyStatus   @default(OPEN)
+  bankId         String?         @map("bank_id") @db.Uuid
+  rawScrapeDataId String?         @map("raw_scrape_data_id") @db.Uuid
+  exchangeRateId String?         @map("exchange_rate_id") @db.Uuid
+  description    String          @db.Text
+  details        Json?           @db.JsonB // { oldValue, newValue, threshold, ... }
+  detectedAt     DateTime        @default(now()) @map("detected_at")
+  resolvedAt     DateTime?       @map("resolved_at")
+  resolvedBy     String?         @map("resolved_by")
+  resolution     String?         @db.Text
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([severity])
+  @@index([status])
+  @@index([bankId])
+  @@index([detectedAt])
+  @@index([status, severity])
+  @@map("anomaly_incidents")
+}
+
+// ── APPROVAL RECORD — Approval workflow for promoting data to production
+model ApprovalRecord {
+  id              String         @id @default(uuid()) @db.Uuid
+  rawScrapeDataId String         @map("raw_scrape_data_id") @db.Uuid
+  exchangeRateId  String?        @map("exchange_rate_id") @db.Uuid
+  bankId          String         @map("bank_id") @db.Uuid
+  status          ApprovalStatus @default(PENDING)
+  reviewedBy      String?        @map("reviewed_by") @db.Uuid
+  reviewedAt      DateTime?      @map("reviewed_at")
+  rejectionReason String?        @map("rejection_reason") @db.Text
+  confidenceScore Int?           @map("confidence_score")
+  notes           String?        @db.Text
+  version         Int            @default(1)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  rawScrapeData RawScrapeData @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([bankId])
+  @@index([rawScrapeDataId])
+  @@index([exchangeRateId])
+  @@index([reviewedBy])
+  @@index([status, bankId])
+  @@map("approval_records")
+}
+
+// ── PARSER VERSION — Version tracking for all parsers
+model ParserVersion {
+  id             String   @id @default(uuid()) @db.Uuid
+  parserName     String   @map("parser_name")
+  version        String
+  releaseDate    DateTime @default(now()) @map("release_date")
+  supportedBanks String?  @map("supported_banks") // comma-separated bank codes
+  maintainer     String?
+  changelog      String?  @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([parserName, version])
+  @@index([parserName])
+  @@index([isActive])
+  @@map("parser_versions")
+}
+
+// ── AUDIT LOG — Immutable, never-deleted audit trail
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String   // CREATE | UPDATE | DELETE | APPROVE | REJECT | SCRAPE | VALIDATE
+  entity    String   // EXCHANGE_RATE | RAW_SCRAPE | VALIDATION_RULE | APPROVAL | etc.
+  entityId  String?  @map("entity_id")
+  oldValue  Json?    @map("old_value") @db.JsonB
+  newValue  Json?    @map("new_value") @db.JsonB
+  reason    String?  @db.Text
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+// ── DATA PROVENANCE — End-to-end traceability for every published rate
+model DataProvenance {
+  id              String   @id @default(uuid()) @db.Uuid
+  exchangeRateId  String   @map("exchange_rate_id") @db.Uuid
+  rawScrapeDataId String   @map("raw_scrape_data_id") @db.Uuid
+  bankId          String   @map("bank_id") @db.Uuid
+  sourceUrl       String   @map("source_url")
+  scraperId       String?  @map("scraper_id")
+  parserVersion   String?  @map("parser_version")
+  htmlArchiveId   String?  @map("html_archive_id") @db.Uuid
+  screenshotId    String?  @map("screenshot_id") @db.Uuid
+  validationRunId String?  @map("validation_run_id") @db.Uuid
+  approvalId      String?  @map("approval_id") @db.Uuid
+  operatorId      String?  @map("operator_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  rawScrapeData  RawScrapeData  @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
+
+  @@unique([exchangeRateId])
+  @@index([bankId])
+  @@index([rawScrapeDataId])
+  @@index([exchangeRateId])
+  @@map("data_provenance")
+}
+
+// ── SCRAPER HEALTH SNAPSHOT — Historical health metrics per bank
+model ScraperHealthSnapshot {
+  id                    String       @id @default(uuid()) @db.Uuid
+  bankId                String       @map("bank_id") @db.Uuid
+  status                HealthStatus @default(UNKNOWN)
+  lastSuccessfulScrape  DateTime?    @map("last_successful_scrape")
+  lastFailedScrape      DateTime?    @map("last_failed_scrape")
+  lastScrapeDurationMs  Int?         @map("last_scrape_duration_ms")
+  successRate7d         Decimal?     @map("success_rate_7d") @db.Decimal(5, 2)
+  successRate30d        Decimal?     @map("success_rate_30d") @db.Decimal(5, 2)
+  successRate90d        Decimal?     @map("success_rate_90d") @db.Decimal(5, 2)
+  averageScrapeDurationMs Int?       @map("average_scrape_duration_ms")
+  consecutiveFailures   Int          @default(0) @map("consecutive_failures")
+  retryCount            Int          @default(0) @map("retry_count")
+  averageConfidenceScore Decimal?    @map("average_confidence_score") @db.Decimal(5, 2)
+  validationFailureRate Decimal?     @map("validation_failure_rate") @db.Decimal(5, 2)
+  totalScrapes          Int          @default(0) @map("total_scrapes")
+  totalFailures         Int          @default(0) @map("total_failures")
+  periodStart           DateTime     @map("period_start")
+  periodEnd             DateTime     @map("period_end")
+  createdAt             DateTime     @default(now()) @map("created_at")
+
+  @@index([bankId])
+  @@index([status])
+  @@index([periodEnd])
+  @@index([bankId, periodEnd])
+  @@map("scraper_health_snapshots")
 }

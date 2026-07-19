@@ -1,0 +1,6 @@
+# Security Contact
+Contact: mailto:security@ethiobankshub.com
+Encryption: https://keys.openpgp.org/search?q=security@ethiobankshub.com
+Preferred-Languages: en, am
+Canonical: https://ethiobankshub.com/.well-known/security.txt
+Policy: https://ethiobankshub.com/security-policy

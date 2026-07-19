@@ -19,8 +19,21 @@ export default () => ({
     refreshExpiresIn: process.env['JWT_REFRESH_EXPIRES_IN'] ?? '7d',
   },
 
-  session: {
-    secret: process.env['SESSION_SECRET'] ?? 'change-me',
+  google: {
+    clientId: process.env['GOOGLE_CLIENT_ID'] ?? '',
+    clientSecret: process.env['GOOGLE_CLIENT_SECRET'] ?? '',
+    callbackUrl: process.env['GOOGLE_CALLBACK_URL'] ?? 'http://localhost:4000/api/v1/auth/google/callback',
+  },
+
+  scraper: {
+    enabled: process.env['SCRAPER_ENABLED'] !== 'false',
+    enabledBanks: process.env['SCRAPER_ENABLED_BANKS'] ?? '',
+    requestTimeout: parseInt(process.env['SCRAPER_REQUEST_TIMEOUT'] ?? '30000', 10),
+    scheduleHour: parseInt(process.env['SCRAPER_SCHEDULE_HOUR'] ?? '8', 10),
+    scheduleMinute: parseInt(process.env['SCRAPER_SCHEDULE_MINUTE'] ?? '30', 10),
+    maxRetries: parseInt(process.env['SCRAPER_MAX_RETRIES'] ?? '3', 10),
+    telegramBotToken: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
+    telegramChatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
   },
 
   cors: {
