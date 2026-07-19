@@ -28,18 +28,17 @@ export class ScrapeQueueService {
 
     const connection = { url: redisUrl };
 
-    this.queue = new Queue<ScrapeJobData>(QUEUE_NAME, {
+    this.queue = new Queue(QUEUE_NAME, {
       connection,
       defaultJobOptions: {
         attempts: this.maxRetries + 1,
         backoff: { type: 'exponential', delay: 10_000 },
-        timeout: 60_000, // 60 second timeout per job
         removeOnComplete: { age: 24 * 3600 },
         removeOnFail: { age: 7 * 24 * 3600 },
       },
-    });
+    }) as unknown as Queue<ScrapeJobData, ScrapeJobResultData>;
 
-    this.worker = new Worker<ScrapeJobData, ScrapeJobResultData>(
+    this.worker = new Worker(
       QUEUE_NAME,
       async (job) => {
         const { bankSlug, retryAttempt } = job.data;

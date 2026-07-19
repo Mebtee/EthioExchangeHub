@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-interface MetricPoint {
+export interface MetricPoint {
   timestamp: string;
   value: number;
   unit: string;

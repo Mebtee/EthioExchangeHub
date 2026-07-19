@@ -56,7 +56,7 @@ export class UserNotificationsService {
         message: data.message,
         severity: data.severity ?? 'info',
         link: data.link,
-        metadata: data.metadata ?? {},
+        metadata: (data.metadata ?? {}) as any,
       },
     });
   }

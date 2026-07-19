@@ -112,7 +112,7 @@ export class PageDetectorService {
 
       // Detect AJAX-loading patterns
       const hasAjaxPatterns =
-        lowerHtml.includes('api/') ||
+        lowerHtml.includes('/api/') ||
         lowerHtml.includes('ajax') ||
         lowerHtml.includes('fetch(') ||
         lowerHtml.includes('axios') ||
@@ -121,6 +121,13 @@ export class PageDetectorService {
         lowerHtml.includes('data-ajax') ||
         lowerHtml.includes('spa') ||
         lowerHtml.includes('router');
+
+      // Detect JSON endpoint references
+      const hasJsonEndpointRef = lowerHtml.includes('/api/') ||
+        lowerHtml.includes('application/json') ||
+        lowerHtml.includes('json/') ||
+        lowerHtml.includes('.json') ||
+        lowerHtml.includes('api.');
 
       // Detect iframe/embed for PDF
       const hasIframePdf =
@@ -156,23 +163,24 @@ export class PageDetectorService {
           confidence: 85,
           reason: 'Page loads PDF via iframe',
           isPdf: true,
-          hasAjaxPatterns,
-          hasJsonEndpoint: false,
-          hasRateKeywords,
           isTablePresent: hasTable,
+          hasAjaxPatterns,
+          hasJsonEndpoint: hasJsonEndpointRef,
+          hasRateKeywords,
         };
       }
 
-      // JSON endpoint embedded
-      if (hasJsonEndpoint) {
+      // JSON endpoint embedded in page
+      if (hasJsonEndpointRef && lowerHtml.includes('/api/')) {
         return {
           method: 'api',
           confidence: 70,
-          reason: 'Page has API/AJAX endpoints',
+          reason: 'Page references API/JSON endpoints',
+          isPdf: false,
+          isTablePresent: hasTable,
           hasAjaxPatterns,
           hasJsonEndpoint: true,
           hasRateKeywords,
-          isTablePresent: hasTable,
         };
       }
 
@@ -183,10 +191,11 @@ export class PageDetectorService {
           confidence: 85,
           reason: 'Static HTML table with exchange rate keywords detected',
           detectedSelectors: this.extractTableSelectors(html),
-          hasAjaxPatterns,
-          hasJsonEndpoint: false,
-          hasRateKeywords,
+          isPdf: false,
           isTablePresent: true,
+          hasAjaxPatterns,
+          hasJsonEndpoint: hasJsonEndpointRef,
+          hasRateKeywords,
         };
       }
 
@@ -199,23 +208,25 @@ export class PageDetectorService {
             ? 'Page appears to be a JS-only skeleton (no visible content)'
             : `Page requires JavaScript rendering (${scriptCount} scripts, AJAX patterns: ${hasAjaxPatterns})`,
           detectedSelectors: this.extractSelectors(html),
-          hasAjaxPatterns,
-          hasJsonEndpoint: false,
-          hasRateKeywords,
+          isPdf: false,
           isTablePresent: hasTable,
+          hasAjaxPatterns,
+          hasJsonEndpoint: hasJsonEndpointRef,
+          hasRateKeywords,
         };
       }
 
-      // Static HTML but unknown structure
+      // Static HTML but unknown structure (no rate keywords)
       if (!hasRateKeywords && hasTable) {
         return {
           method: 'cheerio',
           confidence: 50,
           reason: 'Static HTML with tables but no rate keywords found',
-          hasAjaxPatterns,
-          hasJsonEndpoint: false,
-          hasRateKeywords,
+          isPdf: false,
           isTablePresent: true,
+          hasAjaxPatterns,
+          hasJsonEndpoint: hasJsonEndpointRef,
+          hasRateKeywords,
         };
       }
 
@@ -224,10 +235,11 @@ export class PageDetectorService {
         method: 'cheerio',
         confidence: 40,
         reason: 'Ambiguous page structure — defaulting to cheerio',
-        hasAjaxPatterns,
-        hasJsonEndpoint: false,
-        hasRateKeywords: false,
+        isPdf: false,
         isTablePresent: hasTable,
+        hasAjaxPatterns,
+        hasJsonEndpoint: hasJsonEndpointRef,
+        hasRateKeywords: false,
       };
     } catch (error) {
       this.logger.warn(`Failed to detect page type for ${url}: ${error instanceof Error ? error.message : 'Unknown'}`);

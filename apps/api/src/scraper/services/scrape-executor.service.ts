@@ -8,6 +8,7 @@ import { RateValidatorService } from '../validators/rate-validator.service';
 import { NotificationService } from './notification.service';
 import { CacheInvalidationService } from './cache-invalidation.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NbeScraper } from '../scrapers/nbe.scraper';
 
 export interface ScrapeJobResult {
   bankSlug: string;
@@ -239,7 +240,7 @@ export class ScrapeExecutorService {
       data: {
         bankId: null,
         sourceUrl: entry.metadata.website,
-        status: 'PENDING',
+        status: 'PENDING' as any,
         retryAttempt,
         startedAt: new Date(),
       },
@@ -248,7 +249,14 @@ export class ScrapeExecutorService {
     try {
       const scraper = this.scraperFactory.create({
         slug: entry.slug,
-        metadata: { ...entry.metadata, isActive: true },
+        metadata: {
+          slug: entry.slug,
+          name: entry.metadata.name,
+          website: entry.metadata.website,
+          method: 'cheerio',
+          isActive: true,
+          supportedCurrencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'CNY', 'JPY', 'CHF'],
+        },
         ScraperClass: NbeScraper as unknown as new (...args: never[]) => unknown,
       });
       const result = await scraper.execute();
@@ -330,7 +338,7 @@ export class ScrapeExecutorService {
       data: {
         bankId,
         sourceUrl,
-        status: 'PENDING',
+        status: 'PENDING' as any,
         retryAttempt,
         startedAt: new Date(),
       },

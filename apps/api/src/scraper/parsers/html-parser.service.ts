@@ -43,7 +43,7 @@ export class HtmlParserService {
       // Detect column indices from header
       const headerCells = rows.first().find('th, td');
       const headers: string[] = [];
-      headerCells.each((_, cell) => headers.push($(cell).text().trim().toLowerCase()));
+      headerCells.each((_, cell) => { headers.push($(cell).text().trim().toLowerCase()); });
 
       const buyIdx = headers.findIndex((h) => /buy|buying|bid|cash/i.test(h));
       const sellIdx = headers.findIndex((h) => /sell|selling|ask|transfer/i.test(h));

@@ -44,7 +44,7 @@ export class ScraperHealthService {
         take: 3,
       }),
       this.prisma.scrapeLog.findFirst({
-        where: { bankId, status: { not: 'PENDING' } },
+        where: { bankId, status: { not: 'PENDING' as any } },
         orderBy: { startedAt: 'desc' },
       }),
       this.prisma.confidenceScore.findMany({

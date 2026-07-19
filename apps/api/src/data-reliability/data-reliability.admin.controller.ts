@@ -163,7 +163,7 @@ export class DataReliabilityAdminController {
       where: { id },
       data: {
         ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
-        ...(data.config !== undefined ? { config: data.config } : {}),
+        ...(data.config !== undefined ? { config: data.config as any } : {}),
         ...(data.severity !== undefined ? { severity: data.severity } : {}),
         ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
       },

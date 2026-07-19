@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
 interface ScreenshotCapture {
+  id?: string;
   rawScrapeDataId: string;
   bankId: string;
   url: string;
@@ -88,13 +89,15 @@ export class ScreenshotService {
           height: 900,
         };
 
-        // Save metadata
-        await this.saveScreenshot(fullPage);
+        // Save metadata and capture database ID for provenance
+        const savedFullPage = await this.saveScreenshot(fullPage);
+        fullPage.id = savedFullPage.id;
 
         // Cropped screenshot (try to find the rate table)
         const rateTable = await page.$('table, .exchange-rates, .rates-table, [class*="rate"]');
+        let croppedBuffer: Buffer | null = null;
         if (rateTable) {
-          const croppedBuffer = await rateTable.screenshot({ type: 'png' });
+          croppedBuffer = await rateTable.screenshot({ type: 'png' });
           const croppedPath = `screenshots/${bankId}/${rawScrapeDataId}/cropped.png`;
 
           cropped = {
@@ -108,14 +111,13 @@ export class ScreenshotService {
             height: 900,
           };
 
-          await this.saveScreenshot(cropped);
+          const savedCropped = await this.saveScreenshot(cropped);
+          cropped.id = savedCropped.id;
+          await this.uploadToR2(croppedPath, croppedBuffer);
         }
 
         // In production: upload buffers to Cloudflare R2 here
         await this.uploadToR2(fullPagePath, fullPageBuffer);
-        if (cropped) {
-          await this.uploadToR2(cropped.filePath, croppedBuffer);
-        }
 
         this.logger.log(`Screenshots captured for ${url}`);
       } finally {

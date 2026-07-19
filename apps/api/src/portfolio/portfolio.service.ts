@@ -103,7 +103,7 @@ export class PortfolioService {
         currency: data.currency,
         amount: data.amount,
         description: data.description,
-        metadata: data.metadata ?? {},
+        metadata: (data.metadata ?? {}) as any,
       },
     });
   }
@@ -120,7 +120,7 @@ export class PortfolioService {
 
     return this.prisma.portfolioItem.update({
       where: { id },
-      data,
+      data: data as any,
     });
   }
 

@@ -92,7 +92,8 @@ export class DataPipelineService {
             status: r.status as any,
             currencyTo: r.currencyTo ?? null,
             message: r.message,
-            details: r.details ?? null,
+            details: (r.details ?? null) as any,
+            rule: { connect: { id: r.ruleId } },
           })),
         },
       },
@@ -173,7 +174,7 @@ export class DataPipelineService {
             bankId,
             rawScrapeDataId: rawScrapeData.id,
             description: anomaly.description,
-            details: anomaly.details ?? null,
+            details: (anomaly.details ?? null) as any,
           },
         });
 

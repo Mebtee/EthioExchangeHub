@@ -54,14 +54,16 @@ function parseTable(html: string): RawScrapedRate[] {
   return rates;
 }
 
-function createScraperClass(slug: string, name: string, website: string, method: 'cheerio' | 'playwright' = 'cheerio') {
+const CURRENCY_SET = ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'CNY', 'JPY', 'CHF'] as const;
+
+function createScraperClass(slug: string, name: string, website: string, method: 'cheerio' | 'playwright' = 'cheerio'): new (httpClient: HttpClientService) => BaseScraper {
   @Injectable()
   class DynamicScraper extends BaseScraper {
     readonly metadata: ScraperMetadata = {
       slug, name, website, method, isActive: true,
-      supportedCurrencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'CNY', 'JPY', 'CHF'],
+      supportedCurrencies: [...CURRENCY_SET],
     };
-    constructor(private readonly httpClient: HttpClientService) { super(); }
+    constructor(readonly httpClient: HttpClientService) { super(); }
     async scrapeRates(): Promise<RawScrapedRate[]> {
       const { html } = await this.httpClient.fetch({ url: this.metadata.website, timeout: 30_000 });
       return parseTable(html);

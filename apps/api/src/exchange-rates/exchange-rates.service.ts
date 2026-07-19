@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { QueryRatesDto, QueryHistoricalRatesDto, CompareRatesDto, BestRatesDto, ExportRatesDto } from './dto/query-rates.dto';
 
-interface PaginatedResult<T> {
+export interface PaginatedResult<T> {
   data: T[];
   meta: {
     page: number;
@@ -12,7 +12,7 @@ interface PaginatedResult<T> {
   };
 }
 
-interface RateResponse {
+export interface RateResponse {
   id: string;
   bankId: string;
   bankName: string;
@@ -101,8 +101,8 @@ export class ExchangeRatesService {
 
     // Step 4: Sort by bank sortOrder (in-memory, since we can't mix with cross-table ORDER BY)
     const sorted = rates.sort((a, b) => {
-      const orderA = a.bank?.sortOrder ?? 0;
-      const orderB = b.bank?.sortOrder ?? 0;
+      const orderA = (a.bank as any)?.sortOrder ?? 0;
+      const orderB = (b.bank as any)?.sortOrder ?? 0;
       if (orderA !== orderB) return orderA - orderB;
       return a.currencyTo.localeCompare(b.currencyTo);
     });
