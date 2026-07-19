@@ -40,16 +40,22 @@ import { DataReliabilityModule } from './data-reliability/data-reliability.modul
       },
     ]),
 
-    // ── Redis Caching ──────────────────────────────────────────
+    // ── Caching (Redis or in-memory fallback) ───────────────────
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => ({
-        store: await redisStore({
-          url: config.get<string>('redis.url'),
-          ttl: 300, // 5 minutes default
-        }),
-      }),
+      useFactory: async (config: ConfigService) => {
+        const redisUrl = config.get<string>('redis.url', '');
+        if (redisUrl) {
+          try {
+            const store = await redisStore({ url: redisUrl, ttl: 300 });
+            return { store, ttl: 300 };
+          } catch (error) {
+            console.warn('Redis unavailable, falling back to in-memory cache:', (error as Error).message);
+          }
+        }
+        return { ttl: 300 }; // In-memory cache fallback
+      },
     }),
 
     // ── Application Modules ────────────────────────────────────

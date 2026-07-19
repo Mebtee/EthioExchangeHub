@@ -58,7 +58,7 @@ async function bootstrap() {
 
   // ── Request Logging (structured) ─────────────────────────────
   app.use(
-    morgan(':method :url :status :response-time ms - :res[content-length]', {
+    morgan.default(':method :url :status :response-time ms - :res[content-length]', {
       stream: {
         write: (message: string) => {
           logger.log(message.trim());
