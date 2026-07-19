@@ -231,7 +231,7 @@ export class AnomalyDetectionService {
     }
 
     const totalFailures = fails.length;
-    const severity = totalFailures > 5 ? 'CRITICAL' : totalFailures > 3 ? 'HIGH' : 'MEDIUM';
+    const severity = (totalFailures > 5 ? 'CRITICAL' : totalFailures > 3 ? 'HIGH' : 'MEDIUM') as 'CRITICAL' | 'HIGH' | 'MEDIUM';
 
     return [{
       type: 'PARSER_FAILURE' as AnomalyType,
@@ -254,7 +254,7 @@ export class AnomalyDetectionService {
     if (missing.length > 0) {
       return [{
         type: 'MISSING_CURRENCY' as AnomalyType,
-        severity: missing.length > 2 ? 'HIGH' : 'MEDIUM',
+        severity: (missing.length > 2 ? 'HIGH' : 'MEDIUM') as 'HIGH' | 'MEDIUM',
         description: `Missing currencies for ${bankName}: ${missing.join(', ')}`,
         details: { bankName, missingCurrencies: missing, required: REQUIRED },
       }];
