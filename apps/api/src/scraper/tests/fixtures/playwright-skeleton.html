@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Zemen Bank</title>
+  <script src="/assets/vendor.js"></script>
+  <script src="/assets/app.js"></script>
+  <script src="/assets/router.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // SPA application - content rendered via JavaScript
+    fetch('/api/exchange-rates')
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('root').innerHTML = renderTable(data);
+      });
+  </script>
+</body>
+</html>
