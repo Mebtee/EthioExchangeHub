@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import type { ScraperMetadata, RawScrapedRate } from '../interfaces/bank-scraper.interface';
+import type { Currency } from '@prisma/client';
 import { BaseScraper } from './base.scraper';
 import { HttpClientService } from '../utils/http-client';
-import type { Currency } from '@prisma/client';
 
 @Injectable()
-export class DashenScraper extends BaseScraper {
+export class BoaAbyssiniaScraper extends BaseScraper {
   readonly metadata: ScraperMetadata = {
-    slug: 'DASH',
-    name: 'Dashen Bank',
-    website: 'https://dashenbanksc.com/daily-exchange-rates/',
+    slug: 'BOA',
+    name: 'Bank of Abyssinia',
+    website: 'https://www.bankofabyssinia.com/exchange-rate-2/',
     method: 'cheerio',
     isActive: true,
     supportedCurrencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'CNY', 'JPY', 'CHF'],
@@ -26,34 +26,39 @@ export class DashenScraper extends BaseScraper {
       timeout: 30_000,
     });
 
-    return this.parseDashenRates(html);
+    return this.parseRates(html);
   }
 
-  private parseDashenRates(html: string): RawScrapedRate[] {
+  private parseRates(html: string): RawScrapedRate[] {
     const $ = cheerio.load(html);
     const rates: RawScrapedRate[] = [];
 
-    // Dashen Bank typically uses: Currency | Buy | Sell
-    const table = $('table').first();
-    const rows = table.find('tr');
+    // BoA typically uses a table with: Currency | Buying | Selling
+    const tables = $('table').filter((_, el) => {
+      const text = $(el).text().toLowerCase();
+      return text.includes('buying') || text.includes('selling') || text.includes('exchange');
+    });
 
-    for (let i = 1; i < rows.length; i++) {
-      const cells = $(rows[i]).find('td');
-      if (cells.length < 3) continue;
+    for (const table of tables) {
+      const rows = $(table).find('tr');
+      for (let i = 1; i < rows.length; i++) {
+        const cells = $(rows[i]).find('td');
+        if (cells.length < 3) continue;
 
-      const currencyText = $(cells[0]).text().trim().toUpperCase();
-      const buyRate = this.parseNumeric($(cells[1]).text());
-      const sellRate = this.parseNumeric($(cells[2]).text());
+        const currencyText = $(cells[0]).text().trim().toUpperCase();
+        const buyRate = this.parseNumeric($(cells[1]).text());
+        const sellRate = this.parseNumeric($(cells[2]).text());
 
-      const currencyCode = this.mapCurrency(currencyText);
-      if (currencyCode && buyRate > 0 && sellRate > 0) {
-        rates.push({
-          currencyFrom: 'ETB',
-          currencyTo: currencyCode,
-          buyRate,
-          sellRate,
-          rawText: currencyText,
-        });
+        const currencyCode = this.mapCurrency(currencyText);
+        if (currencyCode && buyRate > 0 && sellRate > 0) {
+          rates.push({
+            currencyFrom: 'ETB',
+            currencyTo: currencyCode,
+            buyRate,
+            sellRate,
+            rawText: currencyText,
+          });
+        }
       }
     }
 
@@ -68,7 +73,7 @@ export class DashenScraper extends BaseScraper {
       SAR: 'SAR', 'SAUDI RIYAL': 'SAR', RIYAL: 'SAR',
       AED: 'AED', 'UAE DIRHAM': 'AED', DIRHAM: 'AED',
       CNY: 'CNY', 'CHINESE YUAN': 'CNY', YUAN: 'CNY', RMB: 'CNY',
-      JPY: 'JPY', 'JAPANESE YUAN': 'JPY', YEN: 'JPY',
+      JPY: 'JPY', 'JAPANESE YEN': 'JPY', YEN: 'JPY',
       CHF: 'CHF', 'SWISS FRANC': 'CHF', FRANC: 'CHF',
     };
     const upper = text.toUpperCase();

@@ -10,10 +10,10 @@ export class CBEScraper extends BaseScraper {
   readonly metadata: ScraperMetadata = {
     slug: 'CBE',
     name: 'Commercial Bank of Ethiopia',
-    website: 'https://combanketh.et/exchange-rates',
+    website: 'https://combanketh.et/exchange-rates?srcPage=home',
     method: 'cheerio',
     isActive: true,
-    supportedCurrencies: ['USD', 'EUR', 'GBP'],
+    supportedCurrencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'CNY', 'JPY', 'CHF'],
   };
 
   constructor(private readonly httpClient: HttpClientService) {
@@ -69,9 +69,20 @@ export class CBEScraper extends BaseScraper {
       USD: 'USD', 'US DOLLAR': 'USD', DOLLAR: 'USD',
       EUR: 'EUR', EURO: 'EUR',
       GBP: 'GBP', 'POUND STERLING': 'GBP', POUND: 'GBP',
+      SAR: 'SAR', 'SAUDI RIYAL': 'SAR', RIYAL: 'SAR',
+      AED: 'AED', 'UAE DIRHAM': 'AED', DIRHAM: 'AED',
+      CNY: 'CNY', 'CHINESE YUAN': 'CNY', YUAN: 'CNY', RMB: 'CNY',
+      JPY: 'JPY', 'JAPANESE YEN': 'JPY', YEN: 'JPY',
+      CHF: 'CHF', 'SWISS FRANC': 'CHF', FRANC: 'CHF',
     };
     const upper = text.toUpperCase();
-    return map[upper] ?? null;
+    if (map[upper]) return map[upper]!;
+    for (const [key, value] of Object.entries(map)) {
+      if (upper.includes(key)) return value;
+    }
+    const match = upper.match(/\b([A-Z]{3})\b/);
+    if (match && map[match[1]!]) return map[match[1]!]!;
+    return null;
   }
 
   private parseNumeric(text: string): number {

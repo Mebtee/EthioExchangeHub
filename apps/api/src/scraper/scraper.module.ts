@@ -13,6 +13,7 @@ import { RateValidatorService } from './validators/rate-validator.service';
 import { NotificationService } from './services/notification.service';
 import { CacheInvalidationService } from './services/cache-invalidation.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PageDetectorService } from './detection/page-detector.service';
 
 @Module({
   imports: [PrismaModule],
@@ -20,6 +21,8 @@ import { PrismaModule } from '../prisma/prisma.module';
   providers: [
     // Registry
     ScraperRegistryService,
+    // Page detection
+    PageDetectorService,
     // Factory (replaces hardcoded switch statements)
     ScraperFactory,
     // Services
@@ -43,6 +46,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     ScrapeExecutorService,
     ScraperRegistryService,
     ScrapeQueueService,
+    PageDetectorService,
   ],
 })
 export class ScraperModule {}

@@ -1,42 +1,68 @@
-import { Injectable } from '@nestjs/common';
-import * as cheerio from 'cheerio';
+import { Injectable, Logger } from '@nestjs/common';
 import type { ScraperMetadata, RawScrapedRate } from '../interfaces/bank-scraper.interface';
-import { BaseScraper } from './base.scraper';
-import { HttpClientService } from '../utils/http-client';
 import type { Currency } from '@prisma/client';
+import { BaseScraper } from './base.scraper';
+import * as cheerio from 'cheerio';
 
 @Injectable()
-export class AwashScraper extends BaseScraper {
+export class ZemenScraper extends BaseScraper {
   readonly metadata: ScraperMetadata = {
-    slug: 'AWIN',
-    name: 'Awash International Bank',
-    website: 'https://awashbank.com/exchange-historical/',
-    method: 'cheerio',
+    slug: 'ZEMEN',
+    name: 'Zemen Bank',
+    website: 'https://zemenbank.com/exchange-rates',
+    method: 'playwright',
     isActive: true,
     supportedCurrencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'CNY', 'JPY', 'CHF'],
   };
 
-  constructor(private readonly httpClient: HttpClientService) {
+  private readonly logger = new Logger(ZemenScraper.name);
+
+  constructor() {
     super();
   }
 
+  /**
+   * Fetches Zemen's exchange rate page via Playwright and parses the table.
+   */
   async scrapeRates(): Promise<RawScrapedRate[]> {
-    const { html } = await this.httpClient.fetch({
-      url: this.metadata.website,
-      timeout: 30_000,
-    });
+    try {
+      const { chromium } = await import('playwright');
+      const browser = await chromium.launch({ headless: true });
 
-    return this.parseAwashRates(html);
+      try {
+        const context = await browser.newContext({
+          userAgent:
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        });
+
+        const page = await context.newPage();
+        await page.goto(this.metadata.website, { waitUntil: 'networkidle', timeout: 30_000 });
+        // Wait for potential table to load
+        await page.waitForSelector('table, .rate-item, [class*="rate"]', { timeout: 10_000 }).catch(() => {});
+        const html = await page.content();
+        await page.close();
+        await context.close();
+
+        return this.parseZemenRates(html);
+      } finally {
+        await browser.close();
+      }
+    } catch (error) {
+      this.logger.error(`Zemen Playwright scrape failed: ${error instanceof Error ? error.message : 'Unknown'}`);
+      throw error;
+    }
   }
 
-  private parseAwashRates(html: string): RawScrapedRate[] {
+  /**
+   * Parse Zemen's exchange rate table from rendered HTML.
+   */
+  parseZemenRates(html: string): RawScrapedRate[] {
     const $ = cheerio.load(html);
     const rates: RawScrapedRate[] = [];
 
-    // Awash typically uses a table with: Currency | Buying | Selling | ...
     const tables = $('table').filter((_, el) => {
       const text = $(el).text().toLowerCase();
-      return text.includes('buying') || text.includes('selling');
+      return text.includes('currency') || text.includes('buying') || text.includes('selling');
     });
 
     for (const table of tables) {
@@ -78,9 +104,7 @@ export class AwashScraper extends BaseScraper {
     };
     const upper = text.toUpperCase();
     if (map[upper]) return map[upper]!;
-    for (const [key, value] of Object.entries(map)) {
-      if (upper.includes(key)) return value;
-    }
+    for (const [key, value] of Object.entries(map)) { if (upper.includes(key)) return value; }
     const match = upper.match(/\b([A-Z]{3})\b/);
     if (match && map[match[1]!]) return map[match[1]!]!;
     return null;

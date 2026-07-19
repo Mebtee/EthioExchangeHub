@@ -1,7 +1,7 @@
 import type { Currency } from '@prisma/client';
 
 // ── Scrape Method ──────────────────────────────────────────────
-export type ScrapeMethod = 'cheerio' | 'playwright' | 'pdf' | 'api' | 'ajax';
+export type ScrapeMethod = 'cheerio' | 'playwright' | 'pdf' | 'api' | 'ajax' | 'detect';
 
 // ── Scraper Metadata ───────────────────────────────────────────
 export interface ScraperMetadata {
