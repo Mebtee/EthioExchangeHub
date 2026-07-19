@@ -1,0 +1,56 @@
+{
+  "name": "ethiobankshub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EthioBanksHub — Unified banking interface for Ethiopian banks",
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "dev:web": "pnpm --filter @ethiobankshub/web dev",
+    "dev:api": "pnpm --filter @ethiobankshub/api dev",
+    "build": "pnpm --filter @ethiobankshub/shared build && pnpm --parallel -r run build",
+    "build:web": "pnpm --filter @ethiobankshub/web build",
+    "build:api": "pnpm --filter @ethiobankshub/api build",
+    "lint": "pnpm --parallel -r run lint",
+    "lint:fix": "pnpm --parallel -r run lint:fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "db:generate": "pnpm --filter @ethiobankshub/api db:generate",
+    "db:push": "pnpm --filter @ethiobankshub/api db:push",
+    "db:migrate": "pnpm --filter @ethiobankshub/api db:migrate",
+    "db:seed": "pnpm --filter @ethiobankshub/api db:seed",
+    "db:studio": "pnpm --filter @ethiobankshub/api db:studio",
+    "typecheck": "pnpm --parallel -r run typecheck",
+    "clean": "pnpm --parallel -r run clean",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.1.0",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.29.1",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "prettier-plugin-tailwindcss": "^0.5.14",
+    "typescript": "^5.4.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yaml,yml}": [
+      "prettier --write"
+    ]
+  }
+}

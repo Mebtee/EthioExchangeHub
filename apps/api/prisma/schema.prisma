@@ -1,0 +1,164 @@
+// ──────────────────────────────────────────────
+// EthioBanksHub — Prisma Schema (PostgreSQL)
+// ──────────────────────────────────────────────
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────
+enum BankProvider {
+  CBE
+  AWIN
+  DASH
+  BOA
+  WB
+  UB
+  NIB
+  BIB
+  LIB
+  ZEMEN
+  AB
+  BUNNA
+  DB
+  ENAT
+  COOP
+  SM
+  HIB
+  TSB
+  AMHARA
+  GADA
+  OMO
+}
+
+enum AccountType {
+  SAVINGS
+  CHECKING
+  CREDIT
+  LOAN
+}
+
+enum TransactionType {
+  TRANSFER
+  PAYMENT
+  DEPOSIT
+  WITHDRAWAL
+  FEE
+  INTEREST
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+}
+
+enum Currency {
+  ETB
+  USD
+  EUR
+  GBP
+}
+
+// ── User ───────────────────────────────────────────────────────
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  fullName      String    @map("full_name")
+  phoneNumber   String?   @map("phone_number")
+  avatarUrl     String?   @map("avatar_url")
+  isVerified    Boolean   @default(false) @map("is_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  linkedAccounts BankAccount[]
+  sessions        Session[]
+
+  @@map("users")
+}
+
+// ── Bank Account ───────────────────────────────────────────────
+model BankAccount {
+  id                String       @id @default(uuid()) @db.Uuid
+  userId            String       @map("user_id") @db.Uuid
+  bankProvider      BankProvider @map("bank_provider")
+  accountNumber     String       @map("account_number")
+  accountHolderName String       @map("account_holder_name")
+  accountType       AccountType  @map("account_type")
+  currency          Currency     @default(ETB)
+  balance           Decimal      @default(0) @db.Decimal(18, 2)
+  isActive          Boolean      @default(true) @map("is_active")
+  isVerified        Boolean      @default(false) @map("is_verified")
+  lastSyncAt        DateTime?    @map("last_sync_at")
+  externalId        String?      @map("external_id")
+  metadata          Json?        @db.JsonB
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sentTransactions     Transaction[] @relation("sender")
+  receivedTransactions Transaction[] @relation("receiver")
+
+  @@unique([userId, bankProvider, accountNumber])
+  @@index([userId])
+  @@index([bankProvider])
+  @@map("bank_accounts")
+}
+
+// ── Transaction ────────────────────────────────────────────────
+model Transaction {
+  id             String            @id @default(uuid()) @db.Uuid
+  transactionId  String            @unique @map("transaction_id")
+  type           TransactionType
+  status         TransactionStatus @default(PENDING)
+  amount         Decimal           @db.Decimal(18, 2)
+  currency       Currency          @default(ETB)
+  fee            Decimal           @default(0) @db.Decimal(18, 2)
+  description    String?
+  reference      String?
+  fromAccountId  String?           @map("from_account_id") @db.Uuid
+  toAccountId    String?           @map("to_account_id") @db.Uuid
+  initiatedAt    DateTime          @default(now()) @map("initiated_at")
+  completedAt    DateTime?         @map("completed_at")
+  failedAt       DateTime?         @map("failed_at")
+  failureReason  String?           @map("failure_reason")
+  metadata       Json?             @db.JsonB
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  fromAccount BankAccount? @relation("sender", fields: [fromAccountId], references: [id])
+  toAccount   BankAccount? @relation("receiver", fields: [toAccountId], references: [id])
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([status])
+  @@index([initiatedAt])
+  @@map("transactions")
+}
+
+// ── Session ────────────────────────────────────────────────────
+model Session {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  refreshToken String  @unique @map("refresh_token")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}

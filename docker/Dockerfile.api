@@ -1,0 +1,39 @@
+# ──────────────────────────────────────────────
+# EthioBanksHub — NestJS API Dockerfile
+# ──────────────────────────────────────────────
+
+# ── Base ────────────────────────────────────────────────────────
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+# ── Dependencies ────────────────────────────────────────────────
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared/package.json ./packages/shared/
+RUN pnpm install --frozen-lockfile
+
+# ── Build ───────────────────────────────────────────────────────
+FROM deps AS builder
+COPY tsconfig.base.json ./
+COPY apps/api ./apps/api
+COPY packages/shared ./packages/shared
+RUN pnpm --filter @ethiobankshub/shared build
+RUN pnpm --filter @ethiobankshub/api build
+
+# ── Production ──────────────────────────────────────────────────
+FROM base AS production
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/prisma ./prisma
+RUN npx prisma generate
+EXPOSE 4000
+CMD ["node", "dist/main"]
+
+# ── Development ─────────────────────────────────────────────────
+FROM base AS development
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+EXPOSE 4000
+CMD ["pnpm", "--filter", "@ethiobankshub/api", "dev"]

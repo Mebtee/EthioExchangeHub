@@ -1,0 +1,45 @@
+version: '3.9'
+
+name: ethiobankshub-dev
+
+services:
+  # Only infrastructure services for local development
+  postgres:
+    image: postgres:16-alpine
+    container_name: ethiobankshub-db
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ethiobanks
+      POSTGRES_PASSWORD: ethiobanks
+      POSTGRES_DB: ethiobankshub
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ethiobanks -d ethiobankshub']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ethiobankshub-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
