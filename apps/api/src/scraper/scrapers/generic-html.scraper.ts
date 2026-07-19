@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import type { ScraperMetadata, RawScrapedRate } from '../interfaces/bank-scraper.interface';
 import type { Currency } from '@prisma/client';
