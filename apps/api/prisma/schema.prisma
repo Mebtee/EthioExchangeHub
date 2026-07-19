@@ -413,19 +413,44 @@ model NbeReferenceRate {
 // ==============================================================
 
 // ── Validation Rule Status ───────────────────────────────────────
-enum RuleStatus { PASS WARNING FAIL }
+enum RuleStatus {
+  PASS
+  WARNING
+  FAIL
+}
 
 // ── Anomaly Severity ─────────────────────────────────────────────
-enum AnomalySeverity { LOW MEDIUM HIGH CRITICAL }
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
 
 // ── Anomaly Status ───────────────────────────────────────────────
-enum AnomalyStatus { OPEN INVESTIGATING RESOLVED DISMISSED }
+enum AnomalyStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+}
 
 // ── Approval Status ───────────────────────────────────────────────
-enum ApprovalStatus { PENDING VALIDATED APPROVED REJECTED ESTIMATED }
+enum ApprovalStatus {
+  PENDING
+  VALIDATED
+  APPROVED
+  REJECTED
+  ESTIMATED
+}
 
 // ── Scraper Health Status ────────────────────────────────────────
-enum HealthStatus { HEALTHY DEGRADED DOWN UNKNOWN }
+enum HealthStatus {
+  HEALTHY
+  DEGRADED
+  DOWN
+  UNKNOWN
+}
 
 // ── STAGE 1: RAW SCRAPE DATA — Immutable, non-editable raw storage
 model RawScrapeData {
@@ -603,6 +628,8 @@ model AnomalyIncident {
   resolvedBy     String?         @map("resolved_by")
   resolution     String?         @db.Text
   createdAt      DateTime        @default(now()) @map("created_at")
+
+  rawScrapeData RawScrapeData? @relation(fields: [rawScrapeDataId], references: [id], onDelete: Cascade)
 
   @@index([type])
   @@index([severity])
