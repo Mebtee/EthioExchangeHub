@@ -13,10 +13,16 @@ export interface GoogleProfile {
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(configService: ConfigService) {
+    const clientID = configService.get<string>('google.clientId', '');
+    const clientSecret = configService.get<string>('google.clientSecret', '');
+    const callbackURL = configService.get<string>('google.callbackUrl', '');
+
+    // If Google OAuth is not configured, provide defaults that won't crash on startup
+    // The route will fail gracefully when used without proper credentials
     super({
-      clientID: configService.getOrThrow<string>('google.clientId'),
-      clientSecret: configService.getOrThrow<string>('google.clientSecret'),
-      callbackURL: configService.getOrThrow<string>('google.callbackUrl'),
+      clientID: clientID || 'unconfigured',
+      clientSecret: clientSecret || 'unconfigured',
+      callbackURL: callbackURL || 'http://localhost:4000/api/v1/auth/google/callback',
       scope: ['email', 'profile'],
     });
   }
