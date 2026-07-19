@@ -97,84 +97,79 @@ export class AnomalyDetectionService {
   private detectSpikes(rates: RawScrapedRate[], bankName: string, previousRates: RawScrapedRate[]): AnomalyResult[] {
     if (previousRates.length === 0) return [];
 
-    return rates
-      .map((r) => {
-        const prev = previousRates.find((p) => p.currencyTo === r.currencyTo);
-        if (!prev) return null;
+    const result: AnomalyResult[] = [];
+    for (const r of rates) {
+      const prev = previousRates.find((p) => p.currencyTo === r.currencyTo);
+      if (!prev) continue;
 
-        const buyChange = Math.abs(r.buyRate - prev.buyRate) / prev.buyRate * 100;
-        const sellChange = Math.abs(r.sellRate - prev.sellRate) / prev.sellRate * 100;
-        const maxChange = Math.max(buyChange, sellChange);
+      const buyChange = Math.abs(r.buyRate - prev.buyRate) / prev.buyRate * 100;
+      const sellChange = Math.abs(r.sellRate - prev.sellRate) / prev.sellRate * 100;
+      const maxChange = Math.max(buyChange, sellChange);
 
-        if (maxChange > 20) {
-          return {
-            type: 'SPIKE' as AnomalyType,
-            severity: 'CRITICAL' as const,
-            description: `Extreme rate spike for ${bankName} ${r.currencyTo}: ${maxChange.toFixed(1)}% change`,
-            details: { currencyTo: r.currencyTo, changePercent: Math.round(maxChange * 100) / 100, oldBuyRate: prev.buyRate, newBuyRate: r.buyRate },
-          };
-        }
-        if (maxChange > 10) {
-          return {
-            type: 'SPIKE' as AnomalyType,
-            severity: 'HIGH' as const,
-            description: `Significant rate change for ${bankName} ${r.currencyTo}: ${maxChange.toFixed(1)}%`,
-            details: { currencyTo: r.currencyTo, changePercent: Math.round(maxChange * 100) / 100 },
-          };
-        }
-        return null;
-      })
-      .filter((a): a is AnomalyResult => a !== null);
+      if (maxChange > 20) {
+        result.push({
+          type: 'SPIKE' as AnomalyType,
+          severity: 'CRITICAL' as const,
+          description: `Extreme rate spike for ${bankName} ${r.currencyTo}: ${maxChange.toFixed(1)}% change`,
+          details: { currencyTo: r.currencyTo, changePercent: Math.round(maxChange * 100) / 100, oldBuyRate: prev.buyRate, newBuyRate: r.buyRate },
+        });
+      } else if (maxChange > 10) {
+        result.push({
+          type: 'SPIKE' as AnomalyType,
+          severity: 'HIGH' as const,
+          description: `Significant rate change for ${bankName} ${r.currencyTo}: ${maxChange.toFixed(1)}%`,
+          details: { currencyTo: r.currencyTo, changePercent: Math.round(maxChange * 100) / 100 },
+        });
+      }
+    }
+    return result;
   }
 
   private detectAbnormalSpread(rates: RawScrapedRate[], bankName: string): AnomalyResult[] {
-    const TIGHT_SPREAD = 0.01; // Spread < 0.01 is suspicious
-    const WIDE_SPREAD = 3.0; // Spread > 3 is suspicious
+    const TIGHT_SPREAD = 0.01;
+    const WIDE_SPREAD = 3.0;
 
-    return rates
-      .map((r) => {
-        const spread = r.sellRate - r.buyRate;
-        if (spread < TIGHT_SPREAD) {
-          return {
-            type: 'ABNORMAL_SPREAD' as AnomalyType,
-            severity: 'HIGH' as const,
-            description: `Abnormally tight spread for ${bankName} ${r.currencyTo}: ${spread.toFixed(4)}`,
-            details: { currencyTo: r.currencyTo, spread: Math.round(spread * 10000) / 10000, buyRate: r.buyRate, sellRate: r.sellRate },
-          };
-        }
-        if (spread > WIDE_SPREAD) {
-          return {
-            type: 'ABNORMAL_SPREAD' as AnomalyType,
-            severity: 'MEDIUM' as const,
-            description: `Abnormally wide spread for ${bankName} ${r.currencyTo}: ${spread.toFixed(4)}`,
-            details: { currencyTo: r.currencyTo, spread: Math.round(spread * 10000) / 10000 },
-          };
-        }
-        return null;
-      })
-      .filter((a): a is AnomalyResult => a !== null);
+    const result: AnomalyResult[] = [];
+    for (const r of rates) {
+      const spread = r.sellRate - r.buyRate;
+      if (spread < TIGHT_SPREAD) {
+        result.push({
+          type: 'ABNORMAL_SPREAD' as AnomalyType,
+          severity: 'HIGH' as const,
+          description: `Abnormally tight spread for ${bankName} ${r.currencyTo}: ${spread.toFixed(4)}`,
+          details: { currencyTo: r.currencyTo, spread: Math.round(spread * 10000) / 10000, buyRate: r.buyRate, sellRate: r.sellRate },
+        });
+      } else if (spread > WIDE_SPREAD) {
+        result.push({
+          type: 'ABNORMAL_SPREAD' as AnomalyType,
+          severity: 'MEDIUM' as const,
+          description: `Abnormally wide spread for ${bankName} ${r.currencyTo}: ${spread.toFixed(4)}`,
+          details: { currencyTo: r.currencyTo, spread: Math.round(spread * 10000) / 10000 },
+        });
+      }
+    }
+    return result;
   }
 
   private detectDuplicatedRates(rates: RawScrapedRate[], bankName: string, previousRates: RawScrapedRate[]): AnomalyResult[] {
     if (previousRates.length === 0) return [];
 
-    return rates
-      .map((r) => {
-        const prev = previousRates.find((p) => p.currencyTo === r.currencyTo);
-        if (!prev) return null;
+    const result: AnomalyResult[] = [];
+    for (const r of rates) {
+      const prev = previousRates.find((p) => p.currencyTo === r.currencyTo);
+      if (!prev) continue;
 
-        const isExactDuplicate = r.buyRate === prev.buyRate && r.sellRate === prev.sellRate;
-        if (isExactDuplicate) {
-          return {
-            type: 'DUPLICATE' as AnomalyType,
-            severity: 'MEDIUM' as const,
-            description: `Exact duplicate rate detected for ${bankName} ${r.currencyTo} — same as previous day`,
-            details: { currencyTo: r.currencyTo, buyRate: r.buyRate, sellRate: r.sellRate },
-          };
-        }
-        return null;
-      })
-      .filter((a): a is AnomalyResult => a !== null);
+      const isExactDuplicate = r.buyRate === prev.buyRate && r.sellRate === prev.sellRate;
+      if (isExactDuplicate) {
+        result.push({
+          type: 'DUPLICATE' as AnomalyType,
+          severity: 'MEDIUM' as const,
+          description: `Exact duplicate rate detected for ${bankName} ${r.currencyTo} — same as previous day`,
+          details: { currencyTo: r.currencyTo, buyRate: r.buyRate, sellRate: r.sellRate },
+        });
+      }
+    }
+    return result;
   }
 
   private detectRepeatedData(rates: RawScrapedRate[], bankName: string, previousRates: RawScrapedRate[]): AnomalyResult[] {
@@ -198,26 +193,25 @@ export class AnomalyDetectionService {
   }
 
   private detectImpossibleValues(rates: RawScrapedRate[], bankName: string): AnomalyResult[] {
-    return rates
-      .map((r) => {
-        const impossible: string[] = [];
-        if (r.buyRate < 0 || r.sellRate < 0) impossible.push('negative');
-        if (r.buyRate === 0 || r.sellRate === 0) impossible.push('zero');
-        if (r.buyRate > 10000 || r.sellRate > 10000) impossible.push('excessively high');
-        if (isNaN(r.buyRate) || isNaN(r.sellRate)) impossible.push('NaN');
-        if (!isFinite(r.buyRate) || !isFinite(r.sellRate)) impossible.push('Infinity');
+    const result: AnomalyResult[] = [];
+    for (const r of rates) {
+      const impossible: string[] = [];
+      if (r.buyRate < 0 || r.sellRate < 0) impossible.push('negative');
+      if (r.buyRate === 0 || r.sellRate === 0) impossible.push('zero');
+      if (r.buyRate > 10000 || r.sellRate > 10000) impossible.push('excessively high');
+      if (isNaN(r.buyRate) || isNaN(r.sellRate)) impossible.push('NaN');
+      if (!isFinite(r.buyRate) || !isFinite(r.sellRate)) impossible.push('Infinity');
 
-        if (impossible.length > 0) {
-          return {
-            type: 'IMPOSSIBLE_VALUE' as AnomalyType,
-            severity: 'CRITICAL' as const,
-            description: `Impossible values for ${bankName} ${r.currencyTo}: ${impossible.join(', ')}`,
-            details: { currencyTo: r.currencyTo, buyRate: r.buyRate, sellRate: r.sellRate, issues: impossible },
-          };
-        }
-        return null;
-      })
-      .filter((a): a is AnomalyResult => a !== null);
+      if (impossible.length > 0) {
+        result.push({
+          type: 'IMPOSSIBLE_VALUE' as AnomalyType,
+          severity: 'CRITICAL' as const,
+          description: `Impossible values for ${bankName} ${r.currencyTo}: ${impossible.join(', ')}`,
+          details: { currencyTo: r.currencyTo, buyRate: r.buyRate, sellRate: r.sellRate, issues: impossible },
+        });
+      }
+    }
+    return result;
   }
 
   private detectParserFailures(validationResults: RuleResult[], bankName: string): AnomalyResult[] {

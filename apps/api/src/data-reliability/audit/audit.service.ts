@@ -31,12 +31,12 @@ export class AuditService {
           action: entry.action,
           entity: entry.entity,
           entityId: entry.entityId ?? null,
-          oldValue: entry.oldValue ?? null,
-          newValue: entry.newValue ?? null,
+          oldValue: (entry.oldValue ?? undefined) as any,
+          newValue: (entry.newValue ?? undefined) as any,
           reason: entry.reason ?? null,
           ipAddress: entry.ipAddress ?? null,
           userAgent: entry.userAgent ?? null,
-          metadata: entry.metadata ?? null,
+          metadata: (entry.metadata ?? undefined) as any,
         },
       });
     } catch (error) {
