@@ -10,21 +10,44 @@ import {
   Smartphone,
   Lightbulb,
 } from "lucide-react";
+import { useMemo } from "react";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { BankAvatar } from "@/components/shared/bank-avatar";
-import { TrendIcon } from "@/components/shared/trend-icon";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
 import { InfoItem } from "@/components/shared/info-item";
 import { Pill } from "@/components/shared/pill";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { useBankBySlug, useCurrencies } from "@/hooks";
+import { formatRate, formatRelativeTime } from "@/lib/format";
+import { getRatesForBank } from "@/lib/rankings";
+import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
 
 function BankDetails() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: bank, isLoading } = useBankBySlug(slug);
+  const { data: bank, isLoading: bankLoading } = useBankBySlug(slug);
+  const {
+    data: rates = [],
+    isLoading: ratesLoading,
+    isError: ratesError,
+    error,
+    refetch: refetchRates,
+  } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
 
-  if (isLoading) {
+  const bankRates = useMemo(() => (bank ? getRatesForBank(rates, bank.name) : []), [rates, bank]);
+
+  const latestUpdate = useMemo(
+    () =>
+      bankRates.reduce<string | undefined>(
+        (latest, r) => (!latest || r.lastUpdated > latest ? r.lastUpdated : latest),
+        undefined,
+      ),
+    [bankRates],
+  );
+
+  const currencyByCode = useMemo(() => new Map(currencies.map((c) => [c.code, c])), [currencies]);
+
+  if (bankLoading) {
     return (
       <SiteShell>
         <PageContainer>{null}</PageContainer>
@@ -45,16 +68,6 @@ function BankDetails() {
     );
   }
 
-  const fxRows = currencies.map((c, i) => {
-    const variance = (i - 1) * 0.04;
-    return {
-      ...c,
-      buy: (bank.buy / (i === 0 ? 1 : 1.78 + i)).toFixed(4),
-      sell: (bank.sell / (i === 0 ? 1 : 1.78 + i)).toFixed(4),
-      trend: variance,
-    };
-  });
-
   return (
     <SiteShell>
       <PageContainer>
@@ -64,6 +77,7 @@ function BankDetails() {
             name={bank.name}
             short={bank.short}
             colorClass={bank.color}
+            logo={bankRates[0]?.logo}
             className="size-32 rounded-xl text-3xl"
           />
           <div className="flex-1 min-w-0">
@@ -85,7 +99,7 @@ function BankDetails() {
                 icon={<Clock className="size-4 text-muted-foreground" />}
                 className="bg-surface-low text-xs"
               >
-                Updated {bank.lastUpdate}
+                Updated {latestUpdate ? formatRelativeTime(latestUpdate) : "—"}
               </Pill>
             </div>
           </div>
@@ -100,48 +114,65 @@ function BankDetails() {
                 <Download className="size-4" /> CSV Export
               </button>
             </div>
-            <div className="grid grid-cols-[1.2fr_1fr_1fr_90px] gap-2 px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-              <span>Currency</span>
-              <span className="text-right">Buy (ETB)</span>
-              <span className="text-right">Sell (ETB)</span>
-              <span className="text-right">24h</span>
-            </div>
-            <ul className="mt-2 divide-y divide-border/60">
-              {fxRows.map((r) => (
-                <li
-                  key={r.code}
-                  className="grid grid-cols-[1.2fr_1fr_1fr_90px] items-center gap-2 px-3 py-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="size-9 rounded bg-surface-high text-[11px] font-bold flex items-center justify-center">
-                      {r.code}
-                    </span>
-                    <div>
-                      <p className="font-semibold text-sm">{r.label}</p>
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        {r.category}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-right tabular font-semibold">{r.buy}</span>
-                  <span className="text-right tabular font-semibold">{r.sell}</span>
-                  <span className="text-right text-sm font-semibold inline-flex items-center justify-end gap-1">
-                    <TrendIcon value={r.trend} className="size-3.5" />
-                    <span
-                      className={
-                        r.trend > 0
-                          ? "text-primary"
-                          : r.trend < 0
-                            ? "text-destructive"
-                            : "text-muted-foreground"
-                      }
-                    >
-                      {Math.abs(r.trend).toFixed(2)}%
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+
+            {ratesLoading ? (
+              <LoadingState
+                label="Loading exchange rates…"
+                hint="Fetching this bank's latest rates from the market service."
+              />
+            ) : ratesError ? (
+              <ErrorState
+                title="Unable to load exchange rates"
+                message={error instanceof Error ? error.message : undefined}
+                onRetry={() => void refetchRates()}
+              />
+            ) : bankRates.length === 0 ? (
+              <EmptyState
+                title="No exchange rates available"
+                message="This bank has not published rate data yet. Rates will appear here as soon as they are collected."
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-[1.2fr_1fr_1fr_90px] gap-2 px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  <span>Currency</span>
+                  <span className="text-right">Buy (ETB)</span>
+                  <span className="text-right">Sell (ETB)</span>
+                  <span className="text-right">24h</span>
+                </div>
+                <ul className="mt-2 divide-y divide-border/60">
+                  {bankRates.map((r) => {
+                    const meta = currencyByCode.get(r.currency);
+                    return (
+                      <li
+                        key={r.id}
+                        className="grid grid-cols-[1.2fr_1fr_1fr_90px] items-center gap-2 px-3 py-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="size-9 rounded bg-surface-high text-[11px] font-bold flex items-center justify-center">
+                            {r.currency}
+                          </span>
+                          <div>
+                            <p className="font-semibold text-sm">{meta?.label ?? r.currency}</p>
+                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                              {meta?.category ?? "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-right tabular font-semibold">
+                          {formatRate(r.cashBuying)}
+                        </span>
+                        <span className="text-right tabular font-semibold">
+                          {formatRate(r.cashSelling)}
+                        </span>
+                        <span className="text-right text-sm font-semibold text-muted-foreground">
+                          —
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
           </SurfaceCard>
 
           {/* Contact + rating */}

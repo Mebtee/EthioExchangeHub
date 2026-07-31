@@ -10,7 +10,7 @@ export function RateHero({
 }: {
   icon: ReactNode;
   label: string;
-  rate: number;
+  rate?: number;
   currency: string;
   bank: string;
   accent: "primary" | "gold";
@@ -28,8 +28,14 @@ export function RateHero({
           {icon}
         </div>
         <p className="mt-4 text-3xl font-bold tabular tracking-tight">
-          {rate.toFixed(2)}{" "}
-          <span className="text-sm text-muted-foreground font-medium">{currency}</span>
+          {typeof rate === "number" && Number.isFinite(rate) ? (
+            <>
+              {rate.toFixed(2)}{" "}
+              <span className="text-sm text-muted-foreground font-medium">{currency}</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           Available at <span className={`font-semibold ${labelColor}`}>{bank}</span>

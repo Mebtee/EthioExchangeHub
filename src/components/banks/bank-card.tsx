@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import { BankAvatar } from "@/components/shared/bank-avatar";
-import type { Bank } from "@/types/bank";
 
-export function BankCard({ bank }: { bank: Bank }) {
+import { BankAvatar } from "@/components/shared/bank-avatar";
+import { formatRelativeTime } from "@/lib/format";
+import type { Bank } from "@/types/bank";
+import type { ExchangeRate } from "@/types/exchange-rate";
+
+export function BankCard({ bank, rate }: { bank: Bank; rate: ExchangeRate }) {
   return (
     <li>
       <Link
@@ -15,6 +18,7 @@ export function BankCard({ bank }: { bank: Bank }) {
             name={bank.name}
             short={bank.short}
             colorClass={bank.color}
+            logo={rate.logo}
             className="size-11 rounded-xl"
           />
           <div className="min-w-0">
@@ -27,17 +31,19 @@ export function BankCard({ bank }: { bank: Bank }) {
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
               Buy
             </p>
-            <p className="font-bold tabular text-primary">{bank.buy.toFixed(2)}</p>
+            <p className="font-bold tabular text-primary">{rate.cashBuying.toFixed(2)}</p>
           </div>
           <div className="rounded-lg bg-surface-low p-3">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
               Sell
             </p>
-            <p className="font-bold tabular">{bank.sell.toFixed(2)}</p>
+            <p className="font-bold tabular">{rate.cashSelling.toFixed(2)}</p>
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Updated {bank.lastUpdate}</span>
+          <span className="text-muted-foreground">
+            Updated {formatRelativeTime(rate.lastUpdated)}
+          </span>
           <span className="inline-flex items-center text-primary font-semibold">
             View details <ChevronRight className="size-3.5" />
           </span>

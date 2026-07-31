@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
+
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { formatAmount } from "@/lib/format";
 import type { Currency } from "@/types/currency";
@@ -9,13 +10,14 @@ export function CurrencyConverter({
   bestBuyRate,
 }: {
   currencies: Currency[];
-  bestBuyRate: number;
+  bestBuyRate?: number;
 }) {
   const [from, setFrom] = useState("USD");
   const [to, setTo] = useState("ETB");
   const [amount, setAmount] = useState(1000);
 
-  const converted = formatAmount(amount * bestBuyRate);
+  const hasRate = typeof bestBuyRate === "number" && Number.isFinite(bestBuyRate);
+  const converted = hasRate ? formatAmount(amount * bestBuyRate) : "—";
 
   return (
     <SurfaceCard className="p-6">
@@ -69,7 +71,9 @@ export function CurrencyConverter({
       </div>
       <p className="text-xs text-muted-foreground text-center">
         Using best available rate:{" "}
-        <span className="font-semibold text-foreground">{bestBuyRate.toFixed(2)}</span>
+        <span className="font-semibold text-foreground">
+          {hasRate ? bestBuyRate.toFixed(2) : "—"}
+        </span>
       </p>
       <button className="mt-4 w-full rounded-xl bg-primary text-primary-foreground py-3 text-sm font-semibold hover:opacity-90 transition">
         Calculate Best Value

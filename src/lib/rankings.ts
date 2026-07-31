@@ -10,13 +10,13 @@ export const RATE_FIELDS: ReadonlyArray<{
   { key: "cashBuying", label: "Cash Buying", shortLabel: "Cash Buy", direction: "desc" },
   { key: "cashSelling", label: "Cash Selling", shortLabel: "Cash Sell", direction: "asc" },
   {
-    key: "transactionalBuying",
+    key: "transactionBuying",
     label: "Transactional Buying",
     shortLabel: "Trans. Buy",
     direction: "desc",
   },
   {
-    key: "transactionalSelling",
+    key: "transactionSelling",
     label: "Transactional Selling",
     shortLabel: "Trans. Sell",
     direction: "asc",
@@ -31,8 +31,37 @@ export function getRate(rate: ExchangeRate, field: RateField): number {
   return rate[field];
 }
 
+/**
+ * Keeps the most recently updated record for each bank + currency pair.
+ * A no-op when the API already returns one record per pair (the intended design).
+ */
+export function dedupeLatestRates(rates: ExchangeRate[]): ExchangeRate[] {
+  const byKey = new Map<string, ExchangeRate>();
+  for (const r of rates) {
+    const key = `${r.bankName}\u0000${r.currency}`;
+    const existing = byKey.get(key);
+    if (!existing || r.lastUpdated > existing.lastUpdated) byKey.set(key, r);
+  }
+  return Array.from(byKey.values());
+}
+
 export function getCurrencyOptions(rates: ExchangeRate[]): string[] {
   return Array.from(new Set(rates.map((r) => r.currency))).sort();
+}
+
+/**
+ * Currency used for headline displays (best buy/sell, directory cards).
+ * Prefers USD when present, otherwise the first currency returned by the API.
+ */
+export function getPrimaryCurrency(rates: ExchangeRate[]): string {
+  const currencies = getCurrencyOptions(rates);
+  return currencies.includes("USD") ? "USD" : (currencies[0] ?? "");
+}
+
+/** All rate records published by the given bank (matched by name). */
+export function getRatesForBank(rates: ExchangeRate[], bankName: string): ExchangeRate[] {
+  const name = bankName.trim().toLowerCase();
+  return rates.filter((r) => r.bankName.trim().toLowerCase() === name);
 }
 
 export interface RankingFilters {

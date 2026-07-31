@@ -4,12 +4,14 @@ export interface ExchangeRate {
   id: number;
   bankId: number;
   bankName: string;
+  /** Bank logo URL (empty string when the bank has no logo). */
+  logo: string;
   currency: string;
   cashBuying: number;
   cashSelling: number;
-  transactionalBuying: number;
-  transactionalSelling: number;
-  scrapedAt: string;
+  transactionBuying: number;
+  transactionSelling: number;
+  lastUpdated: string;
   source: RateSource;
 }
 
@@ -19,8 +21,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export type RateField =
-  "cashBuying" | "cashSelling" | "transactionalBuying" | "transactionalSelling";
+export type RateField = "cashBuying" | "cashSelling" | "transactionBuying" | "transactionSelling";
 
 export interface RankedExchangeRate extends ExchangeRate {
   rank: number;

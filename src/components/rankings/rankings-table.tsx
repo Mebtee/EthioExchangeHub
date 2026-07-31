@@ -1,5 +1,5 @@
 import { RankingRow, RANKING_GRID } from "./ranking-row";
-import { RankingsEmpty, RankingsError, RankingsLoading } from "./rankings-states";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
 import { RATE_FIELDS } from "@/lib/rankings";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
@@ -43,11 +43,25 @@ export function RankingsTable({
         </div>
 
         {isLoading ? (
-          <RankingsLoading />
+          <LoadingState
+            label="Loading live exchange rates…"
+            hint="Fetching the latest bank rates from the market service."
+          />
         ) : isError ? (
-          <RankingsError message={errorMessage} onRetry={onRetry} />
+          <ErrorState
+            title="Unable to load exchange rates"
+            message={errorMessage ?? "Something went wrong while contacting the rates service."}
+            onRetry={onRetry}
+          />
         ) : rankings.length === 0 ? (
-          <RankingsEmpty hasFilters={hasFilters} />
+          <EmptyState
+            title="No exchange rates available"
+            message={
+              hasFilters
+                ? "No banks match your current search or currency selection."
+                : "No bank has published rate data yet. Rates will appear here as soon as they are collected."
+            }
+          />
         ) : (
           <>
             <ul className="divide-y divide-border/60">

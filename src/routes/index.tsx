@@ -8,18 +8,43 @@ import { RateHero } from "@/components/home/rate-hero";
 import { LiveRankings } from "@/components/home/live-rankings";
 import { CurrencyConverter } from "@/components/home/currency-converter";
 import { FinancialNews } from "@/components/home/financial-news";
-import { useBanks, useCurrencies, useNews } from "@/hooks";
+import { getPrimaryCurrency } from "@/lib/rankings";
+import { formatRelativeTime } from "@/lib/format";
+import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
 
 function Index() {
-  const { data: banks = [] } = useBanks();
+  const { data: rates = [], isLoading, isError, error, refetch } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
   const { data: news = [] } = useNews();
 
-  const top5 = useMemo(() => [...banks].sort((a, b) => b.buy - a.buy).slice(0, 5), [banks]);
-  const bestBuy = top5[0];
-  const bestSell = [...banks].sort((a, b) => a.sell - b.sell)[0];
+  const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
-  const rate = bestBuy?.buy ?? 0;
+  const bestBuy = useMemo(
+    () =>
+      rates
+        .filter((r) => r.currency === primaryCurrency && Number.isFinite(r.cashBuying))
+        .sort((a, b) => b.cashBuying - a.cashBuying)[0],
+    [rates, primaryCurrency],
+  );
+
+  const bestSell = useMemo(
+    () =>
+      rates
+        .filter((r) => r.currency === primaryCurrency && Number.isFinite(r.cashSelling))
+        .sort((a, b) => a.cashSelling - b.cashSelling)[0],
+    [rates, primaryCurrency],
+  );
+
+  const latestUpdate = useMemo(
+    () =>
+      rates.reduce<string | undefined>(
+        (latest, r) => (!latest || r.lastUpdated > latest ? r.lastUpdated : latest),
+        undefined,
+      ),
+    [rates],
+  );
+
+  const rate = bestBuy?.cashBuying;
 
   return (
     <SiteShell>
@@ -53,7 +78,9 @@ function Index() {
             </div>
             <p className="mt-5 text-xs text-muted-foreground flex items-center gap-2">
               <RefreshCw className="size-3" /> Last Updated:{" "}
-              <span className="font-semibold text-foreground">Oct 24, 2024 — 14:30 GMT+3</span>
+              <span className="font-semibold text-foreground">
+                {latestUpdate ? formatRelativeTime(latestUpdate) : "—"}
+              </span>
             </p>
           </section>
 
@@ -62,17 +89,17 @@ function Index() {
             <RateHero
               icon={<ShoppingCart className="size-5" />}
               label="Best Buy Rate"
-              rate={bestBuy?.buy ?? 0}
-              currency={`ETB/USD`}
-              bank={bestBuy?.name ?? "—"}
+              rate={bestBuy?.cashBuying}
+              currency={`ETB/${primaryCurrency || "—"}`}
+              bank={bestBuy?.bankName ?? "—"}
               accent="primary"
             />
             <RateHero
               icon={<Tag className="size-5" />}
               label="Best Sell Rate"
-              rate={bestSell?.sell ?? 0}
-              currency="ETB/USD"
-              bank={bestSell?.name ?? "—"}
+              rate={bestSell?.cashSelling}
+              currency={`ETB/${primaryCurrency || "—"}`}
+              bank={bestSell?.bankName ?? "—"}
               accent="gold"
             />
           </section>
@@ -80,7 +107,13 @@ function Index() {
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           {/* Live rankings */}
-          <LiveRankings banks={banks} />
+          <LiveRankings
+            rates={rates}
+            isLoading={isLoading}
+            isError={isError}
+            errorMessage={error instanceof Error ? error.message : undefined}
+            onRetry={() => void refetch()}
+          />
 
           {/* Converter + news */}
           <section className="space-y-6">

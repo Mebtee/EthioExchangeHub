@@ -1,5 +1,10 @@
 export type BankType = "State Owned" | "Private Bank";
 
+/**
+ * Bank directory record from the /banks API.
+ * Note: exchange rates are NOT part of this type — they come from the
+ * exchange-rate records returned by /exchange-rates.
+ */
 export interface Bank {
   slug: string;
   name: string;
@@ -7,11 +12,6 @@ export interface Bank {
   type: BankType;
   /** Tailwind background class used for the bank's avatar/badge. */
   color: string;
-  buy: number;
-  sell: number;
-  /** Percent change, used by trend indicators. */
-  trend: number;
-  lastUpdate: string;
   established?: number;
   description?: string;
   phone?: string;
