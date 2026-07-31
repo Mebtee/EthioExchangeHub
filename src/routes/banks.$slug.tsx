@@ -21,8 +21,16 @@ import { useBankBySlug, useCurrencies } from "@/hooks";
 
 function BankDetails() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: bank } = useBankBySlug(slug);
+  const { data: bank, isLoading } = useBankBySlug(slug);
   const { data: currencies = [] } = useCurrencies();
+
+  if (isLoading) {
+    return (
+      <SiteShell>
+        <PageContainer>{null}</PageContainer>
+      </SiteShell>
+    );
+  }
 
   if (!bank) {
     return (

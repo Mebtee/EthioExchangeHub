@@ -32,3 +32,6 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# npm lockfile (project uses bun.lock)
+package-lock.json

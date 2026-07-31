@@ -1,12 +1,12 @@
-import { news, newsCategories } from "@/lib/demo-data";
+import { apiClient } from "./client";
 import type { NewsCategory, NewsItem } from "@/types/news";
 
-// TODO(backend): Replace these mocks with real API calls (e.g. GET /news).
-
 export async function fetchNews(): Promise<NewsItem[]> {
-  return news;
+  const { data } = await apiClient.get<NewsItem[]>("/news");
+  return data;
 }
 
 export async function fetchNewsCategories(): Promise<NewsCategory[]> {
-  return newsCategories;
+  const { data } = await apiClient.get<NewsCategory[]>("/news/categories");
+  return data;
 }

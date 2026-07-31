@@ -1,14 +1,9 @@
-import { apiRequest, ApiError } from "./client";
-import type { ApiResponse, ExchangeRate } from "@/types/exchange-rate";
+import { apiClient } from "./client";
+import type { ExchangeRate } from "@/types/exchange-rate";
 
 export async function fetchExchangeRates(currency?: string): Promise<ExchangeRate[]> {
-  const response = await apiRequest<ApiResponse<ExchangeRate[]>>("/exchange-rates", {
-    params: { currency },
+  const { data } = await apiClient.get<ExchangeRate[]>("/exchange-rates", {
+    params: { currency: currency || undefined },
   });
-
-  if (!response?.success) {
-    throw new ApiError(response?.message ?? "Failed to load exchange rates.");
-  }
-
-  return Array.isArray(response.data) ? response.data : [];
+  return data;
 }
