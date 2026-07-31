@@ -20,10 +20,7 @@ export interface ApiResponse<T> {
 }
 
 export type RateField =
-  | "cashBuying"
-  | "cashSelling"
-  | "transactionalBuying"
-  | "transactionalSelling";
+  "cashBuying" | "cashSelling" | "transactionalBuying" | "transactionalSelling";
 
 export interface RankedExchangeRate extends ExchangeRate {
   rank: number;

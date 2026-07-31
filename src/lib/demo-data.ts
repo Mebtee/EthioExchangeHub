@@ -1,22 +1,14 @@
-export type Bank = {
-  slug: string;
-  name: string;
-  short: string;
-  type: "State Owned" | "Private Bank";
-  color: string; // tailwind bg class
-  buy: number;
-  sell: number;
-  trend: number; // percent
-  lastUpdate: string;
-  established?: number;
-  description?: string;
-  phone?: string;
-  email?: string;
-  hq?: string;
-  rating?: number;
-  reviews?: number;
-  branches?: number;
-};
+import type { Bank } from "@/types/bank";
+import type { Currency } from "@/types/currency";
+import type { MarketTickerItem } from "@/types/market";
+import type { NewsCategory, NewsItem } from "@/types/news";
+
+/**
+ * Mock payloads used until the backend API is connected.
+ * Each dataset is exposed through a service in `lib/api/` and a
+ * TanStack Query hook, so swapping these for real network calls is a
+ * one-line change per service.
+ */
 
 export const banks: Bank[] = [
   {
@@ -161,7 +153,7 @@ export const banks: Bank[] = [
   },
 ];
 
-export const marketTicker = [
+export const marketTicker: MarketTickerItem[] = [
   { pair: "USD/ETB", value: 112.45, change: 0.2 },
   { pair: "EUR/ETB", value: 121.12, change: -0.1 },
   { pair: "GBP/ETB", value: 144.3, change: 0.5 },
@@ -169,27 +161,13 @@ export const marketTicker = [
   { pair: "CNY/ETB", value: 15.55, change: -0.3 },
 ];
 
-export const currencies = [
+export const currencies: Currency[] = [
   { code: "USD", label: "US Dollar", category: "Major" },
   { code: "EUR", label: "Euro", category: "Major" },
   { code: "GBP", label: "British Pound", category: "Major" },
   { code: "CNY", label: "Chinese Yuan", category: "Emerging" },
   { code: "AED", label: "UAE Dirham", category: "Middle East" },
 ];
-
-export type NewsItem = {
-  id: string;
-  title: string;
-  excerpt: string;
-  category: string;
-  date: string;
-  readMinutes: number;
-  image: string;
-  featured?: boolean;
-  author?: string;
-  authorRole?: string;
-  authorAvatar?: string;
-};
 
 export const news: NewsItem[] = [
   {
@@ -222,8 +200,7 @@ export const news: NewsItem[] = [
   {
     id: "n3",
     title: "Quarterly Trade Volume Reaches New Milestone",
-    excerpt:
-      "How increased export volumes are influencing the stability of the national currency.",
+    excerpt: "How increased export volumes are influencing the stability of the national currency.",
     category: "Market Report",
     date: "Oct 20, 2024",
     readMinutes: 4,
@@ -254,7 +231,7 @@ export const news: NewsItem[] = [
   },
 ];
 
-export const newsCategories = [
+export const newsCategories: NewsCategory[] = [
   { name: "All Stories", count: 42 },
   { name: "Official News", count: 12 },
   { name: "Market Trends", count: 18 },

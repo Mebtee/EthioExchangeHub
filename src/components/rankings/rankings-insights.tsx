@@ -1,4 +1,5 @@
 import { Lightbulb, Star } from "lucide-react";
+import { formatRate } from "@/lib/format";
 import { rateFieldLabel } from "@/lib/rankings";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
@@ -27,10 +28,10 @@ export function RankingsInsights({
         <div>
           <h3 className="font-semibold text-primary">Market Insight</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Across {rankings.length} bank{rankings.length === 1 ? "" : "s"} publishing{" "}
-            {currency} rates, the spread between the best and weakest{" "}
-            <span className="font-bold text-primary">"{label}"</span>{" "}
-            rate is {spread.toFixed(4)} ETB.
+            Across {rankings.length} bank{rankings.length === 1 ? "" : "s"} publishing {currency}{" "}
+            rates, the spread between the best and weakest{" "}
+            <span className="font-bold text-primary">"{label}"</span> rate is {formatRate(spread)}{" "}
+            ETB.
           </p>
         </div>
       </div>
@@ -42,11 +43,9 @@ export function RankingsInsights({
         <p className="text-[10px] uppercase tracking-wider text-[color:var(--gold-foreground)]/70 mb-3">
           Recommended for {currency} {label}
         </p>
-        <p className="text-xl font-bold text-[color:var(--gold-foreground)]">
-          {top.bankName}
-        </p>
+        <p className="text-xl font-bold text-[color:var(--gold-foreground)]">{top.bankName}</p>
         <p className="text-sm font-semibold text-[color:var(--gold-foreground)]">
-          {top.rate.toFixed(4)} ETB
+          {formatRate(top.rate)} ETB
         </p>
       </div>
     </section>

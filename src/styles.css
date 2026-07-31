@@ -73,16 +73,16 @@
 :root {
   --radius: 1rem;
   /* Premium Fiscal Growth palette */
-  --background: oklch(0.985 0.002 247);     /* #f8f9fa */
-  --foreground: oklch(0.22 0.012 230);      /* #191c1d */
+  --background: oklch(0.985 0.002 247); /* #f8f9fa */
+  --foreground: oklch(0.22 0.012 230); /* #191c1d */
   --surface: oklch(0.985 0.002 247);
-  --surface-low: oklch(0.965 0.002 247);    /* #f3f4f5 */
-  --surface-high: oklch(0.93 0.003 247);    /* #e7e8e9 */
+  --surface-low: oklch(0.965 0.002 247); /* #f3f4f5 */
+  --surface-high: oklch(0.93 0.003 247); /* #e7e8e9 */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.012 230);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.012 230);
-  --primary: oklch(0.45 0.14 148);          /* #0d631b deep green */
+  --primary: oklch(0.45 0.14 148); /* #0d631b deep green */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.94 0.005 247);
   --secondary-foreground: oklch(0.22 0.012 230);
@@ -90,14 +90,14 @@
   --muted-foreground: oklch(0.45 0.02 230);
   --accent: oklch(0.94 0.005 247);
   --accent-foreground: oklch(0.22 0.012 230);
-  --destructive: oklch(0.55 0.22 27);       /* #ba1a1a */
+  --destructive: oklch(0.55 0.22 27); /* #ba1a1a */
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.9 0.005 230);
   --input: oklch(0.9 0.005 230);
   --ring: oklch(0.45 0.14 148);
-  --gold: oklch(0.78 0.16 82);              /* #fdc003 secondary container */
+  --gold: oklch(0.78 0.16 82); /* #fdc003 secondary container */
   --gold-soft: oklch(0.95 0.07 90);
-  --gold-foreground: oklch(0.42 0.11 75);   /* #6c5000 */
+  --gold-foreground: oklch(0.42 0.11 75); /* #6c5000 */
   --success: oklch(0.55 0.16 148);
   --on-surface-variant: oklch(0.42 0.02 230);
   --chart-1: oklch(0.646 0.222 41.116);

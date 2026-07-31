@@ -1,8 +1,8 @@
-import { SiteShell, PageContainer } from "@/components/site-shell";
+import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { RankingsFilters } from "@/components/rankings/rankings-filters";
 import { RankingsTable } from "@/components/rankings/rankings-table";
 import { RankingsInsights } from "@/components/rankings/rankings-insights";
-import { useRankings } from "@/hooks/use-rankings";
+import { useRankings } from "@/hooks";
 import { rateFieldLabel } from "@/lib/rankings";
 
 function RankingsPage() {

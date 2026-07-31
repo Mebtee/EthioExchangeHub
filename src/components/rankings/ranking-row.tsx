@@ -1,24 +1,14 @@
 import { Link } from "react-router-dom";
-import {
-  RATE_FIELDS,
-  bankAccentClass,
-  bankInitial,
-  formatRelativeTime,
-  slugifyBankName,
-  sourceLabel,
-} from "@/lib/rankings";
+
+import { BankAvatar } from "@/components/shared/bank-avatar";
+import { RATE_FIELDS } from "@/lib/rankings";
+import { slugifyBankName, sourceLabel } from "@/lib/bank";
+import { formatRate, formatRelativeTime } from "@/lib/format";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
-export const RANKING_GRID =
-  "grid-cols-[60px_1.5fr_1fr_1fr_1fr_1fr_0.8fr_0.9fr_100px]";
+export const RANKING_GRID = "grid-cols-[60px_1.5fr_1fr_1fr_1fr_1fr_0.8fr_0.9fr_100px]";
 
-export function RankingRow({
-  item,
-  field,
-}: {
-  item: RankedExchangeRate;
-  field: RateField;
-}) {
+export function RankingRow({ item, field }: { item: RankedExchangeRate; field: RateField }) {
   const isTop = item.rank === 1;
 
   return (
@@ -35,31 +25,21 @@ export function RankingRow({
         {item.rank}
       </span>
       <div className="flex items-center gap-3 min-w-0">
-        <span
-          className={`size-10 rounded-full text-white font-bold flex items-center justify-center ${bankAccentClass(item.bankName)}`}
-        >
-          {bankInitial(item.bankName)}
-        </span>
+        <BankAvatar name={item.bankName} className="size-10 rounded-full" />
         <div className="min-w-0">
           <p className="font-semibold truncate">{item.bankName}</p>
-          <p className="text-xs text-muted-foreground">
-            {sourceLabel(item.source)}
-          </p>
+          <p className="text-xs text-muted-foreground">{sourceLabel(item.source)}</p>
         </div>
       </div>
       {RATE_FIELDS.map((f) => {
         const active = f.key === field;
         const value = item[f.key];
         const display =
-          typeof value === "number" && Number.isFinite(value)
-            ? value.toFixed(4)
-            : "—";
+          typeof value === "number" && Number.isFinite(value) ? formatRate(value) : "—";
         return (
           <div
             key={f.key}
-            className={`tabular font-semibold ${
-              active ? "text-primary" : "text-muted-foreground"
-            }`}
+            className={`tabular font-semibold ${active ? "text-primary" : "text-muted-foreground"}`}
           >
             {display}
             {isTop && active && (
@@ -70,12 +50,8 @@ export function RankingRow({
           </div>
         );
       })}
-      <div className="text-sm font-semibold text-muted-foreground">
-        {item.currency}
-      </div>
-      <span className="text-sm text-muted-foreground">
-        {formatRelativeTime(item.scrapedAt)}
-      </span>
+      <div className="text-sm font-semibold text-muted-foreground">{item.currency}</div>
+      <span className="text-sm text-muted-foreground">{formatRelativeTime(item.scrapedAt)}</span>
       <Link
         to={`/banks/${slugifyBankName(item.bankName)}`}
         className="ml-auto rounded-lg bg-surface-high px-4 py-2 text-xs font-semibold hover:bg-surface-high/80"

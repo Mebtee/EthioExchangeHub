@@ -1,5 +1,4 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";
 
 export class ApiError extends Error {
   constructor(
@@ -16,10 +15,7 @@ export async function apiRequest<T>(
   init?: RequestInit & { params?: Record<string, string | undefined> },
 ): Promise<T> {
   const { params, ...requestInit } = init ?? {};
-  const url = new URL(
-    `${API_BASE_URL.replace(/\/$/, "")}${path}`,
-    window.location.origin,
-  );
+  const url = new URL(`${API_BASE_URL.replace(/\/$/, "")}${path}`, window.location.origin);
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
   });
@@ -35,10 +31,7 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(
-      `Request failed with status ${response.status}.`,
-      response.status,
-    );
+    throw new ApiError(`Request failed with status ${response.status}.`, response.status);
   }
 
   return (await response.json()) as T;

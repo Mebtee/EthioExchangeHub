@@ -12,13 +12,7 @@ export function RankingsLoading() {
   );
 }
 
-export function RankingsError({
-  message,
-  onRetry,
-}: {
-  message?: string;
-  onRetry: () => void;
-}) {
+export function RankingsError({ message, onRetry }: { message?: string; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
       <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">

@@ -34,13 +34,13 @@ npm run dev   # or: bun run dev
 
 ### Scripts
 
-| Script       | Description                        |
-| ------------ | ---------------------------------- |
-| `npm run dev`    | Start the Vite dev server      |
-| `npm run build`  | Build the production bundle    |
-| `npm run preview`| Preview the production build   |
-| `npm run lint`   | Run ESLint                     |
-| `npm run format` | Format code with Prettier      |
+| Script            | Description                  |
+| ----------------- | ---------------------------- |
+| `npm run dev`     | Start the Vite dev server    |
+| `npm run build`   | Build the production bundle  |
+| `npm run preview` | Preview the production build |
+| `npm run lint`    | Run ESLint                   |
+| `npm run format`  | Format code with Prettier    |
 
 ## Configuration
 

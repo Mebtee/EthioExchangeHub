@@ -1,6 +1,7 @@
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
-import { SiteShell, PageContainer } from "@/components/site-shell";
 
+import { SiteShell, PageContainer } from "@/components/layout/site-shell";
+import { InfoItem } from "@/components/shared/info-item";
 
 function ContactPage() {
   return (
@@ -9,7 +10,8 @@ function ContactPage() {
         <div className="max-w-2xl">
           <h1 className="text-4xl font-bold tracking-tight">Get in Touch</h1>
           <p className="mt-3 text-muted-foreground">
-            Questions about our data, API access, or institutional partnerships? Our team typically responds within 24 hours.
+            Questions about our data, API access, or institutional partnerships? Our team typically
+            responds within 24 hours.
           </p>
         </div>
 
@@ -21,7 +23,9 @@ function ContactPage() {
             </div>
             <Field label="Subject" placeholder="How can we help?" />
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Message</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Message
+              </label>
               <textarea
                 rows={6}
                 placeholder="Tell us more about your inquiry..."
@@ -34,9 +38,24 @@ function ContactPage() {
           </form>
 
           <aside className="space-y-4">
-            <ContactCard icon={<Mail className="size-5 text-primary" />} label="Email" value="support@ethioexchange.com" />
-            <ContactCard icon={<Phone className="size-5 text-primary" />} label="Phone" value="+251 11 555 0103" />
-            <ContactCard icon={<MapPin className="size-5 text-primary" />} label="Headquarters" value="Bole Road, Addis Ababa, Ethiopia" />
+            <InfoItem
+              variant="card"
+              icon={<Mail className="size-5 text-primary" />}
+              label="Email"
+              value="support@ethioexchange.com"
+            />
+            <InfoItem
+              variant="card"
+              icon={<Phone className="size-5 text-primary" />}
+              label="Phone"
+              value="+251 11 555 0103"
+            />
+            <InfoItem
+              variant="card"
+              icon={<MapPin className="size-5 text-primary" />}
+              label="Headquarters"
+              value="Bole Road, Addis Ababa, Ethiopia"
+            />
             <div className="rounded-2xl bg-primary text-primary-foreground p-6">
               <MessageCircle className="size-6" />
               <h3 className="mt-3 font-semibold">Live Chat</h3>
@@ -51,27 +70,25 @@ function ContactPage() {
   );
 }
 
-function Field({ label, type = "text", placeholder }: { label: string; type?: string; placeholder?: string }) {
+function Field({
+  label,
+  type = "text",
+  placeholder,
+}: {
+  label: string;
+  type?: string;
+  placeholder?: string;
+}) {
   return (
     <div>
-      <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+        {label}
+      </label>
       <input
         type={type}
         placeholder={placeholder}
         className="w-full rounded-xl border border-border bg-surface-low px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
       />
-    </div>
-  );
-}
-
-function ContactCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-card border border-border/60 p-5 flex items-start gap-4">
-      <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">{icon}</div>
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
-        <p className="text-sm font-semibold mt-1">{value}</p>
-      </div>
     </div>
   );
 }

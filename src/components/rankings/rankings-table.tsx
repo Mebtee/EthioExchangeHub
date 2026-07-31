@@ -42,26 +42,26 @@ export function RankingsTable({
           <span className="text-right">Action</span>
         </div>
 
-      {isLoading ? (
-        <RankingsLoading />
-      ) : isError ? (
-        <RankingsError message={errorMessage} onRetry={onRetry} />
-      ) : rankings.length === 0 ? (
-        <RankingsEmpty hasFilters={hasFilters} />
-      ) : (
-        <>
-          <ul className="divide-y divide-border/60">
-            {rankings.map((item) => (
-              <RankingRow key={item.id} item={item} field={field} />
-            ))}
-          </ul>
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border/60">
-            <span className="text-sm text-muted-foreground">
-              Showing 1 to {rankings.length} of {totalBanks} banks
-            </span>
-          </div>
-        </>
-      )}
+        {isLoading ? (
+          <RankingsLoading />
+        ) : isError ? (
+          <RankingsError message={errorMessage} onRetry={onRetry} />
+        ) : rankings.length === 0 ? (
+          <RankingsEmpty hasFilters={hasFilters} />
+        ) : (
+          <>
+            <ul className="divide-y divide-border/60">
+              {rankings.map((item) => (
+                <RankingRow key={item.id} item={item} field={field} />
+              ))}
+            </ul>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border/60">
+              <span className="text-sm text-muted-foreground">
+                Showing 1 to {rankings.length} of {totalBanks} banks
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

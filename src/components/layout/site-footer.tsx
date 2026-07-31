@@ -8,8 +8,8 @@ export function SiteFooter() {
         <div>
           <div className="text-xl font-bold text-primary mb-3">Ethio Exchange</div>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Empowering the Ethiopian financial landscape with real-time exchange
-            insights and secure banking aggregation.
+            Empowering the Ethiopian financial landscape with real-time exchange insights and secure
+            banking aggregation.
           </p>
           <div className="mt-5 flex gap-3">
             {[Globe, AtSign, Share2].map((Icon, i) => (
@@ -23,26 +23,38 @@ export function SiteFooter() {
             ))}
           </div>
         </div>
-        <FooterCol title="Quick Links" links={[
-          { to: "/", label: "Rates" },
-          { to: "/banks", label: "Banks" },
-          { to: "/news", label: "News" },
-        ]} />
-        <FooterCol title="About" links={[
-          { to: "/about", label: "Our Story" },
-          { to: "/about", label: "Methodology" },
-          { to: "/about", label: "Privacy" },
-        ]} />
-        <FooterCol title="Contact" links={[
-          { to: "/contact", label: "Support" },
-          { to: "/contact", label: "API Access" },
-          { to: "/contact", label: "Feedback" },
-        ]} />
-        <FooterCol title="Legal" links={[
-          { to: "/about", label: "Terms of Service" },
-          { to: "/about", label: "Privacy Policy" },
-          { to: "/about", label: "Disclaimer" },
-        ]} />
+        <FooterCol
+          title="Quick Links"
+          links={[
+            { to: "/", label: "Rates" },
+            { to: "/banks", label: "Banks" },
+            { to: "/news", label: "News" },
+          ]}
+        />
+        <FooterCol
+          title="About"
+          links={[
+            { to: "/about", label: "Our Story" },
+            { to: "/about", label: "Methodology" },
+            { to: "/about", label: "Privacy" },
+          ]}
+        />
+        <FooterCol
+          title="Contact"
+          links={[
+            { to: "/contact", label: "Support" },
+            { to: "/contact", label: "API Access" },
+            { to: "/contact", label: "Feedback" },
+          ]}
+        />
+        <FooterCol
+          title="Legal"
+          links={[
+            { to: "/about", label: "Terms of Service" },
+            { to: "/about", label: "Privacy Policy" },
+            { to: "/about", label: "Disclaimer" },
+          ]}
+        />
       </div>
       <div className="border-t border-border/60 py-5 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} Ethio Exchange. All rights reserved.
@@ -51,13 +63,7 @@ export function SiteFooter() {
   );
 }
 
-function FooterCol({
-  title,
-  links,
-}: {
-  title: string;
-  links: { to: string; label: string }[];
-}) {
+function FooterCol({ title, links }: { title: string; links: { to: string; label: string }[] }) {
   return (
     <div>
       <h5 className="text-primary font-semibold mb-3 text-sm">{title}</h5>

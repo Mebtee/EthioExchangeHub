@@ -8,14 +8,13 @@ export function useRankings() {
   const [currency, setCurrency] = useState<string>("");
   const [query, setQuery] = useState("");
 
-  const { data, isLoading, isError, error, refetch, isFetching } =
-    useExchangeRates();
+  const { data, isLoading, isError, error, refetch, isFetching } = useExchangeRates();
 
   const rates = useMemo(() => data ?? [], [data]);
   const currencies = useMemo(() => getCurrencyOptions(rates), [rates]);
 
   const activeCurrency =
-    currency && currencies.includes(currency) ? currency : currencies[0] ?? "";
+    currency && currencies.includes(currency) ? currency : (currencies[0] ?? "");
 
   const rankings = useMemo(
     () => buildRankings(rates, { field, currency: activeCurrency, query }),
@@ -26,9 +25,7 @@ export function useRankings() {
   const totalBanks = useMemo(
     () =>
       rates.filter(
-        (r) =>
-          (activeCurrency ? r.currency === activeCurrency : true) &&
-          Number.isFinite(r[field]),
+        (r) => (activeCurrency ? r.currency === activeCurrency : true) && Number.isFinite(r[field]),
       ).length,
     [rates, activeCurrency, field],
   );
