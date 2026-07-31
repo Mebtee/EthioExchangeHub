@@ -1,0 +1,61 @@
+# Ethio Exchange
+
+Ethio Exchange is a web application that aggregates real-time foreign exchange
+rates from Ethiopian banks, plus rankings, market insights, and banking news.
+
+## Features
+
+- **Exchange rates**: live FX rates across Ethiopian banks, with a scrolling market ticker
+- **Bank directory**: browse banks and view detailed rate pages per bank
+- **Rankings**: compare banks on buying/selling rates with filters and insights
+- **News & notifications**: latest banking news and rate alerts
+- **Responsive UI**: built with React 19, Tailwind CSS 4, and shadcn/ui components
+
+## Tech stack
+
+- [React](https://react.dev) 19 + [React Router](https://reactrouter.com) 7
+- [Vite](https://vitejs.dev) 8 with the React and Tailwind plugins
+- [Tailwind CSS](https://tailwindcss.com) 4
+- [TanStack Query](https://tanstack.com/query) for data fetching
+- [shadcn/ui](https://ui.shadcn.com) components (Radix UI primitives)
+- [Bun](https://bun.sh) as the package manager and lockfile tool
+
+## Getting started
+
+Requirements: [Node.js](https://nodejs.org) 20+ or [Bun](https://bun.sh).
+
+```sh
+# Install dependencies
+npm install   # or: bun install
+
+# Start the development server (http://localhost:8080)
+npm run dev   # or: bun run dev
+```
+
+### Scripts
+
+| Script       | Description                        |
+| ------------ | ---------------------------------- |
+| `npm run dev`    | Start the Vite dev server      |
+| `npm run build`  | Build the production bundle    |
+| `npm run preview`| Preview the production build   |
+| `npm run lint`   | Run ESLint                     |
+| `npm run format` | Format code with Prettier      |
+
+## Configuration
+
+The app reads an optional `VITE_API_BASE_URL` environment variable to point at
+the exchange-rate backend. When unset, it falls back to
+`http://localhost:5000/api`. See `src/lib/api/client.ts` for details.
+
+## Project structure
+
+```
+src/
+  components/   Reusable UI components (layout, ticker, rankings, shadcn/ui)
+  hooks/        Custom React hooks (rankings, exchange rates, mobile)
+  lib/          API client, demo data, and utilities
+  routes/       Page-level route components
+  types/        Shared TypeScript types
+  styles.css    Global styles and Tailwind entry point
+```
