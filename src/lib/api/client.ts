@@ -1,6 +1,13 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 
-import { getAccessToken } from "@/lib/auth-token";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  isTokenExpired,
+  SESSION_EXPIRED_EVENT,
+  setTokens,
+} from "@/lib/auth-token";
 import { config } from "@/lib/config";
 import type { ApiResponse } from "@/types/exchange-rate";
 
@@ -80,6 +87,35 @@ function toApiError(error: unknown): ApiError {
     : new ApiError("An unexpected error occurred.");
 }
 
+interface RetriableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+/** Single-flight refresh so concurrent 401s trigger one /auth/refresh call. */
+let refreshPromise: Promise<boolean> | null = null;
+
+async function refreshAccessTokenOnce(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken || isTokenExpired(refreshToken)) return false;
+
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const { refreshTokens } = await import("./auth");
+      const tokens = await refreshTokens(refreshToken);
+      setTokens(tokens);
+      return true;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+/** Lets the auth context drop its user when a refresh fails. */
+function dispatchSessionExpired(): void {
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+}
+
 // ---- Response interceptor: unwrap the envelope + normalize errors ----
 apiClient.interceptors.response.use(
   (response) => {
@@ -93,5 +129,27 @@ apiClient.interceptors.response.use(
     }
     return response;
   },
-  (error: unknown) => Promise.reject(toApiError(error)),
+  async (error: unknown) => {
+    const apiError = toApiError(error);
+    const config = (error as { config?: RetriableRequestConfig })?.config;
+    const isRefreshRequest = config?.url?.includes("/auth/refresh") ?? false;
+
+    // Attempt a single token refresh on 401, then replay the original request.
+    // Never retry the refresh request itself (avoids a self-referencing loop).
+    if (apiError.status === 401 && config && !config._retry && !isRefreshRequest) {
+      config._retry = true;
+      try {
+        const refreshed = await refreshAccessTokenOnce();
+        if (refreshed) {
+          return apiClient(config);
+        }
+      } catch {
+        // Fall through — clear tokens and surface the original 401.
+      }
+      clearTokens();
+      dispatchSessionExpired();
+    }
+
+    return Promise.reject(apiError);
+  },
 );

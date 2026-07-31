@@ -13,6 +13,20 @@ export function formatRelativeTime(iso: string): string {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
+/** Relative time for a scheduled (future) or past timestamp. */
+export function formatRelativeSchedule(iso: string): string {
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return "—";
+  const diffMinutes = Math.floor((time - Date.now()) / 60000);
+  if (diffMinutes > 0) {
+    if (diffMinutes < 60) return `in ${diffMinutes} min`;
+    const hours = Math.floor(diffMinutes / 60);
+    if (hours < 24) return `in ${hours} hour${hours === 1 ? "" : "s"}`;
+    return `in ${Math.floor(hours / 24)} day${Math.floor(hours / 24) === 1 ? "" : "s"}`;
+  }
+  return formatRelativeTime(iso);
+}
+
 /** Four-decimal rate display used across ranking surfaces. */
 export function formatRate(value: number): string {
   return value.toFixed(4);
