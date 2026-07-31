@@ -21,13 +21,18 @@ export function useRankings() {
     [rates, field, activeCurrency, query],
   );
 
-  /** Banks with a published rate for the active field and currency. */
+  const search = query.trim().toLowerCase();
+
+  /** Banks with a published rate for the active field, currency, and search. */
   const totalBanks = useMemo(
     () =>
       rates.filter(
-        (r) => (activeCurrency ? r.currency === activeCurrency : true) && Number.isFinite(r[field]),
+        (r) =>
+          (activeCurrency ? r.currency === activeCurrency : true) &&
+          Number.isFinite(r[field]) &&
+          (search ? r.bankName.toLowerCase().includes(search) : true),
       ).length,
-    [rates, activeCurrency, field],
+    [rates, activeCurrency, field, search],
   );
 
   return {

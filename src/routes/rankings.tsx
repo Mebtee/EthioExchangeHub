@@ -51,7 +51,7 @@ function RankingsPage() {
           isLoading={isLoading}
           isError={isError}
           errorMessage={error instanceof Error ? error.message : undefined}
-          hasFilters={Boolean(query.trim())}
+          hasFilters={Boolean(query.trim()) || Boolean(currency)}
           onRetry={() => void refetch()}
         />
 
