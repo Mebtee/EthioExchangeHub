@@ -1,0 +1,7 @@
+# Reserved for Phase 2+.
+
+# controllers/  — request/response layer (thin): validate -> call service -> send ApiResponse
+# services/    — business logic: exchange-rate resolution (manual > scraper), freshness filtering
+# repositories/— data access: Supabase (PostgreSQL) queries. No SQL in services/controllers.
+# routes/      — Express routers: one per resource, mounted under /api/v1 in app.ts
+# validators/  — Zod schemas per route; validated in controllers (never in repositories)
