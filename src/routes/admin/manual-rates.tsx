@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, Plus, TriangleAlert, Trash2 } from "lucide-react";
 
 import { DataTable } from "@/components/admin/data-table";
@@ -26,13 +26,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useMockFetch } from "@/hooks/use-mock-fetch";
-import {
-  BANK_OPTIONS,
-  CURRENCY_OPTIONS,
-  MANUAL_RATES,
-  type ManualRate,
-} from "@/lib/admin/mock-data";
+import { useManualRates } from "@/hooks/use-admin";
+import { BANK_OPTIONS, CURRENCY_OPTIONS } from "@/mocks/admin";
+import type { ManualRate } from "@/types/admin";
 import { formatRate, formatRelativeTime } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -77,8 +73,19 @@ function parseRateForm(form: RateFormState): ManualRate | null {
 }
 
 export default function AdminManualRatesPage() {
-  const { data, isLoading } = useMockFetch(() => MANUAL_RATES);
-  const [rates, setRates] = useState<ManualRate[]>(MANUAL_RATES);
+  const { data, isLoading } = useManualRates();
+  const [rates, setRates] = useState<ManualRate[]>([]);
+  const hydrated = useRef(false);
+
+  // Hydrate the working copy from the data source (mock data today, the real
+  // API once VITE_USE_MOCKS=false). Only seeds once so local add/edit/delete
+  // edits are never clobbered by a later refetch.
+  useEffect(() => {
+    if (data && !hydrated.current) {
+      hydrated.current = true;
+      setRates(data);
+    }
+  }, [data]);
   const [query, setQuery] = useState("");
   const [currency, setCurrency] = useState("ALL");
 

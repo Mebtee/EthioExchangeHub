@@ -16,14 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useMockFetch } from "@/hooks/use-mock-fetch";
-import { ADMIN_SETTINGS } from "@/lib/admin/mock-data";
+import { useAdminSettings } from "@/hooks/use-admin";
+import { ADMIN_SETTINGS } from "@/mocks/admin";
+import { CURRENCIES } from "@/mocks/currencies";
 import { toast } from "sonner";
 
-const CURRENCIES = ["USD", "EUR", "GBP", "AED", "SAR", "KES"];
 
 export default function AdminSettingsPage() {
-  const { data } = useMockFetch(() => ADMIN_SETTINGS);
+  const { data } = useAdminSettings();
   const settings = data ?? ADMIN_SETTINGS;
 
   const [siteName, setSiteName] = useState(settings.siteName);

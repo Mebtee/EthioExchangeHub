@@ -6,10 +6,8 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { slugifyBankName, sourceLabel } from "@/lib/bank";
 import { getCurrencyOptions } from "@/lib/rankings";
+import { PREFERRED_TABS } from "@/mocks/currencies";
 import type { ExchangeRate } from "@/types/exchange-rate";
-
-/** Preferred tab order; filtered to currencies actually returned by the API. */
-const PREFERRED_TABS = ["USD", "EUR", "GBP"];
 
 export function LiveRankings({
   rates,

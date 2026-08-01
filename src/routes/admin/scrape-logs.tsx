@@ -4,8 +4,9 @@ import { DataTable } from "@/components/admin/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { SearchInput } from "@/components/shared/search-input";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { useMockFetch } from "@/hooks/use-mock-fetch";
-import { SCRAPE_LOGS, type LogStatus, type ScrapeLog } from "@/lib/admin/mock-data";
+import { useScrapeLogs } from "@/hooks/use-admin";
+import { SCRAPE_LOGS } from "@/mocks/admin";
+import type { LogStatus, ScrapeLog } from "@/types/admin";
 import { formatAmount, formatRelativeTime } from "@/lib/format";
 
 const STATUS_FILTERS: Array<"ALL" | LogStatus> = ["ALL", "success", "warning", "error"];
@@ -17,7 +18,7 @@ function logTone(status: LogStatus) {
 }
 
 export default function AdminScrapeLogsPage() {
-  const { data, isLoading } = useMockFetch(() => SCRAPE_LOGS);
+  const { data, isLoading } = useScrapeLogs();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | LogStatus>("ALL");
 

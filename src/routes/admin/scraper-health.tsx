@@ -5,8 +5,9 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useMockFetch } from "@/hooks/use-mock-fetch";
-import { SCRAPERS, type ScraperHealth } from "@/lib/admin/mock-data";
+import { useScraperHealth } from "@/hooks/use-admin";
+import { SCRAPERS } from "@/mocks/admin";
+import type { ScraperHealth } from "@/types/admin";
 import { formatAmount, formatRelativeSchedule, formatRelativeTime } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -17,7 +18,7 @@ function statusTone(status: ScraperHealth["status"]) {
 }
 
 export default function AdminScraperHealthPage() {
-  const { data, isLoading } = useMockFetch(() => SCRAPERS);
+  const { data, isLoading } = useScraperHealth();
   const scrapers = data ?? SCRAPERS;
 
   const counts = {

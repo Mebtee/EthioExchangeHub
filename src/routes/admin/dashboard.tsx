@@ -13,9 +13,10 @@ import {
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { useMockFetch } from "@/hooks/use-mock-fetch";
-import { DASHBOARD_STATS, RATE_TREND, SCRAPE_LOGS, type ScrapeLog } from "@/lib/admin/mock-data";
+import { useDashboardStats, useRateTrend, useScrapeLogs } from "@/hooks/use-admin";
+import { DASHBOARD_STATS, RATE_TREND } from "@/mocks/admin";
 import { formatRelativeTime } from "@/lib/format";
+import type { ScrapeLog } from "@/types/admin";
 
 const STAT_ICONS = [Building2, Coins, Activity, ShieldCheck] as const;
 const STAT_TONES = ["primary", "gold", "neutral", "success"] as const;
@@ -27,8 +28,9 @@ function logTone(status: ScrapeLog["status"]) {
 }
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading } = useMockFetch(() => DASHBOARD_STATS);
-  const { data: recentLogs } = useMockFetch(() => SCRAPE_LOGS.slice(0, 5));
+  const { data: stats, isLoading } = useDashboardStats();
+  const { data: trend } = useRateTrend();
+  const { data: recentLogs } = useScrapeLogs();
 
   return (
     <div className="space-y-8">
@@ -76,7 +78,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={RATE_TREND} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <AreaChart data={trend ?? RATE_TREND} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="buyFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -136,7 +138,7 @@ export default function AdminDashboardPage() {
             <h2 className="font-semibold">Recent activity</h2>
           </div>
           <ul className="flex-1 divide-y divide-border/60">
-            {(recentLogs ?? []).map((log) => (
+            {(recentLogs ?? []).slice(0, 5).map((log) => (
               <li key={log.id} className="flex items-start gap-3 px-6 py-3.5">
                 <StatusBadge tone={logTone(log.status)} className="mt-0.5 shrink-0">
                   {log.status}

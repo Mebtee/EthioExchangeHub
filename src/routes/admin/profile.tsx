@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useMockFetch } from "@/hooks/use-mock-fetch";
-import { ADMIN_PROFILE } from "@/lib/admin/mock-data";
+import { useAdminProfile } from "@/hooks/use-admin";
+import { ADMIN_PROFILE } from "@/mocks/admin";
 import { formatRelativeTime } from "@/lib/format";
 import { toast } from "sonner";
 
 export default function AdminProfilePage() {
-  const { data, isLoading } = useMockFetch(() => ADMIN_PROFILE);
+  const { data, isLoading } = useAdminProfile();
   const profile = data ?? ADMIN_PROFILE;
 
   const [name, setName] = useState(profile.name);

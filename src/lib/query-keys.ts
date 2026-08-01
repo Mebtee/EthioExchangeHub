@@ -25,3 +25,14 @@ export const marketTickerKeys = {
   all: ["market-ticker"] as const,
   lists: () => [...marketTickerKeys.all, "list"] as const,
 };
+
+export const adminKeys = {
+  all: ["admin"] as const,
+  dashboard: () => [...adminKeys.all, "dashboard"] as const,
+  rateTrend: () => [...adminKeys.all, "rate-trend"] as const,
+  manualRates: () => [...adminKeys.all, "manual-rates"] as const,
+  scrapeLogs: () => [...adminKeys.all, "scrape-logs"] as const,
+  scraperHealth: () => [...adminKeys.all, "scraper-health"] as const,
+  profile: () => [...adminKeys.all, "profile"] as const,
+  settings: () => [...adminKeys.all, "settings"] as const,
+};

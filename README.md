@@ -48,6 +48,20 @@ The app reads an optional `VITE_API_BASE_URL` environment variable to point at
 the exchange-rate backend. When unset, it falls back to
 `http://localhost:5000/api`. See `src/lib/api/client.ts` for details.
 
+### Mock data mode
+
+While the backend is under development, the admin UI is powered by mock data
+isolated in `src/mocks/`. Set `VITE_USE_MOCKS=true` (the default) to keep
+using mocks, or `VITE_USE_MOCKS=false` once the backend endpoints exist — the
+TanStack Query hooks in `src/hooks/use-admin.ts` switch over to the real API
+(`src/lib/api/admin.ts`) without any component changes.
+
+**Endpoint availability (verified):** `GET /api/exchange-rates` is wired to
+the real API (no mock). The admin endpoints (`/api/admin/dashboard`,
+`/api/admin/manual-rates`, `/api/admin/scraper-health`, `/api/admin/scrape-logs`)
+are not available yet, so their hooks keep serving mock data and are marked
+with `TODO` until the backend exposes them.
+
 ## Project structure
 
 ```

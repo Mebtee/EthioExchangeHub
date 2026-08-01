@@ -1,7 +1,27 @@
 /**
- * Temporary mock data for the Admin Dashboard UI.
- * Replace with real API calls once the admin endpoints are wired up.
+ * Mock data for the Admin Dashboard UI.
+ *
+ * All mock data lives in the dedicated `src/mocks/` directory so it stays
+ * isolated from production components.
+ *
+ * RETENTION STATUS (verified): the corresponding backend endpoints
+ * (GET /api/admin/dashboard, /api/admin/manual-rates,
+ * /api/admin/scraper-health, /api/admin/scrape-logs) are NOT available yet —
+ * no backend is running and the workspace Express backend exposes no admin
+ * routes. Per project decision these mocks are retained and marked `TODO` in
+ * `src/hooks/use-admin.ts` until each endpoint ships; then set
+ * `VITE_USE_MOCKS=false` to switch the hooks to the real API responses.
  */
+
+import type {
+  AdminProfile,
+  AdminSettings,
+  DashboardStat,
+  ManualRate,
+  RateTrendPoint,
+  ScrapeLog,
+  ScraperHealth,
+} from "@/types/admin";
 
 export const BANK_OPTIONS = [
   "Commercial Bank of Ethiopia",
@@ -24,25 +44,12 @@ const daysAgo = (d: number) => hoursAgo(d * 24);
 
 /* ---------------------------------- Dashboard ---------------------------------- */
 
-export interface DashboardStat {
-  label: string;
-  value: string;
-  delta: string;
-  direction: "up" | "down" | "neutral";
-}
-
 export const DASHBOARD_STATS: DashboardStat[] = [
   { label: "Banks Tracked", value: "18", delta: "+2 this month", direction: "up" },
   { label: "Active Rates", value: "1,240", delta: "+8.4% vs last week", direction: "up" },
   { label: "Scrapers Online", value: "6 / 7", delta: "1 degraded", direction: "neutral" },
   { label: "Scrape Success", value: "97.3%", delta: "+0.6 pts", direction: "up" },
 ];
-
-export interface RateTrendPoint {
-  label: string;
-  cashBuying: number;
-  cashSelling: number;
-}
 
 export const RATE_TREND: RateTrendPoint[] = [
   { label: "Mon", cashBuying: 129.42, cashSelling: 130.61 },
@@ -55,20 +62,6 @@ export const RATE_TREND: RateTrendPoint[] = [
 ];
 
 /* ------------------------------ Manual Exchange Rates ----------------------------- */
-
-export type RateSource = "manual" | "scraper";
-
-export interface ManualRate {
-  id: number;
-  bankName: string;
-  currency: string;
-  cashBuying: number;
-  cashSelling: number;
-  transactionBuying: number;
-  transactionSelling: number;
-  lastUpdated: string;
-  source: RateSource;
-}
 
 export const MANUAL_RATES: ManualRate[] = [
   {
@@ -163,20 +156,6 @@ export const MANUAL_RATES: ManualRate[] = [
 
 /* --------------------------------- Scraper Health --------------------------------- */
 
-export type ScraperStatus = "healthy" | "degraded" | "offline";
-
-export interface ScraperHealth {
-  id: number;
-  name: string;
-  bank: string;
-  status: ScraperStatus;
-  successRate: number;
-  lastRun: string;
-  nextRun: string;
-  records: number;
-  avgDurationMs: number;
-}
-
 export const SCRAPERS: ScraperHealth[] = [
   {
     id: 1,
@@ -258,19 +237,6 @@ export const SCRAPERS: ScraperHealth[] = [
 ];
 
 /* ---------------------------------- Scrape Logs ---------------------------------- */
-
-export type LogStatus = "success" | "warning" | "error";
-
-export interface ScrapeLog {
-  id: number;
-  timestamp: string;
-  scraper: string;
-  bank: string;
-  status: LogStatus;
-  records: number;
-  durationMs: number;
-  message: string;
-}
 
 export const SCRAPE_LOGS: ScrapeLog[] = [
   {
@@ -417,7 +383,7 @@ export const SCRAPE_LOGS: ScrapeLog[] = [
 
 /* ---------------------------------- Profile & Settings ---------------------------------- */
 
-export const ADMIN_PROFILE = {
+export const ADMIN_PROFILE: AdminProfile = {
   name: "Ethio Exchange Admin",
   email: "admin@ethioexchange.dev",
   role: "Super Admin",
@@ -426,7 +392,7 @@ export const ADMIN_PROFILE = {
   lastLogin: hoursAgo(2),
 };
 
-export const ADMIN_SETTINGS = {
+export const ADMIN_SETTINGS: AdminSettings = {
   siteName: "Ethio Exchange Hub",
   defaultCurrency: "USD",
   refreshInterval: "15",
