@@ -5,24 +5,19 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { SearchInput } from "@/components/shared/search-input";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { useScrapeLogs } from "@/hooks/use-admin";
-import { SCRAPE_LOGS } from "@/mocks/admin";
-import type { LogStatus, ScrapeLog } from "@/types/admin";
-import { formatAmount, formatRelativeTime } from "@/lib/format";
+import type { LogStatus } from "@/types/admin";
+import { formatCountOrDash, formatDurationMs, formatRelativeTime } from "@/lib/format";
+import { logStatusTone } from "@/lib/status";
 
 const STATUS_FILTERS: Array<"ALL" | LogStatus> = ["ALL", "success", "warning", "error"];
-
-function logTone(status: LogStatus) {
-  if (status === "success") return "success" as const;
-  if (status === "warning") return "warning" as const;
-  return "danger" as const;
-}
 
 export default function AdminScrapeLogsPage() {
   const { data, isLoading } = useScrapeLogs();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | LogStatus>("ALL");
 
-  const logs = data ?? SCRAPE_LOGS;
+  // Stable reference so the filter memo below doesn't recompute each render.
+  const logs = useMemo(() => data ?? [], [data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -98,22 +93,20 @@ export default function AdminScrapeLogsPage() {
             {
               key: "status",
               header: "Status",
-              cell: (log) => <StatusBadge tone={logTone(log.status)}>{log.status}</StatusBadge>,
+              cell: (log) => <StatusBadge tone={logStatusTone(log.status)}>{log.status}</StatusBadge>,
             },
             {
               key: "records",
               header: "Records",
               cell: (log) => (
-                <span className="tabular">{log.records > 0 ? formatAmount(log.records) : "—"}</span>
+                <span className="tabular">{formatCountOrDash(log.records)}</span>
               ),
             },
             {
               key: "duration",
               header: "Duration",
               cell: (log) => (
-                <span className="tabular">
-                  {log.durationMs > 0 ? `${(log.durationMs / 1000).toFixed(1)}s` : "—"}
-                </span>
+                <span className="tabular">{formatDurationMs(log.durationMs)}</span>
               ),
             },
             {

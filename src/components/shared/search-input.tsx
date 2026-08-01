@@ -1,12 +1,15 @@
+import type { InputHTMLAttributes } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type InputType = Extract<InputHTMLAttributes<HTMLInputElement>["type"], string>;
 
 interface SearchInputProps {
   placeholder?: string;
   value?: string;
   onChange?: (value: string) => void;
   /** HTML input type; defaults to "search" to match the original markup. */
-  type?: string;
+  type?: InputType;
   /** Outer wrapper classes (controls width/position). */
   wrapperClassName?: string;
   /** Input classes (e.g. "pl-10 pr-4 py-2.5"). */

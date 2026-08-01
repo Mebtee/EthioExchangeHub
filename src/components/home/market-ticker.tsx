@@ -1,16 +1,23 @@
+import { useMemo } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { useMarketTicker } from "@/hooks";
 
 export function MarketTicker() {
   const { data = [] } = useMarketTicker();
-  const items = [...data, ...data, ...data];
+
+  // Tripled for a seamless loop; memoized so the marquee doesn't rebuild each render.
+  const items = useMemo(() => [...data, ...data, ...data], [data]);
+
   return (
-    <div className="overflow-hidden bg-foreground text-background border-y border-border/40">
-      <div className="flex gap-12 py-3 animate-[ee-marquee_40s_linear_infinite] whitespace-nowrap">
+    <div
+      className="overflow-hidden bg-foreground text-background border-y border-border/40"
+      aria-hidden="true"
+    >
+      <div className="flex gap-12 py-3 animate-[ee-marquee_40s_linear_infinite] whitespace-nowrap ee-marquee">
         {items.map((t, i) => {
           const up = t.change >= 0;
           return (
-            <div key={i} className="flex items-center gap-2 text-sm font-medium tabular pl-12">
+            <div key={`${t.pair}-${i}`} className="flex items-center gap-2 text-sm font-medium tabular pl-12">
               <span className="text-background/70">{t.pair}</span>
               <span className="font-semibold">{t.value.toFixed(2)}</span>
               <span
@@ -27,7 +34,6 @@ export function MarketTicker() {
           );
         })}
       </div>
-      <style>{`@keyframes ee-marquee { from { transform: translateX(0)} to { transform: translateX(-33.333%)}}`}</style>
     </div>
   );
 }

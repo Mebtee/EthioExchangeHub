@@ -19,7 +19,7 @@ import { InfoItem } from "@/components/shared/info-item";
 import { Pill } from "@/components/shared/pill";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { formatRate, formatRelativeTime } from "@/lib/format";
-import { getRatesForBank } from "@/lib/rankings";
+import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
 
 function BankDetails() {
@@ -36,14 +36,7 @@ function BankDetails() {
 
   const bankRates = useMemo(() => (bank ? getRatesForBank(rates, bank.name) : []), [rates, bank]);
 
-  const latestUpdate = useMemo(
-    () =>
-      bankRates.reduce<string | undefined>(
-        (latest, r) => (!latest || r.lastUpdated > latest ? r.lastUpdated : latest),
-        undefined,
-      ),
-    [bankRates],
-  );
+  const latestUpdate = useMemo(() => getLatestUpdate(bankRates), [bankRates]);
 
   const currencyByCode = useMemo(() => new Map(currencies.map((c) => [c.code, c])), [currencies]);
 

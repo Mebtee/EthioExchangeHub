@@ -1,14 +1,21 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 
 import { BankAvatar } from "@/components/shared/bank-avatar";
 import { RATE_FIELDS } from "@/lib/rankings";
 import { slugifyBankName, sourceLabel } from "@/lib/bank";
-import { formatRate, formatRelativeTime } from "@/lib/format";
+import { formatRateOrDash, formatRelativeTime } from "@/lib/format";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
 export const RANKING_GRID = "grid-cols-[60px_1.5fr_1fr_1fr_1fr_1fr_0.8fr_0.9fr_100px]";
 
-export function RankingRow({ item, field }: { item: RankedExchangeRate; field: RateField }) {
+export const RankingRow = memo(function RankingRow({
+  item,
+  field,
+}: {
+  item: RankedExchangeRate;
+  field: RateField;
+}) {
   const isTop = item.rank === 1;
 
   return (
@@ -33,9 +40,7 @@ export function RankingRow({ item, field }: { item: RankedExchangeRate; field: R
       </div>
       {RATE_FIELDS.map((f) => {
         const active = f.key === field;
-        const value = item[f.key];
-        const display =
-          typeof value === "number" && Number.isFinite(value) ? formatRate(value) : "—";
+        const display = formatRateOrDash(item[f.key]);
         return (
           <div
             key={f.key}
@@ -60,4 +65,4 @@ export function RankingRow({ item, field }: { item: RankedExchangeRate; field: R
       </Link>
     </li>
   );
-}
+});

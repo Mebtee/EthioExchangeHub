@@ -6,20 +6,13 @@ import { SurfaceCard } from "@/components/shared/surface-card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useScraperHealth } from "@/hooks/use-admin";
-import { SCRAPERS } from "@/mocks/admin";
-import type { ScraperHealth } from "@/types/admin";
-import { formatAmount, formatRelativeSchedule, formatRelativeTime } from "@/lib/format";
+import { formatCountOrDash, formatDurationMs, formatRelativeSchedule, formatRelativeTime } from "@/lib/format";
+import { scraperStatusTone } from "@/lib/status";
 import { toast } from "sonner";
-
-function statusTone(status: ScraperHealth["status"]) {
-  if (status === "healthy") return "success" as const;
-  if (status === "degraded") return "warning" as const;
-  return "danger" as const;
-}
 
 export default function AdminScraperHealthPage() {
   const { data, isLoading } = useScraperHealth();
-  const scrapers = data ?? SCRAPERS;
+  const scrapers = data ?? [];
 
   const counts = {
     total: scrapers.length,
@@ -86,7 +79,7 @@ export default function AdminScraperHealthPage() {
                 <p className="truncate font-semibold">{scraper.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{scraper.bank}</p>
               </div>
-              <StatusBadge tone={statusTone(scraper.status)} className="shrink-0">
+              <StatusBadge tone={scraperStatusTone(scraper.status)} className="shrink-0">
                 {scraper.status}
               </StatusBadge>
             </div>
@@ -108,17 +101,11 @@ export default function AdminScraperHealthPage() {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Records</dt>
-                <dd className="font-medium tabular">
-                  {scraper.records > 0 ? formatAmount(scraper.records) : "—"}
-                </dd>
+                <dd className="font-medium tabular">{formatCountOrDash(scraper.records)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Avg duration</dt>
-                <dd className="font-medium tabular">
-                  {scraper.avgDurationMs > 0
-                    ? `${(scraper.avgDurationMs / 1000).toFixed(1)}s`
-                    : "—"}
-                </dd>
+                <dd className="font-medium tabular">{formatDurationMs(scraper.avgDurationMs)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Next run</dt>

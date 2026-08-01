@@ -1,5 +1,6 @@
 import { RankingRow, RANKING_GRID } from "./ranking-row";
-import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
+import { EmptyState, ErrorState } from "@/components/shared/async-states";
+import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { RATE_FIELDS } from "@/lib/rankings";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
@@ -42,11 +43,9 @@ export function RankingsTable({
           <span className="text-right">Action</span>
         </div>
 
+        {/* Skeleton columns mirror the header: rank, bank, 4 rate fields, currency, update, action */}
         {isLoading ? (
-          <LoadingState
-            label="Loading live exchange rates…"
-            hint="Fetching the latest bank rates from the market service."
-          />
+          <TableRowsSkeleton rows={8} columns={9} />
         ) : isError ? (
           <ErrorState
             title="Unable to load exchange rates"

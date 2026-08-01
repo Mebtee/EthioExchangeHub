@@ -19,7 +19,13 @@ export function BankAvatar({ name, short, colorClass, logo, className }: BankAva
   if (logo) {
     return (
       <span className={cn("flex items-center justify-center bg-surface-low", classes)}>
-        <img src={logo} alt={name} loading="lazy" className="size-[62%] object-contain" />
+        <img
+          src={logo}
+          alt={name}
+          loading="lazy"
+          decoding="async"
+          className="size-[62%] object-contain"
+        />
       </span>
     );
   }

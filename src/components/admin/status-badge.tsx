@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
+import type { StatusTone } from "@/lib/status";
 import { cn } from "@/lib/utils";
-
-type StatusTone = "success" | "warning" | "danger" | "neutral";
+import type { ReactNode } from "react";
 
 const TONES: Record<StatusTone, string> = {
   success: "border-transparent bg-success/10 text-success",
@@ -16,7 +16,7 @@ export function StatusBadge({
   className,
 }: {
   tone?: StatusTone;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return <Badge className={cn(TONES[tone], className)}>{children}</Badge>;

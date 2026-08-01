@@ -22,9 +22,12 @@ export function CurrencyConverter({
   return (
     <SurfaceCard className="p-6">
       <h3 className="text-lg font-semibold mb-4">Currency Converter</h3>
-      <label className="block text-xs font-semibold text-muted-foreground mb-1">From</label>
+      <label htmlFor="converter-from" className="block text-xs font-semibold text-muted-foreground mb-1">
+        From
+      </label>
       <div className="flex items-stretch gap-2 mb-2">
         <select
+          id="converter-from"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="rounded-xl border border-border bg-surface-low px-3 text-sm font-semibold"
@@ -35,6 +38,8 @@ export function CurrencyConverter({
         </select>
         <input
           type="number"
+          id="converter-amount"
+          aria-label="Amount to convert"
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
           className="flex-1 rounded-xl border border-border bg-surface-low px-3 py-2.5 text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary"
@@ -53,9 +58,12 @@ export function CurrencyConverter({
           <ArrowUpDown className="size-4" />
         </button>
       </div>
-      <label className="block text-xs font-semibold text-muted-foreground mb-1">To</label>
+      <label htmlFor="converter-to" className="block text-xs font-semibold text-muted-foreground mb-1">
+        To
+      </label>
       <div className="flex items-stretch gap-2 mb-3">
         <select
+          id="converter-to"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="rounded-xl border border-border bg-surface-low px-3 text-sm font-semibold"

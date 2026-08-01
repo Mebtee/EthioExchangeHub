@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil, Plus, TriangleAlert, Trash2 } from "lucide-react";
 
 import { DataTable } from "@/components/admin/data-table";
@@ -27,9 +27,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useManualRates } from "@/hooks/use-admin";
-import { BANK_OPTIONS, CURRENCY_OPTIONS } from "@/mocks/admin";
+import { useHydrateOnce } from "@/hooks/use-hydrate-once";
+import { BANK_OPTIONS } from "@/mocks/admin";
+import { CURRENCY_OPTIONS } from "@/mocks/currencies";
 import type { ManualRate } from "@/types/admin";
-import { formatRate, formatRelativeTime } from "@/lib/format";
+import { formatRateOrDash, formatRelativeTime } from "@/lib/format";
 import { toast } from "sonner";
 
 interface RateFormState {
@@ -75,17 +77,11 @@ function parseRateForm(form: RateFormState): ManualRate | null {
 export default function AdminManualRatesPage() {
   const { data, isLoading } = useManualRates();
   const [rates, setRates] = useState<ManualRate[]>([]);
-  const hydrated = useRef(false);
 
   // Hydrate the working copy from the data source (mock data today, the real
   // API once VITE_USE_MOCKS=false). Only seeds once so local add/edit/delete
   // edits are never clobbered by a later refetch.
-  useEffect(() => {
-    if (data && !hydrated.current) {
-      hydrated.current = true;
-      setRates(data);
-    }
-  }, [data]);
+  useHydrateOnce(data, setRates);
   const [query, setQuery] = useState("");
   const [currency, setCurrency] = useState("ALL");
 
@@ -151,8 +147,7 @@ export default function AdminManualRatesPage() {
     setDeleting(null);
   }
 
-  const rateField = (value: number | undefined) =>
-    typeof value === "number" && Number.isFinite(value) ? formatRate(value) : "—";
+  const rateField = (value: number | undefined) => formatRateOrDash(value);
 
   return (
     <div className="space-y-6">

@@ -12,15 +12,27 @@ export function SiteFooter() {
             banking aggregation.
           </p>
           <div className="mt-5 flex gap-3">
-            {[Globe, AtSign, Share2].map((Icon, i) => (
-              <a
-                key={i}
-                href="#"
-                className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
-              >
-                <Icon className="size-4" />
-              </a>
-            ))}
+            <a
+              href="#"
+              aria-label="Visit our website"
+              className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
+            >
+              <Globe className="size-4" />
+            </a>
+            <a
+              href="#"
+              aria-label="Contact us by email"
+              className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
+            >
+              <AtSign className="size-4" />
+            </a>
+            <a
+              href="#"
+              aria-label="Share on social media"
+              className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
+            >
+              <Share2 className="size-4" />
+            </a>
           </div>
         </div>
         <FooterCol

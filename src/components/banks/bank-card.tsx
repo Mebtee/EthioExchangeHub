@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
@@ -6,7 +7,7 @@ import { formatRelativeTime } from "@/lib/format";
 import type { Bank } from "@/types/bank";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
-export function BankCard({ bank, rate }: { bank: Bank; rate: ExchangeRate }) {
+export const BankCard = memo(function BankCard({ bank, rate }: { bank: Bank; rate: ExchangeRate }) {
   return (
     <li>
       <Link
@@ -51,4 +52,4 @@ export function BankCard({ bank, rate }: { bank: Bank; rate: ExchangeRate }) {
       </Link>
     </li>
   );
-}
+});

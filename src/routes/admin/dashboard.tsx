@@ -12,20 +12,14 @@ import {
 
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { EmptyState } from "@/components/shared/async-states";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { useDashboardStats, useRateTrend, useScrapeLogs } from "@/hooks/use-admin";
-import { DASHBOARD_STATS, RATE_TREND } from "@/mocks/admin";
 import { formatRelativeTime } from "@/lib/format";
-import type { ScrapeLog } from "@/types/admin";
+import { logStatusTone } from "@/lib/status";
 
 const STAT_ICONS = [Building2, Coins, Activity, ShieldCheck] as const;
 const STAT_TONES = ["primary", "gold", "neutral", "success"] as const;
-
-function logTone(status: ScrapeLog["status"]) {
-  if (status === "success") return "success" as const;
-  if (status === "warning") return "warning" as const;
-  return "danger" as const;
-}
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useDashboardStats();
@@ -50,19 +44,28 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {(stats ?? DASHBOARD_STATS).map((stat, i) => (
-          <StatCard
-            key={stat.label}
-            label={stat.label}
-            value={isLoading ? "…" : stat.value}
-            delta={isLoading ? undefined : stat.delta}
-            direction={isLoading ? undefined : stat.direction}
-            icon={STAT_ICONS[i]}
-            tone={STAT_TONES[i]}
-          />
-        ))}
-      </div>
+      {!isLoading && (stats ?? []).length === 0 ? (
+        <EmptyState
+          title="No dashboard statistics available"
+          message="Statistics will appear here once the backend starts reporting."
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {(stats ?? []).map((stat, i) => (
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={isLoading ? "…" : stat.value}
+              delta={isLoading ? undefined : stat.delta}
+              direction={isLoading ? undefined : stat.direction}
+              // Index into fixed visual arrays defensively so a stats list of
+              // any length renders without crashing (cycles + falls back).
+              icon={STAT_ICONS[i % STAT_ICONS.length] ?? Building2}
+              tone={STAT_TONES[i % STAT_TONES.length] ?? "primary"}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* Rate trend chart */}
@@ -78,7 +81,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trend ?? RATE_TREND} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <AreaChart data={trend ?? []} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="buyFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -140,7 +143,7 @@ export default function AdminDashboardPage() {
           <ul className="flex-1 divide-y divide-border/60">
             {(recentLogs ?? []).slice(0, 5).map((log) => (
               <li key={log.id} className="flex items-start gap-3 px-6 py-3.5">
-                <StatusBadge tone={logTone(log.status)} className="mt-0.5 shrink-0">
+                <StatusBadge tone={logStatusTone(log.status)} className="mt-0.5 shrink-0">
                   {log.status}
                 </StatusBadge>
                 <div className="min-w-0">

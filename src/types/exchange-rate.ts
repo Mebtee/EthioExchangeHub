@@ -1,11 +1,8 @@
 export type RateSource = "scraper" | "manual" | (string & {});
 
-export interface ExchangeRate {
-  id: number;
-  bankId: number;
+/** Fields shared by every rate record (public exchange rates and admin manual rates). */
+export interface RateRecord {
   bankName: string;
-  /** Bank logo URL (empty string when the bank has no logo). */
-  logo: string;
   currency: string;
   cashBuying: number;
   cashSelling: number;
@@ -13,6 +10,13 @@ export interface ExchangeRate {
   transactionSelling: number;
   lastUpdated: string;
   source: RateSource;
+}
+
+export interface ExchangeRate extends RateRecord {
+  id: number;
+  bankId: number;
+  /** Bank logo URL (empty string when the bank has no logo). */
+  logo: string;
 }
 
 export interface ApiResponse<T> {

@@ -76,7 +76,7 @@ function Field({
   placeholder,
 }: {
   label: string;
-  type?: string;
+  type?: "text" | "email" | "tel";
   placeholder?: string;
 }) {
   return (

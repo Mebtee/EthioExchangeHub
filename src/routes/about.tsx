@@ -41,6 +41,10 @@ function AboutPage() {
             <img
               src="https://images.unsplash.com/photo-1640340434855-6084b1f4901c?auto=format&fit=crop&w=1000&q=80"
               alt="Live financial dashboard"
+              loading="lazy"
+              decoding="async"
+              width="1000"
+              height="750"
               className="rounded-2xl object-cover w-full aspect-[4/3] shadow-[0_20px_60px_-20px_rgba(13,99,27,0.4)]"
             />
             <div className="absolute -bottom-6 left-6 rounded-2xl bg-card border border-border/60 p-4 shadow-xl w-52">

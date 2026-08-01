@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CalendarDays, Clock, Mail, ShieldCheck } from "lucide-react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
+import { EmptyState } from "@/components/shared/async-states";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,17 +10,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdminProfile } from "@/hooks/use-admin";
-import { ADMIN_PROFILE } from "@/mocks/admin";
+import { useHydrateOnce } from "@/hooks/use-hydrate-once";
 import { formatRelativeTime } from "@/lib/format";
 import { toast } from "sonner";
 
 export default function AdminProfilePage() {
   const { data, isLoading } = useAdminProfile();
-  const profile = data ?? ADMIN_PROFILE;
+  const profile = data ?? null;
 
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [bio, setBio] = useState("Keeping Ethiopia's exchange-rate data fresh and accurate.");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+
+  // Hydrate the edit form once the profile arrives; never clobber local edits.
+  useHydrateOnce(data, (profile) => {
+    setName(profile.name);
+    setEmail(profile.email);
+    setBio("Keeping Ethiopia's exchange-rate data fresh and accurate.");
+  });
 
   return (
     <div className="space-y-6">
@@ -39,6 +47,11 @@ export default function AdminProfilePage() {
               <div className="h-4 w-32 animate-pulse rounded-full bg-surface-high" />
               <div className="h-3 w-48 animate-pulse rounded-full bg-surface-high" />
             </div>
+          ) : !profile ? (
+            <EmptyState
+              title="No profile available"
+              message="Profile details will appear here once the backend provides them."
+            />
           ) : (
             <>
               <div className="flex flex-col items-center gap-3 text-center">

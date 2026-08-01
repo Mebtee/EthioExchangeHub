@@ -32,10 +32,25 @@ export function formatRate(value: number): string {
   return value.toFixed(4);
 }
 
+/** Rate display that falls back to an em-dash for missing/invalid values. */
+export function formatRateOrDash(value: number | undefined | null): string {
+  return typeof value === "number" && Number.isFinite(value) ? formatRate(value) : "—";
+}
+
 /** Two-decimal fixed number with thousands separators. */
 export function formatAmount(value: number): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+/** Count display that falls back to an em-dash for zero/missing values. */
+export function formatCountOrDash(value: number | undefined | null): string {
+  return typeof value === "number" && value > 0 ? formatAmount(value) : "—";
+}
+
+/** Milliseconds rendered as seconds with one decimal, or an em-dash when empty. */
+export function formatDurationMs(value: number | undefined | null): string {
+  return typeof value === "number" && value > 0 ? `${(value / 1000).toFixed(1)}s` : "—";
 }

@@ -1,13 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { BankCard } from "@/components/banks/bank-card";
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
-import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
+import { EmptyState, ErrorState } from "@/components/shared/async-states";
+import { CardGridSkeleton } from "@/components/shared/skeletons";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
-import { getPrimaryCurrency } from "@/lib/rankings";
+import { dedupeLatestRates, getPrimaryCurrency } from "@/lib/rankings";
 import { useBanks, useExchangeRates } from "@/hooks";
-import type { ExchangeRate } from "@/types/exchange-rate";
 
 function key(bankName: string): string {
   return bankName.trim().toLowerCase();
@@ -32,17 +32,23 @@ function BanksPage() {
 
   /** Banks that have published a rate for the primary currency, with their newest record. */
   const bankEntries = useMemo(() => {
-    const rateByBank = new Map<string, ExchangeRate>();
-    for (const r of rates) {
-      if (r.currency !== primaryCurrency) continue;
-      const k = key(r.bankName);
-      const existing = rateByBank.get(k);
-      if (!existing || r.lastUpdated > existing.lastUpdated) rateByBank.set(k, r);
-    }
+    // Reuses the shared newest-per-bank+currency dedupe from lib/rankings.
+    const latestByBank = dedupeLatestRates(
+      rates.filter((r) => r.currency === primaryCurrency),
+    );
+    const rateByBank = new Map(latestByBank.map((r) => [key(r.bankName), r]));
     return banks
       .filter((b) => rateByBank.has(key(b.name)))
       .map((bank) => ({ bank, rate: rateByBank.get(key(bank.name))! }));
   }, [banks, rates, primaryCurrency]);
+
+  const [query, setQuery] = useState("");
+
+  const filteredEntries = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return bankEntries;
+    return bankEntries.filter(({ bank }) => bank.name.toLowerCase().includes(q));
+  }, [bankEntries, query]);
 
   const isLoading = banksLoading || ratesLoading;
   const isError = banksError || ratesError;
@@ -64,15 +70,17 @@ function BanksPage() {
                 : "No bank rates available yet."
           }
           action={
-            <SearchInput placeholder="Search bank name..." wrapperClassName="w-full sm:w-72" />
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Search bank name..."
+              wrapperClassName="w-full sm:w-72"
+            />
           }
         />
 
         {isLoading ? (
-          <LoadingState
-            label="Loading bank directory…"
-            hint="Fetching the latest bank rates from the market service."
-          />
+          <CardGridSkeleton count={6} />
         ) : isError ? (
           <ErrorState
             title="Unable to load bank directory"
@@ -86,9 +94,14 @@ function BanksPage() {
             title="No bank rates available"
             message="No bank has published rate data yet. Banks will appear here as soon as rates are collected."
           />
+        ) : filteredEntries.length === 0 ? (
+          <EmptyState
+            title="No banks match your search"
+            message="Try a different bank name or clear the search."
+          />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {bankEntries.map(({ bank, rate }) => (
+            {filteredEntries.map(({ bank, rate }) => (
               <BankCard key={bank.slug} bank={bank} rate={rate} />
             ))}
           </ul>

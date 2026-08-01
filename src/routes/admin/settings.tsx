@@ -17,22 +17,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAdminSettings } from "@/hooks/use-admin";
-import { ADMIN_SETTINGS } from "@/mocks/admin";
-import { CURRENCIES } from "@/mocks/currencies";
+import { useHydrateOnce } from "@/hooks/use-hydrate-once";
+import { CURRENCY_OPTIONS } from "@/mocks/currencies";
 import { toast } from "sonner";
-
 
 export default function AdminSettingsPage() {
   const { data } = useAdminSettings();
-  const settings = data ?? ADMIN_SETTINGS;
 
-  const [siteName, setSiteName] = useState(settings.siteName);
-  const [defaultCurrency, setDefaultCurrency] = useState(settings.defaultCurrency);
-  const [emailAlerts, setEmailAlerts] = useState(settings.emailAlerts);
-  const [failureAlerts, setFailureAlerts] = useState(settings.failureAlerts);
-  const [dailyDigest, setDailyDigest] = useState(settings.dailyDigest);
-  const [weeklyReport, setWeeklyReport] = useState(settings.weeklyReport);
+  // Form state starts at defaults and is hydrated once settings arrive — the
+  // hydration effect below is the single source of truth for initial values.
+  const [siteName, setSiteName] = useState("");
+  const [defaultCurrency, setDefaultCurrency] = useState("USD");
+  const [emailAlerts, setEmailAlerts] = useState(false);
+  const [failureAlerts, setFailureAlerts] = useState(false);
+  const [dailyDigest, setDailyDigest] = useState(false);
+  const [weeklyReport, setWeeklyReport] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Hydrate the form once settings arrive; never clobber local edits on refetch.
+  useHydrateOnce(data, (settings) => {
+    setSiteName(settings.siteName);
+    setDefaultCurrency(settings.defaultCurrency);
+    setEmailAlerts(settings.emailAlerts);
+    setFailureAlerts(settings.failureAlerts);
+    setDailyDigest(settings.dailyDigest);
+    setWeeklyReport(settings.weeklyReport);
+  });
 
   return (
     <div className="space-y-6">
@@ -65,7 +75,7 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setDefaultCurrency(e.target.value)}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                {CURRENCIES.map((c) => (
+                {CURRENCY_OPTIONS.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
+import { EmptyState, ErrorState } from "@/components/shared/async-states";
+import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import {
   Table,
   TableBody,
@@ -44,7 +45,7 @@ export function DataTable<T>({
   footer,
 }: DataTableProps<T>) {
   if (isLoading) {
-    return <LoadingState label="Loading data…" hint="Fetching records from the admin service." />;
+    return <TableRowsSkeleton rows={6} columns={columns.length} />;
   }
 
   if (isError) {

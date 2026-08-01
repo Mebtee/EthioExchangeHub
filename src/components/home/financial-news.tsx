@@ -14,7 +14,13 @@ export function FinancialNews({ items }: { items: NewsItem[] }) {
       <ul className="space-y-4">
         {items.slice(0, 2).map((n) => (
           <li key={n.id} className="flex gap-3">
-            <img src={n.image} alt="" className="size-14 rounded-lg object-cover flex-shrink-0" />
+            <img
+              src={n.image}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="size-14 rounded-lg object-cover flex-shrink-0"
+            />
             <div>
               <p className="text-sm font-semibold leading-snug line-clamp-2">{n.title}</p>
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1">

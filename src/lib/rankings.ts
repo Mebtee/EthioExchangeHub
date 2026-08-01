@@ -64,6 +64,33 @@ export function getRatesForBank(rates: ExchangeRate[], bankName: string): Exchan
   return rates.filter((r) => r.bankName.trim().toLowerCase() === name);
 }
 
+/** Timestamp of the newest rate record across the list (undefined when empty). */
+export function getLatestUpdate(rates: ExchangeRate[]): string | undefined {
+  return rates.reduce<string | undefined>(
+    (latest, r) => (!latest || r.lastUpdated > latest ? r.lastUpdated : latest),
+    undefined,
+  );
+}
+
+/**
+ * Best (max or min) rate for a field among the given currency's records.
+ * Returns undefined when no finite value exists.
+ */
+export function getBestRate(
+  rates: ExchangeRate[],
+  currency: string,
+  field: RateField,
+  direction: "max" | "min",
+): ExchangeRate | undefined {
+  const candidates = rates.filter(
+    (r) => r.currency === currency && Number.isFinite(r[field]),
+  );
+  if (candidates.length === 0) return undefined;
+  return candidates.reduce((best, r) =>
+    direction === "max" ? (r[field] > best[field] ? r : best) : (r[field] < best[field] ? r : best),
+  );
+}
+
 export interface RankingFilters {
   field: RateField;
   currency?: string;

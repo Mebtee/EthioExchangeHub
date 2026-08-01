@@ -21,19 +21,12 @@ export function useRankings() {
     [rates, field, activeCurrency, query],
   );
 
-  const search = query.trim().toLowerCase();
-
-  /** Banks with a published rate for the active field, currency, and search. */
-  const totalBanks = useMemo(
-    () =>
-      rates.filter(
-        (r) =>
-          (activeCurrency ? r.currency === activeCurrency : true) &&
-          Number.isFinite(r[field]) &&
-          (search ? r.bankName.toLowerCase().includes(search) : true),
-      ).length,
-    [rates, activeCurrency, field, search],
-  );
+  /**
+   * Every filtered rate record is ranked by buildRankings, so the ranking
+   * count is the total of banks with a published rate for the active
+   * field, currency, and search.
+   */
+  const totalBanks = rankings.length;
 
   return {
     field,

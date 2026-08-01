@@ -8,6 +8,8 @@
  * automatically.
  */
 
+import type { RateRecord } from "./exchange-rate";
+
 export interface DashboardStat {
   label: string;
   value: string;
@@ -21,18 +23,8 @@ export interface RateTrendPoint {
   cashSelling: number;
 }
 
-export type RateSource = "manual" | "scraper";
-
-export interface ManualRate {
+export interface ManualRate extends RateRecord {
   id: number;
-  bankName: string;
-  currency: string;
-  cashBuying: number;
-  cashSelling: number;
-  transactionBuying: number;
-  transactionSelling: number;
-  lastUpdated: string;
-  source: RateSource;
 }
 
 export type ScraperStatus = "healthy" | "degraded" | "offline";

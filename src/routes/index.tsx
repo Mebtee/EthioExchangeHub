@@ -8,11 +8,11 @@ import { RateHero } from "@/components/home/rate-hero";
 import { LiveRankings } from "@/components/home/live-rankings";
 import { CurrencyConverter } from "@/components/home/currency-converter";
 import { FinancialNews } from "@/components/home/financial-news";
-import { getPrimaryCurrency } from "@/lib/rankings";
+import { getBestRate, getLatestUpdate, getPrimaryCurrency } from "@/lib/rankings";
 import { formatRelativeTime } from "@/lib/format";
 import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
 
-function Index() {
+function HomePage() {
   const { data: rates = [], isLoading, isError, error, refetch } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
   const { data: news = [] } = useNews();
@@ -20,29 +20,16 @@ function Index() {
   const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
   const bestBuy = useMemo(
-    () =>
-      rates
-        .filter((r) => r.currency === primaryCurrency && Number.isFinite(r.cashBuying))
-        .sort((a, b) => b.cashBuying - a.cashBuying)[0],
+    () => getBestRate(rates, primaryCurrency, "cashBuying", "max"),
     [rates, primaryCurrency],
   );
 
   const bestSell = useMemo(
-    () =>
-      rates
-        .filter((r) => r.currency === primaryCurrency && Number.isFinite(r.cashSelling))
-        .sort((a, b) => a.cashSelling - b.cashSelling)[0],
+    () => getBestRate(rates, primaryCurrency, "cashSelling", "min"),
     [rates, primaryCurrency],
   );
 
-  const latestUpdate = useMemo(
-    () =>
-      rates.reduce<string | undefined>(
-        (latest, r) => (!latest || r.lastUpdated > latest ? r.lastUpdated : latest),
-        undefined,
-      ),
-    [rates],
-  );
+  const latestUpdate = useMemo(() => getLatestUpdate(rates), [rates]);
 
   const rate = bestBuy?.cashBuying;
 
@@ -126,4 +113,4 @@ function Index() {
   );
 }
 
-export default Index;
+export default HomePage;

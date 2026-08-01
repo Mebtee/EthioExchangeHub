@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { BankAvatar } from "@/components/shared/bank-avatar";
-import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
+import { EmptyState, ErrorState } from "@/components/shared/async-states";
+import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { slugifyBankName, sourceLabel } from "@/lib/bank";
 import { getCurrencyOptions } from "@/lib/rankings";
@@ -70,10 +71,7 @@ export function LiveRankings({
       </div>
 
       {isLoading ? (
-        <LoadingState
-          label="Loading live exchange rates…"
-          hint="Fetching the latest bank rates from the market service."
-        />
+        <TableRowsSkeleton rows={5} columns={3} />
       ) : isError ? (
         <ErrorState
           title="Unable to load exchange rates"

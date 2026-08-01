@@ -36,8 +36,6 @@ export const BANK_OPTIONS = [
   "Abay Bank",
 ] as const;
 
-export const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "AED", "SAR", "KES", "CNY", "JPY"] as const;
-
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 const hoursAgo = (h: number) => minutesAgo(h * 60);
 const daysAgo = (d: number) => hoursAgo(d * 24);

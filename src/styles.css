@@ -167,3 +167,29 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Market ticker marquee — the loop repeats the track three times, so the
+   animation shifts by one third of the total width. */
+@keyframes ee-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+/* Respect users who prefer reduced motion: stop the marquee and any infinite
+   animations without removing the content. */
+@media (prefers-reduced-motion: reduce) {
+  .ee-marquee {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
