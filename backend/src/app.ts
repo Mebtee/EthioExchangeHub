@@ -10,14 +10,16 @@ import { env } from "./utils/validate-env";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 import { logStream } from "./lib/logger";
-import { successResponse } from "./utils/api-response";
+import { verifyDatabaseConnection } from "./lib/supabase";
+import { errorResponse, successResponse } from "./utils/api-response";
 
 /**
  * Builds and returns the Express application.
  *
- * Phase 1 registers GLOBAL middleware and the health check ONLY.
- * No business routes, auth, or repositories yet — those mount here in later phases
- * (e.g. `app.use('/api/v1', apiRouter)` once routes exist).
+ * Registers GLOBAL middleware and the health check (which since Phase 2A also
+ * verifies Supabase connectivity). No business routes, auth, or repositories
+ * yet — those mount here in later phases (e.g. `app.use('/api/v1', apiRouter)`
+ * once routes exist).
  */
 export function createApp(): Express {
   const app = express();
@@ -51,8 +53,20 @@ export function createApp(): Express {
   app.use(morgan("combined", { stream: logStream }));
 
   // ---- Health check ----
-  app.get(HEALTH_PATH, (_req, res) => {
-    successResponse(res, { status: "OK" }, "Server is healthy.");
+  // Phase 2A: reports server + database connectivity. `verifyDatabaseConnection`
+  // never throws (Supabase failures are wrapped in DatabaseError and logged), so
+  // the handler cannot reject; it responds with the standard envelope either way.
+  app.get(HEALTH_PATH, async (_req, res) => {
+    const databaseConnected = await verifyDatabaseConnection();
+    if (!databaseConnected) {
+      errorResponse(res, "Database connection failed.", 503);
+      return;
+    }
+    successResponse(
+      res,
+      { server: "OK", database: "Connected" },
+      "Server and database are healthy.",
+    );
   });
 
   // ---- 404 + error handling (registered last, in order) ----
