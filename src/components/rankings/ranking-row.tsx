@@ -58,7 +58,7 @@ export const RankingRow = memo(function RankingRow({
       <div className="text-sm font-semibold text-muted-foreground">{item.currency}</div>
       <span className="text-sm text-muted-foreground">{formatRelativeTime(item.lastUpdated)}</span>
       <Link
-        to={`/banks/${slugifyBankName(item.bankName)}`}
+        to={`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`}
         className="ml-auto rounded-lg bg-surface-high px-4 py-2 text-xs font-semibold hover:bg-surface-high/80"
       >
         Details
