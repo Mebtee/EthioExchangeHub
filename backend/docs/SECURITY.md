@@ -89,7 +89,7 @@ cors({
 - **Local development**: set `ALLOWED_ORIGINS` to your dev-server origin(s)
   (e.g. `http://localhost:5173` for Vite).
 
-### Rate limiting (`express-rate-limit` v7)
+### Rate limiting (`express-rate-limit` v8)
 
 Two limiters, both using standard `RateLimit-*` headers (`standardHeaders:
 "draft-8"`) with **no legacy** `X-RateLimit-*` headers:
@@ -103,7 +103,7 @@ Exceeding the limit returns `429 { success: false, message, data: null }`.
 Health/readiness/liveness probes are intentionally **not** rate-limited so
 orchestrators and load balancers are never throttled.
 
-### Slow-down (`express-slow-down` v2)
+### Slow-down (`express-slow-down` v3)
 
 Applied globally **after** cookie parsing, **before** routes:
 
