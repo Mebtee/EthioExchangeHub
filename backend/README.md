@@ -73,7 +73,8 @@ The server listens on `http://localhost:5000` by default.
 | `BODY_LIMIT`                | no       | `1mb`                   | Max JSON + URL-encoded request body size (oversize → 413)       |
 | `RATE_LIMIT_WINDOW_MS`      | no       | `900000`                | Rate-limit window (15 min)                                      |
 | `RATE_LIMIT_MAX`            | no       | `100`                   | General API limit: req / window / IP                            |
-| `RATE_LIMIT_STRICT_MAX`     | no       | `30`                    | `/docs` + `/metrics` stricter limit                             |     | `SLOW_DOWN_WINDOW_MS` | no  | `900000` | Slow-down window (15 min) |
+| `RATE_LIMIT_STRICT_MAX`     | no       | `30`                    | `/docs` + `/metrics` stricter limit                             |
+| `SLOW_DOWN_WINDOW_MS`       | no       | `900000`                | Slow-down window (15 min)                                       |
 | `SLOW_DOWN_DELAY_AFTER`     | no       | `50`                    | Requests allowed at full speed before delaying                  |
 | `SLOW_DOWN_MAX_DELAY_MS`    | no       | `2000`                  | Max per-request slow-down delay                                 |
 

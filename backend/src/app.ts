@@ -126,7 +126,7 @@ export function createApp(): Express {
 
   // ---- Strict rate limit for docs + metrics (Phase 3A) ----
   // Documentation and metrics can be abused to burn resources; a stricter
-  // limiter (default 30/min/IP) applies to them. Registered BEFORE all routes
+  // limiter (default 30/15min/IP) applies to them. Registered BEFORE all routes
   // (including /metrics) so it is actually enforced in Express's ordering.
   app.use(["/docs", "/docs.json", METRICS_PATH], createStrictLimiter());
 
@@ -187,7 +187,7 @@ export function createApp(): Express {
   // ---- Versioned business API (Phase 2F) ----
   // Mounted under `/api/v1`; future API versions can add their own prefix
   // without touching controllers. The GENERAL rate limiter (default
-  // 100 req/min/IP) wraps the API surface; probes below are unaffected.
+  // 100 req/15min/IP) wraps the API surface; probes below are unaffected.
   app.use(API_PREFIX, createGeneralLimiter(), apiRouter);
 
   // ---- API documentation (Phase 2H) ----
