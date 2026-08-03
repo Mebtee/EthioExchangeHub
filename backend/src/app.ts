@@ -6,14 +6,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
 
-import {
-  HEALTH_PATH,
-  READY_PATH,
-  LIVE_PATH,
-  METRICS_PATH,
-  API_PREFIX,
-  REQUEST_BODY_LIMIT,
-} from "./constants";
+import { HEALTH_PATH, READY_PATH, LIVE_PATH, METRICS_PATH, API_PREFIX } from "./constants";
 import { openApiDocument } from "./docs/openapi";
 import { env } from "./utils/validate-env";
 import { errorHandler } from "./middleware/error-handler";
@@ -22,6 +15,8 @@ import { notFoundHandler } from "./middleware/not-found";
 import { logStream, logger } from "./lib/logger";
 import { renderMetrics, registry } from "./lib/metrics";
 import { requestIdMiddleware } from "./middleware/request-id";
+import { createGeneralLimiter, createStrictLimiter } from "./middleware/rate-limit";
+import { createSlowDown } from "./middleware/slow-down";
 import { verifyDatabaseConnection } from "./lib/supabase";
 import { apiRouter } from "./routes";
 import { errorResponse, successResponse } from "./utils/api-response";
@@ -37,35 +32,80 @@ import { errorResponse, successResponse } from "./utils/api-response";
 export function createApp(): Express {
   const app = express();
 
-  // ---- Security ----
+  // ---- Trust proxy (Phase 3A) ----
+  // When the app sits behind nginx/a load balancer, TRUST_PROXY (number of
+  // hops) makes req.ip and the rate-limit key reflect the real client address.
+  // Default "0" (off) keeps direct connections correct; set 1 behind a proxy.
+  app.set("trust proxy", env.TRUST_PROXY);
+
+  // ---- Security headers (Phase 3A) ----
+  // Helmet with production-safe, environment-aware settings. CSP is disabled
+  // because this API serves no user-controlled HTML (Swagger UI is static) —
+  // enable it in env when a policy is defined. HSTS applies only in production
+  // so localhost/HTTP dev setups are unaffected. See docs/SECURITY.md.
   app.use(
     helmet({
+      contentSecurityPolicy: false,
+      strictTransportSecurity:
+        env.NODE_ENV === "production"
+          ? { maxAge: 31_536_000, includeSubDomains: true, preload: true }
+          : false,
+      referrerPolicy: { policy: "no-referrer" },
+      dnsPrefetchControl: { allow: false },
       crossOriginResourcePolicy: { policy: "cross-origin" },
+      // X-XSS-Protection is deprecated/ignored by modern browsers; helmet
+      // disables it by default. CSP + nosniff are the effective controls.
+      xXssProtection: false,
     }),
   );
 
-  // ---- CORS ----
+  // ---- CORS (Phase 3A) ----
+  // Only the configured allow-list is allowed: ALLOWED_ORIGINS (comma-separated;
+  // falls back to the legacy FRONTEND_URL when unset). Unknown origins are
+  // rejected — no Access-Control-Allow-Origin header is emitted, so browsers
+  // block the response. Non-browser clients (no Origin header) pass through
+  // untouched. `credentials: false`: the API is authentication-free, so we
+  // never advertise credential support (OWASP: avoid Allow-Credentials:true).
+  const allowedOrigins = new Set<string>(
+    env.ALLOWED_ORIGINS.length > 0 ? env.ALLOWED_ORIGINS : [env.FRONTEND_URL],
+  );
   app.use(
     cors({
-      origin: env.FRONTEND_URL,
-      credentials: true,
+      origin(origin, callback) {
+        if (!origin || allowedOrigins.has(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(null, false);
+      },
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      credentials: false,
     }),
   );
 
   // ---- Performance ----
-  // Compression is enabled globally with a 1 KB threshold (the default);
-  // responses smaller than the threshold are left uncompressed. Exclusions:
-  // responses already carrying `Content-Encoding`, streaming responses, and
-  // content types that are already compressed (images, archives) are skipped
-  // by the underlying middleware automatically. See docs/SECURITY.md.
+  // Compression is enabled globally with a 1 KB threshold; responses smaller
+  // than the threshold are left uncompressed. The middleware automatically
+  // skips responses already carrying `Content-Encoding`, streaming responses,
+  // and already-compressed content types (images, archives). Registered before
+  // routes so every response is eligible. See docs/SECURITY.md.
   app.use(compression({ threshold: 1024 }));
 
-  // ---- Body parsing ----
-  app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
-  app.use(express.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
+  // ---- Body parsing (Phase 3A: size limits) ----
+  // JSON and URL-encoded bodies are limited to BODY_LIMIT (default 1 MB).
+  // Oversized payloads are rejected with 413 (see error-handler). Registered
+  // before routes so the limits apply to the whole API surface.
+  app.use(express.json({ limit: env.BODY_LIMIT }));
+  app.use(express.urlencoded({ extended: true, limit: env.BODY_LIMIT }));
 
   // ---- Cookies ----
   app.use(cookieParser());
+
+  // ---- Slow-down (Phase 3A) ----
+  // Gradual delay for clients that exceed the threshold — never blocks. Infra
+  // probe paths are skipped so monitoring is never throttled. Registered before
+  // routes so it covers the whole surface.
+  app.use(createSlowDown());
 
   // ---- Request id (Phase 3) ----
   // Generates a UUID per request, sets the X-Request-ID response header, and
@@ -83,6 +123,12 @@ export function createApp(): Express {
   // timestamp and appends the request id (from async context), so every line
   // carries: timestamp, requestId, method, path, status.
   app.use(morgan(":method :url :status :response-time ms", { stream: logStream }));
+
+  // ---- Strict rate limit for docs + metrics (Phase 3A) ----
+  // Documentation and metrics can be abused to burn resources; a stricter
+  // limiter (default 30/min/IP) applies to them. Registered BEFORE all routes
+  // (including /metrics) so it is actually enforced in Express's ordering.
+  app.use(["/docs", "/docs.json", METRICS_PATH], createStrictLimiter());
 
   // ---- Health check ----
   // Phase 2A: reports server + database connectivity. `verifyDatabaseConnection`
@@ -140,8 +186,9 @@ export function createApp(): Express {
 
   // ---- Versioned business API (Phase 2F) ----
   // Mounted under `/api/v1`; future API versions can add their own prefix
-  // without touching controllers. Registered before the 404/error handlers.
-  app.use(API_PREFIX, apiRouter);
+  // without touching controllers. The GENERAL rate limiter (default
+  // 100 req/min/IP) wraps the API surface; probes below are unaffected.
+  app.use(API_PREFIX, createGeneralLimiter(), apiRouter);
 
   // ---- API documentation (Phase 2H) ----
   // Swagger UI renders the OpenAPI 3.1 document; `/docs.json` serves the raw

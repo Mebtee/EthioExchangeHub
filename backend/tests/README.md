@@ -8,6 +8,7 @@ Supabase client, and services/controllers run against mock collaborators.
 
 ```bash
 npm test              # run all tests once
+npm run test:watch    # run tests in watch mode (dev)
 npm run test:coverage # run all tests with coverage thresholds (90/85/90/90)
 ```
 
