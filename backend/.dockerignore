@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Tests & coverage
+tests
+coverage
+
+# VCS
+.git
+.gitignore
+
+# Environment (never ship secrets)
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log

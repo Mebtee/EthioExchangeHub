@@ -73,3 +73,28 @@ src/
   types/        Shared TypeScript types
   styles.css    Global styles and Tailwind entry point
 ```
+
+## Backend API
+
+The backend lives in [`backend/`](backend/README.md) — Express + TypeScript,
+Supabase-backed, with Swagger docs, a test suite (277+ tests, coverage
+gates 90/85/90/90), Docker multi-stage build, and CI via GitHub Actions.
+
+![Backend CI](https://github.com/your-org/ethio-exchange-hub/actions/workflows/backend-ci.yml/badge.svg)
+
+```sh
+cd backend
+cp .env.example .env   # fill in Supabase credentials & JWT secret
+npm ci
+npm run dev            # http://localhost:5000 — Swagger UI at /docs
+```
+
+### Docker
+
+```sh
+docker compose up --build backend     # API on http://localhost:5000
+docker compose --profile nginx up     # optional nginx reverse proxy
+```
+
+See [`backend/README.md`](backend/README.md) for environment variables,
+deployment instructions, and the full ops story.

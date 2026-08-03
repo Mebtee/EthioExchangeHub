@@ -13,4 +13,13 @@ export const API_PREFIX = `/api/${API_VERSION}`;
 /** Health-check path (infrastructure only — not part of the versioned API). */
 export const HEALTH_PATH = "/health";
 
+/** Readiness-check path (Phase 3 — infrastructure only, used by orchestrators). */
+export const READY_PATH = "/ready";
+
+/** Liveness-check path (Phase 2K — infrastructure only, used by orchestrators). */
+export const LIVE_PATH = "/live";
+
+/** Prometheus metrics path (Phase 2K — infrastructure only, scraped by monitoring). */
+export const METRICS_PATH = "/metrics";
+
 export const REQUEST_BODY_LIMIT = "1mb";
