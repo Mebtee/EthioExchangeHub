@@ -24,11 +24,13 @@ foundation, business API, and production-readiness infrastructure).
                                    │ :5000
                     ┌──────────────▼───────────────┐
                     │  Express app (createApp)     │
-                    │  helmet → cors → compression │
-                    │  requestId → metrics → morgan│
+                    │  trust proxy → helmet → cors │
+                    │  compression → body limits   │
+                    │  slow-down → requestId       │
+                    │  metrics → morgan            │
                     │  /health /ready /live        │
                     │  /metrics  /docs  /api/v1    │
-                    │  notFound → errorHandler     │
+                    │  rate limits → 404/error     │
                     └──────────────┬───────────────┘
                                    │ getSupabase()
                     ┌──────────────▼───────────────┐
@@ -39,8 +41,6 @@ foundation, business API, and production-readiness infrastructure).
 Layer flow for the business API: `routes → controllers → services →
 repositories → Supabase`. Middleware (request id, metrics, access logging,
 validation) wraps the request without touching business logic.
-
-## Local setup
 
 ## Local setup
 
@@ -57,17 +57,25 @@ The server listens on `http://localhost:5000` by default.
 
 ### Environment variables
 
-| Variable                    | Required | Default                 | Description                                                 |
-| --------------------------- | -------- | ----------------------- | ----------------------------------------------------------- |
-| `NODE_ENV`                  | no       | `development`           | `development` \| `test` \| `production`                     |
-| `PORT`                      | no       | `5000`                  | HTTP listen port                                            |
-| `FRONTEND_URL`              | no       | `http://localhost:8080` | CORS-allowed frontend origin                                |
-| `SUPABASE_URL`              | **yes**  | —                       | Supabase project URL                                        |
-| `SUPABASE_SERVICE_ROLE_KEY` | **yes**  | —                       | Supabase service-role key                                   |
-| `JWT_SECRET`                | **yes**  | —                       | ≥ 8 chars (auth, later phases)                              |
-| `JWT_EXPIRES_IN`            | no       | `15m`                   | Access-token lifetime                                       |
-| `REFRESH_TOKEN_EXPIRES_IN`  | no       | `30d`                   | Refresh-token lifetime                                      |
-| `LOG_LEVEL`                 | no       | `info`                  | `fatal` \| `error` \| `warn` \| `info` \| `http` \| `debug` |
+| Variable                    | Required | Default                 | Description                                                     |
+| --------------------------- | -------- | ----------------------- | --------------------------------------------------------------- |
+| `NODE_ENV`                  | no       | `development`           | `development` \| `test` \| `production`                         |
+| `PORT`                      | no       | `5000`                  | HTTP listen port                                                |
+| `FRONTEND_URL`              | no       | `http://localhost:8080` | Legacy CORS fallback origin (used when `ALLOWED_ORIGINS` empty) |
+| `ALLOWED_ORIGINS`           | no       | — (uses `FRONTEND_URL`) | Comma-separated CORS allow-list (e.g. `http://a,http://b`)      |
+| `SUPABASE_URL`              | **yes**  | —                       | Supabase project URL                                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | **yes**  | —                       | Supabase service-role key                                       |
+| `JWT_SECRET`                | **yes**  | —                       | ≥ 8 chars (auth, later phases)                                  |
+| `JWT_EXPIRES_IN`            | no       | `15m`                   | Access-token lifetime                                           |
+| `REFRESH_TOKEN_EXPIRES_IN`  | no       | `30d`                   | Refresh-token lifetime                                          |
+| `LOG_LEVEL`                 | no       | `info`                  | `fatal` \| `error` \| `warn` \| `info` \| `http` \| `debug`     |
+| `TRUST_PROXY`               | no       | `0`                     | Proxy hops for real client IPs (set `1` behind nginx)           |
+| `BODY_LIMIT`                | no       | `1mb`                   | Max JSON + URL-encoded request body size (oversize → 413)       |
+| `RATE_LIMIT_WINDOW_MS`      | no       | `900000`                | Rate-limit window (15 min)                                      |
+| `RATE_LIMIT_MAX`            | no       | `100`                   | General API limit: req / window / IP                            |
+| `RATE_LIMIT_STRICT_MAX`     | no       | `30`                    | `/docs` + `/metrics` stricter limit                             |     | `SLOW_DOWN_WINDOW_MS` | no  | `900000` | Slow-down window (15 min) |
+| `SLOW_DOWN_DELAY_AFTER`     | no       | `50`                    | Requests allowed at full speed before delaying                  |
+| `SLOW_DOWN_MAX_DELAY_MS`    | no       | `2000`                  | Max per-request slow-down delay                                 |
 
 Missing required variables fail fast at boot with a readable message.
 
@@ -124,11 +132,12 @@ the request id, method, path, and status.
 ## Production checklist
 
 - [ ] Required env vars set (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`)
-- [ ] `NODE_ENV=production` and `FRONTEND_URL` = real frontend origin
+- [ ] `NODE_ENV=production` and `ALLOWED_ORIGINS` = real frontend origin(s)
 - [ ] `/live`, `/ready`, `/health` return 200
 - [ ] `/metrics` scraped by Prometheus; alert rules active (5xx rate, latency)
 - [ ] TLS terminated at the proxy; `:5000` not publicly exposed
-- [ ] Rate limiting enabled (see `docs/SECURITY.md`)
+- [ ] `TRUST_PROXY=1` behind nginx so rate limits key on real client IPs
+- [ ] Rate limiting + slow-down active (general 100/15min, strict 30/15min — `docs/SECURITY.md`)
 - [ ] DB backups + PITR configured (see `docs/BACKUP_AND_RECOVERY.md`)
 - [ ] Graceful shutdown verified (`SIGTERM` → clean exit)
 - [ ] Rollout uses `/ready` gate + rolling restart (see `docs/DEPLOYMENT.md`)
@@ -137,7 +146,8 @@ the request id, method, path, and status.
 
 - `docs/DEPLOYMENT.md` — build, run, nginx, HTTPS, rolling deploys
 - `docs/MONITORING.md` — Prometheus scraping, PromQL, alerts, Grafana
-- `docs/SECURITY.md` — helmet/CORS/cookies/compression review
+- `docs/SECURITY.md` — helmet/CORS/rate-limit/slow-down/body-limits review
+- `docs/SECURITY_AUDIT.md` — Phase 3A security audit report (changes, findings, score)
 - `docs/BACKUP_AND_RECOVERY.md` — Supabase + env backup, DR checklist
 - `RUNBOOK.md` — incident response for the top failure scenarios
 

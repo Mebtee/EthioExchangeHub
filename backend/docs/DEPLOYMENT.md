@@ -33,18 +33,19 @@ This guide covers deploying the Ethio Exchange Hub backend API to production.
 
 ## Environment variables
 
-| Variable                                      | Required | Notes                                          |
-| --------------------------------------------- | -------- | ---------------------------------------------- |
-| `NODE_ENV`                                    | no       | `production` recommended                       |
-| `PORT`                                        | no       | Default `5000`                                 |
-| `FRONTEND_URL`                                | yes*     | CORS origin — must match the deployed frontend |
-| `SUPABASE_URL`                                | **yes**  | Fail-fast at boot                              |
-| `SUPABASE_SERVICE_ROLE_KEY`                   | **yes**  | Fail-fast at boot — treat as a secret          |
-| `JWT_SECRET`                                  | **yes**  | ≥ 8 chars — treat as a secret                  |
-| `JWT_EXPIRES_IN` / `REFRESH_TOKEN_EXPIRES_IN` | no       | Token lifetimes                                |
-| `LOG_LEVEL`                                   | no       | `info` recommended in production               |
+| Variable                                      | Required | Notes                                                                                    |
+| --------------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                    | no       | `production` recommended                                                                 |
+| `PORT`                                        | no       | Default `5000`                                                                           |
+| `ALLOWED_ORIGINS`                             | yes*     | Comma-separated CORS allow-list — must include the deployed frontend origin              |
+| `FRONTEND_URL`                                | no       | Legacy fallback origin when `ALLOWED_ORIGINS` is empty (default `http://localhost:8080`) |
+| `SUPABASE_URL`                                | **yes**  | Fail-fast at boot                                                                        |
+| `SUPABASE_SERVICE_ROLE_KEY`                   | **yes**  | Fail-fast at boot — treat as a secret                                                    |
+| `JWT_SECRET`                                  | **yes**  | ≥ 8 chars — treat as a secret                                                            |
+| `JWT_EXPIRES_IN` / `REFRESH_TOKEN_EXPIRES_IN` | no       | Token lifetimes                                                                          |
+| `LOG_LEVEL`                                   | no       | `info` recommended in production                                                         |
 
-\* FRONTEND_URL has a default; override it in production.
+\* `ALLOWED_ORIGINS` has no default when unset it falls back to `FRONTEND_URL` (default `http://localhost:8080`); override in production.
 
 ## Build & run
 
