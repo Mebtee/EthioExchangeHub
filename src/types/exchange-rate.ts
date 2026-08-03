@@ -15,6 +15,7 @@ export interface RateRecord {
 export interface ExchangeRate extends RateRecord {
   id: number;
   bankId: number;
+  bankCode?: string;
   /** Bank logo URL (empty string when the bank has no logo). */
   logo: string;
 }

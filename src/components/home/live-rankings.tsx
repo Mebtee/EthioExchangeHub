@@ -98,7 +98,7 @@ export function LiveRankings({
                 className="grid grid-cols-[1fr_90px_90px_60px] items-center gap-4 px-2 py-4 hover:bg-surface-low rounded-lg transition"
               >
                 <Link
-                  to={`/banks/${slugifyBankName(item.bankName)}`}
+                  to={`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`}
                   className="flex items-center gap-3 min-w-0"
                 >
                   <BankAvatar
