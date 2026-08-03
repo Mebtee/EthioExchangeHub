@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ethio-exchange-backend:latest
+    container_name: ethio-exchange-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      # Frontend origin allowed by CORS. Override for your deployed frontend.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      # REQUIRED at boot — replace with real Supabase credentials (see backend/.env.example).
+      SUPABASE_URL: ${SUPABASE_URL:-https://placeholder-project.supabase.co}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-placeholder-service-role-key}
+      # REQUIRED at boot — replace with a long random string.
+      JWT_SECRET: ${JWT_SECRET:-development-secret-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-30d}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5000/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Optional reverse-proxy placeholder. Enable with: docker compose --profile nginx up
+  # Put your server/proxy config in docker/nginx.conf (see backend/README.md).
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ethio-exchange-nginx
+    profiles: ["nginx"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
