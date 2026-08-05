@@ -6,7 +6,7 @@ const apiBaseUrl: string | undefined = import.meta.env.VITE_API_BASE_URL;
 
 if (!apiBaseUrl) {
   throw new Error(
-    "VITE_API_BASE_URL is not defined. Copy .env.example to .env and set VITE_API_BASE_URL (e.g. http://localhost:5000/api).",
+    "VITE_API_BASE_URL is not defined. Copy .env.example to .env and set VITE_API_BASE_URL (e.g. http://localhost:5000/api/v1).",
   );
 }
 
