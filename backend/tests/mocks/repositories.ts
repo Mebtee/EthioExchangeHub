@@ -13,6 +13,8 @@ import type { ExchangeRatesRepository } from "@/repositories/ExchangeRatesReposi
 import type { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
 import type { ScraperHealthRepository } from "@/repositories/ScraperHealthRepository";
 import type { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
+import type { SettingsRepository } from "@/repositories/SettingsRepository";
+import type { UsersRepository } from "@/repositories/UsersRepository";
 
 /** Builds a mock BanksRepository. */
 export function createMockBanksRepository(
@@ -107,4 +109,42 @@ export function createMockScrapeLogsRepository(
     ...overrides,
   };
   return mock as unknown as ScrapeLogsRepository;
+}
+
+/** Builds a mock SettingsRepository. */
+export function createMockSettingsRepository(
+  overrides: Partial<Record<keyof SettingsRepository, unknown>> = {},
+): SettingsRepository {
+  const mock: Record<string, unknown> = {
+    findAll: vi.fn(),
+    findOneBy: vi.fn(),
+    findManyBy: vi.fn(),
+    findLatestBy: vi.fn(),
+    insert: vi.fn(),
+    updateBy: vi.fn(),
+    deleteBy: vi.fn(),
+    findAllSettings: vi.fn(),
+    upsertMany: vi.fn(),
+    ...overrides,
+  };
+  return mock as unknown as SettingsRepository;
+}
+
+/** Builds a mock UsersRepository. */
+export function createMockUsersRepository(
+  overrides: Partial<Record<keyof UsersRepository, unknown>> = {},
+): UsersRepository {
+  const mock: Record<string, unknown> = {
+    findAll: vi.fn(),
+    findOneBy: vi.fn(),
+    findManyBy: vi.fn(),
+    findLatestBy: vi.fn(),
+    insert: vi.fn(),
+    updateBy: vi.fn(),
+    deleteBy: vi.fn(),
+    findByEmail: vi.fn(),
+    findById: vi.fn(),
+    ...overrides,
+  };
+  return mock as unknown as UsersRepository;
 }

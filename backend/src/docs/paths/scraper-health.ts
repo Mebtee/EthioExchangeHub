@@ -1,4 +1,11 @@
-import { nullableRef, pathParam, schemaRef, successResponse, type DocPathItem } from "../helpers";
+import {
+  arrayRef,
+  nullableRef,
+  pathParam,
+  schemaRef,
+  successResponse,
+  type DocPathItem,
+} from "../helpers";
 
 /** Scraper-health endpoints (mounted under `/api/v1`). */
 export const scraperHealthPaths: Record<string, DocPathItem> = {
@@ -13,6 +20,17 @@ export const scraperHealthPaths: Record<string, DocPathItem> = {
           "Scraper health summary retrieved.",
           schemaRef("ScraperHealthSummary"),
         ),
+      },
+    },
+  },
+  "/scraper-health/list": {
+    get: {
+      tags: ["Scraper Health"],
+      summary: "List scraper health rows",
+      description: "Every per-bank health row, alphabetical by bank code.",
+      operationId: "listScraperHealth",
+      responses: {
+        "200": successResponse("Scraper health list retrieved.", arrayRef("ScraperHealth")),
       },
     },
   },

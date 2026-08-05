@@ -31,8 +31,12 @@ export const adminKeys = {
   dashboard: () => [...adminKeys.all, "dashboard"] as const,
   rateTrend: () => [...adminKeys.all, "rate-trend"] as const,
   manualRates: () => [...adminKeys.all, "manual-rates"] as const,
-  scrapeLogs: () => [...adminKeys.all, "scrape-logs"] as const,
+  scrapeLogs: (limit?: number) =>
+    limit === undefined
+      ? ([...adminKeys.all, "scrape-logs"] as const)
+      : ([...adminKeys.all, "scrape-logs", limit] as const),
   scraperHealth: () => [...adminKeys.all, "scraper-health"] as const,
+  scraperHealthList: () => [...adminKeys.all, "scraper-health-list"] as const,
   profile: () => [...adminKeys.all, "profile"] as const,
   settings: () => [...adminKeys.all, "settings"] as const,
 };

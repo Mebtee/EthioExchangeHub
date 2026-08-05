@@ -54,6 +54,17 @@ export const envSchema = z.object({
   // Tuning knobs — safe defaults.
   JWT_EXPIRES_IN: z.string().min(1).default("15m"),
   REFRESH_TOKEN_EXPIRES_IN: z.string().min(1).default("30d"),
+  /** Lifetime of the short-lived password-reset token (A1). */
+  PASSWORD_RESET_TOKEN_EXPIRES_IN: z.string().min(1).default("30m"),
+
+  /**
+   * The single administrator account provisioned on first login (A1).
+   * `ADMIN_PASSWORD` is REQUIRED (no default) — the provisioned `users` row
+   * stores only its scrypt hash, never the plaintext. Change both in
+   * production; the placeholder email matches the frontend login page hint.
+   */
+  ADMIN_EMAIL: z.string().email().default("admin@ethioexchange.dev"),
+  ADMIN_PASSWORD: z.string().min(8),
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "http", "debug"]).default("info"),
 
@@ -77,6 +88,22 @@ export const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   /** Stricter limit for documentation/metrics endpoints. */
   RATE_LIMIT_STRICT_MAX: z.coerce.number().int().positive().default(30),
+  /** Tighter brute-force limit for the /auth surface (login, refresh, reset). */
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+
+  /**
+   * Staleness window (days): a resolved rate row is marked `stale: true` when
+   * its `rate_date` is older than this many days before today. Stale rows are
+   * always served (never dropped) — consumers decide how to treat them.
+   * `0` disables staleness marking.
+   *
+   * NOTE: default must stay in sync with `DEFAULT_MAX_RATE_AGE_DAYS` in
+   * services/helpers/RateResolution.ts. "Today" is the SERVER's local date
+   * (`todayLocalIso`), so production deployments targeting Ethiopia should
+   * run the container in `Africa/Addis_Ababa` (UTC+3) — otherwise rows are
+   * marked stale ~3 hours earlier than the local calendar day would.
+   */
+  MAX_RATE_AGE_DAYS: z.coerce.number().int().nonnegative().default(7),
 
   /** Slow-down: requests allowed at full speed before gradual delay begins. */
   SLOW_DOWN_WINDOW_MS: z.coerce.number().int().positive().default(900_000),

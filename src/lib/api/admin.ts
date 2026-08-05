@@ -1,81 +1,187 @@
 import { apiClient } from "./client";
+import { fetchBanks } from "./banks";
+import {
+  mapBankRow,
+  mapExchangeRateRow,
+  mapManualRateRow,
+  mapScrapeLogRow,
+  mapScraperHealthRow,
+  type BackendBankRow,
+  type BackendExchangeRateRow,
+  type BackendManualRateRow,
+  type BackendScrapeLogRow,
+  type BackendScraperHealthRow,
+  type BackendScraperHealthSummary,
+} from "./adapters";
 import type {
   AdminProfile,
+  AdminProfileUpdate,
   AdminSettings,
+  AdminSettingsUpdate,
   DashboardStat,
   ManualRate,
+  ManualRatePayload,
+  ManualRateUpdate,
   RateTrendPoint,
   ScrapeLog,
-  ScraperHealth,
+  ScraperHealthRow,
+  ScraperHealthSummary,
 } from "@/types/admin";
 
 /**
  * Admin API service.
  *
- * ENDPOINT AVAILABILITY (verified): the Express backend is not running and the
- * only Express backend in this workspace exposes no admin routes, so all of the
- * endpoints below are currently UNAVAILABLE. Per project decision, the admin
- * hooks keep serving mock data from `src/mocks/` and are marked with `TODO`
- * until each endpoint ships.
- *
- * These functions are NOT called while `VITE_USE_MOCKS=true` (the default).
- * They are the ready-to-use wiring: flip `VITE_USE_MOCKS=false` once the
- * backend exposes these routes and the hooks in `src/hooks/use-admin.ts`
- * switch over automatically — no component changes required.
- *
- * ENVELOPE CONTRACT: `src/lib/api/client.ts` only unwraps a
- * `{ success, message, data }` envelope. The workspace Express backend
- * (`exchange plat`) currently responds with `{ status, data: {...} }` — the
- * shipped admin endpoints must return the `{ success, message, data }` shape
- * (or the unwrap logic in `client.ts` must be extended) or these functions
- * will receive the wrong shape.
+ * Every function talks to the real backend and is mapped through the row
+ * adapters in `./adapters`. No data is ever invented client-side — failures
+ * surface as proper API errors and the pages render their error states.
  */
 
-// TODO: Replace mock data (DASHBOARD_STATS) with this endpoint once
-// GET /api/admin/dashboard is available.
-export async function fetchAdminDashboard(): Promise<DashboardStat[]> {
-  const { data } = await apiClient.get<DashboardStat[]>("/admin/dashboard");
-  return data;
+/** Dashboard payload: the stat cards plus the recent-activity feed. */
+export interface AdminDashboard {
+  stats: DashboardStat[];
+  recentLogs: ScrapeLog[];
 }
 
-// TODO: Replace mock data (RATE_TREND) with this endpoint once a trend route
-// exists (not part of the agreed endpoint list yet).
+/**
+ * Dashboard data derived from the live endpoints (banks, rates, scraper
+ * health, recent scrape logs). `/banks` is fetched exactly ONCE and shared by
+ * every name resolution; logs are limited to the 5 most recent runs on the
+ * server (no full-table download + client-side slice). The same query powers
+ * both the stat cards and the "Recent activity" feed, so the dashboard issues
+ * no duplicate requests.
+ */
+export async function fetchAdminDashboard(): Promise<AdminDashboard> {
+  const [{ data: bankRows }, { data: rateRows }, health, { data: logRows }] = await Promise.all([
+    apiClient.get<BackendBankRow[]>("/banks"),
+    apiClient.get<BackendExchangeRateRow[]>("/rates/latest"),
+    fetchScraperHealth(),
+    apiClient.get<BackendScrapeLogRow[]>("/scrape-logs", { params: { limit: 5 } }),
+  ]);
+
+  const bankNameByCode = new Map(bankRows.map((bank) => [bank.bank_code, bank.bank_name]));
+  const banks = bankRows.map(mapBankRow);
+  const rates = rateRows.map((rate) =>
+    mapExchangeRateRow(rate, bankNameByCode.get(rate.bank_code)),
+  );
+  const logs = logRows.map((log) => mapScrapeLogRow(log, bankNameByCode.get(log.bank_code)));
+
+  const completedRuns = logs.length;
+  const successfulRuns = logs.filter((log) => log.status === "success").length;
+  const successRate =
+    completedRuns > 0 ? Math.round((successfulRuns / completedRuns) * 1000) / 10 : 0;
+
+  return {
+    stats: [
+      {
+        label: "Banks Tracked",
+        value: String(banks.length),
+        delta: "from live bank directory",
+        direction: "neutral",
+      },
+      {
+        label: "Active Rates",
+        value: rates.length.toLocaleString(),
+        delta: "latest rate snapshot",
+        direction: "neutral",
+      },
+      {
+        label: "Scrapers Online",
+        value: `${health.healthy} / ${health.total}`,
+        delta: `${health.degraded} degraded`,
+        direction: "neutral",
+      },
+      {
+        label: "Scrape Success",
+        value: `${successRate}%`,
+        delta: `${completedRuns} recent runs`,
+        direction: "neutral",
+      },
+    ],
+    recentLogs: logs,
+  };
+}
+
+/**
+ * Cash buying/selling trend for USD over the last 7 days (matches the
+ * dashboard card's label; the endpoint aggregates real exchange_rates data).
+ */
 export async function fetchRateTrend(): Promise<RateTrendPoint[]> {
-  const { data } = await apiClient.get<RateTrendPoint[]>("/admin/dashboard/rate-trend");
+  const { data } = await apiClient.get<RateTrendPoint[]>("/admin/dashboard/rate-trend", {
+    params: { currency: "USD", days: 7 },
+  });
   return data;
 }
 
-// TODO: Replace mock data (MANUAL_RATES) with this endpoint once
-// GET /api/admin/manual-rates is available.
 export async function fetchManualRates(): Promise<ManualRate[]> {
-  const { data } = await apiClient.get<ManualRate[]>("/admin/manual-rates");
+  const [{ data: rates }, banks] = await Promise.all([
+    apiClient.get<BackendManualRateRow[]>("/manual-rates"),
+    fetchBanks(),
+  ]);
+  const bankNameByCode = new Map(banks.map((bank) => [bank.slug, bank.name]));
+  return rates.map((rate) => mapManualRateRow(rate, bankNameByCode.get(rate.bank_code)));
+}
+
+export async function createManualRate(payload: ManualRatePayload): Promise<ManualRate> {
+  const { data } = await apiClient.post<BackendManualRateRow>("/manual-rates", payload);
+  return mapManualRateRow(data);
+}
+
+export async function updateManualRate(id: string, payload: ManualRateUpdate): Promise<ManualRate> {
+  const { data } = await apiClient.put<BackendManualRateRow>(`/manual-rates/${id}`, payload);
+  return mapManualRateRow(data);
+}
+
+export async function deleteManualRate(id: string): Promise<void> {
+  await apiClient.delete(`/manual-rates/${id}`);
+}
+
+export async function fetchScrapeLogs(limit?: number): Promise<ScrapeLog[]> {
+  const [{ data: logs }, banks] = await Promise.all([
+    apiClient.get<BackendScrapeLogRow[]>(
+      "/scrape-logs",
+      limit !== undefined ? { params: { limit } } : undefined,
+    ),
+    fetchBanks(),
+  ]);
+  const bankNameByCode = new Map(banks.map((bank) => [bank.slug, bank.name]));
+  return logs.map((log) => mapScrapeLogRow(log, bankNameByCode.get(log.bank_code)));
+}
+
+export async function fetchScraperHealth(): Promise<ScraperHealthSummary> {
+  const { data } = await apiClient.get<BackendScraperHealthSummary>("/scraper-health");
   return data;
 }
 
-// TODO: Replace mock data (SCRAPE_LOGS) with this endpoint once
-// GET /api/admin/scrape-logs is available.
-export async function fetchScrapeLogs(): Promise<ScrapeLog[]> {
-  const { data } = await apiClient.get<ScrapeLog[]>("/admin/scrape-logs");
-  return data;
+/** Per-bank scraper-health rows (admin list), names resolved from /banks. */
+export async function fetchScraperHealthList(): Promise<ScraperHealthRow[]> {
+  const [{ data: rows }, banks] = await Promise.all([
+    apiClient.get<BackendScraperHealthRow[]>("/scraper-health/list"),
+    fetchBanks(),
+  ]);
+  const bankNameByCode = new Map(banks.map((bank) => [bank.slug, bank.name]));
+  return rows.map((row) => mapScraperHealthRow(row, bankNameByCode.get(row.bank_code)));
 }
 
-// TODO: Replace mock data (SCRAPERS) with this endpoint once
-// GET /api/admin/scraper-health is available.
-export async function fetchScraperHealth(): Promise<ScraperHealth[]> {
-  const { data } = await apiClient.get<ScraperHealth[]>("/admin/scraper-health");
-  return data;
-}
-
-// TODO: Replace mock data (ADMIN_PROFILE) with this endpoint once a profile
-// route exists (not part of the agreed endpoint list yet).
+/** The configured administrator profile. */
 export async function fetchAdminProfile(): Promise<AdminProfile> {
   const { data } = await apiClient.get<AdminProfile>("/admin/profile");
   return data;
 }
 
-// TODO: Replace mock data (ADMIN_SETTINGS) with this endpoint once a settings
-// route exists (not part of the agreed endpoint list yet).
+/** Persists the provided profile fields and returns the stored profile. */
+export async function updateAdminProfile(payload: AdminProfileUpdate): Promise<AdminProfile> {
+  const { data } = await apiClient.put<AdminProfile>("/admin/profile", payload);
+  return data;
+}
+
+/** The persisted platform settings (merged with configured defaults). */
 export async function fetchAdminSettings(): Promise<AdminSettings> {
   const { data } = await apiClient.get<AdminSettings>("/admin/settings");
+  return data;
+}
+
+/** Persists the provided settings fields and returns the stored settings. */
+export async function updateAdminSettings(payload: AdminSettingsUpdate): Promise<AdminSettings> {
+  const { data } = await apiClient.put<AdminSettings>("/admin/settings", payload);
   return data;
 }

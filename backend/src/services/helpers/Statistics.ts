@@ -8,6 +8,7 @@
  */
 
 import type { ScraperHealthRow } from "@/types/database";
+import { isStaleRate } from "./RateResolution";
 
 /** Business buckets for scraper health status. */
 export type ScraperBucket = "healthy" | "degraded" | "failed" | "unknown";
@@ -22,6 +23,22 @@ export function categorizeScraperStatus(status: string): ScraperBucket {
   return "unknown";
 }
 
+/** Canonical log-status buckets (D3) — the single source of truth. */
+export type LogBucket = "success" | "failed";
+
+/**
+ * Maps a raw scrape-log status to the canonical bucket. Any status that is
+ * not explicitly `success` is treated as `failed` — a run that did not
+ * confirm success is operationally a failure, and a new/unknown value must
+ * never silently surface as a third bucket (which filters/validators would
+ * reject). Keeps the vocabulary closed: `success | failed`, everywhere.
+ */
+export function categorizeLogStatus(status: string): LogBucket {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "success") return "success";
+  return "failed";
+}
+
 /** Aggregate summary computed from all health rows. */
 export interface ScraperHealthSummary {
   total: number;
@@ -33,10 +50,23 @@ export interface ScraperHealthSummary {
   averageResponseTimeMs: number | null;
   /** Average consecutive failures across rows that have one, else null. */
   averageConsecutiveFailures: number | null;
+  /**
+   * Scrapers whose `last_rate_date` is older than the staleness window (D2),
+   * or that have never produced a rate. Surfaces data freshness on the admin
+   * scraper-health view without dropping anything.
+   */
+  staleCount: number;
 }
 
-/** Computes the aggregate summary for a set of health rows. */
-export function summarizeHealth(rows: ScraperHealthRow[]): ScraperHealthSummary {
+/**
+ * Computes the aggregate summary for a set of health rows. `today` and
+ * `maxAgeDays` are injected so staleness is deterministic in tests.
+ */
+export function summarizeHealth(
+  rows: ScraperHealthRow[],
+  today: string,
+  maxAgeDays: number,
+): ScraperHealthSummary {
   let healthy = 0;
   let degraded = 0;
   let failed = 0;
@@ -45,6 +75,7 @@ export function summarizeHealth(rows: ScraperHealthRow[]): ScraperHealthSummary 
   let responseTimeCount = 0;
   let failures = 0;
   let failureCount = 0;
+  let staleCount = 0;
 
   for (const row of rows) {
     const bucket = categorizeScraperStatus(row.status);
@@ -61,6 +92,11 @@ export function summarizeHealth(rows: ScraperHealthRow[]): ScraperHealthSummary 
       failures += row.consecutive_failures;
       failureCount += 1;
     }
+    // A scraper with no rate yet, or one whose last rate is older than the
+    // window, is counted as stale — surfaced, never silently dropped.
+    if (row.last_rate_date === null || isStaleRate(row.last_rate_date, today, maxAgeDays)) {
+      staleCount += 1;
+    }
   }
 
   return {
@@ -71,5 +107,6 @@ export function summarizeHealth(rows: ScraperHealthRow[]): ScraperHealthSummary 
     unknown,
     averageResponseTimeMs: responseTimeCount > 0 ? responseTimes / responseTimeCount : null,
     averageConsecutiveFailures: failureCount > 0 ? failures / failureCount : null,
+    staleCount,
   };
 }

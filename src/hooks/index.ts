@@ -7,10 +7,12 @@ export { useHydrateOnce } from "./use-hydrate-once";
 export {
   useAdminProfile,
   useAdminSettings,
+  useCreateManualRate,
   useDashboardStats,
+  useDeleteManualRate,
   useManualRates,
   useRateTrend,
   useScrapeLogs,
   useScraperHealth,
+  useUpdateManualRate,
 } from "./use-admin";
-export { useMockableQuery } from "./use-mockable-query";

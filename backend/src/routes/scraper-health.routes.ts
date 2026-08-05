@@ -15,6 +15,9 @@ export function scraperHealthRouter(controller: ScraperHealthController): Router
   const router = Router();
 
   router.get("/", controller.getHealth);
+  // The literal /list route must be registered BEFORE /:bankCode so "list"
+  // is never parsed as a bank code.
+  router.get("/list", controller.getHealthList);
   router.get("/:bankCode", validateParams(scraperHealthParamsSchema), controller.getHealthByBank);
 
   return router;

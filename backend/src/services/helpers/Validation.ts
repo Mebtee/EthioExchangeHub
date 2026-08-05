@@ -27,11 +27,19 @@ export function assertCurrencyCode(value: string): void {
   }
 }
 
-/** Throws when `value` is not a valid ISO date (YYYY-MM-DD). */
+/**
+ * Throws when `value` is not a valid ISO date (YYYY-MM-DD). Implemented as a
+ * throw-wrapper over `isIsoDate` so the two helpers can never drift apart.
+ */
 export function assertIsoDate(value: string): void {
-  if (!ISO_DATE_PATTERN.test(value)) {
+  if (!isIsoDate(value)) {
     throw new ValidationError(`"${value}" is not a valid date (expected YYYY-MM-DD).`);
   }
+}
+
+/** Non-throwing ISO date check — true when `value` matches YYYY-MM-DD. */
+export function isIsoDate(value: string): boolean {
+  return ISO_DATE_PATTERN.test(value);
 }
 
 /** Throws when `value` is not a finite positive number. */

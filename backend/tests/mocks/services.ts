@@ -8,11 +8,27 @@
 
 import { vi } from "vitest";
 
+import type { AuthService } from "@/services/AuthService";
 import type { BanksService } from "@/services/BanksService";
 import type { ExchangeRatesService } from "@/services/ExchangeRatesService";
 import type { ManualRatesService } from "@/services/ManualRatesService";
 import type { ScraperHealthService } from "@/services/ScraperHealthService";
 import type { ScrapeLogsService } from "@/services/ScrapeLogsService";
+import type { SettingsService } from "@/services/SettingsService";
+
+/** Builds a mock AuthService. */
+export function createMockAuthService(
+  overrides: Partial<Record<keyof AuthService, unknown>> = {},
+): AuthService {
+  return {
+    login: vi.fn(),
+    refresh: vi.fn(),
+    me: vi.fn(),
+    forgotPassword: vi.fn(),
+    resetPassword: vi.fn(),
+    ...overrides,
+  } as unknown as AuthService;
+}
 
 /** Builds a mock BanksService. */
 export function createMockBanksService(
@@ -38,6 +54,8 @@ export function createMockExchangeRatesService(
     getLatestRatesByBank: vi.fn(),
     getLatestRateByBankAndCurrency: vi.fn(),
     getHistoricalRates: vi.fn(),
+    getRateTrend: vi.fn(),
+    getMarketTicker: vi.fn(),
     ...overrides,
   } as unknown as ExchangeRatesService;
 }
@@ -64,6 +82,7 @@ export function createMockScraperHealthService(
     listHealthy: vi.fn(),
     listDegraded: vi.fn(),
     listFailed: vi.fn(),
+    listAll: vi.fn(),
     findByBankCode: vi.fn(),
     ...overrides,
   } as unknown as ScraperHealthService;
@@ -80,4 +99,17 @@ export function createMockScrapeLogsService(
     listLogs: vi.fn(),
     ...overrides,
   } as unknown as ScrapeLogsService;
+}
+
+/** Builds a mock SettingsService. */
+export function createMockSettingsService(
+  overrides: Partial<Record<keyof SettingsService, unknown>> = {},
+): SettingsService {
+  return {
+    getProfile: vi.fn(),
+    updateProfile: vi.fn(),
+    getSettings: vi.fn(),
+    updateSettings: vi.fn(),
+    ...overrides,
+  } as unknown as SettingsService;
 }

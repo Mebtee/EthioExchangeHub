@@ -46,3 +46,21 @@ export function createStrictLimiter(overrides: Partial<Options> = {}) {
     ...overrides,
   });
 }
+
+/**
+ * Dedicated limiter for `/auth` (A2 — brute-force protection).
+ *
+ * The general API limiter (default 100/15min/IP) is far too generous for a
+ * financial admin login, so the auth surface gets its own tighter budget
+ * (default 10 requests/15min/IP, env-tunable via `AUTH_RATE_LIMIT_MAX`).
+ * Mounted in front of the auth router so login, refresh, and reset attempts
+ * are throttled independently of the rest of the API.
+ */
+export function createAuthLimiter(overrides: Partial<Options> = {}) {
+  return rateLimit({
+    ...baseConfig,
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    limit: env.AUTH_RATE_LIMIT_MAX,
+    ...overrides,
+  });
+}

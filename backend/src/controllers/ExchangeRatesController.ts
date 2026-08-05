@@ -59,11 +59,28 @@ export class ExchangeRatesController {
     },
   );
 
+  /** Returns the market ticker derived from the latest rate rows. */
+  getMarketTicker = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const items = await this.exchangeRatesService.getMarketTicker(
+      ExchangeRatesController.readLimit(req.query),
+    );
+    successResponse(res, items, "Market ticker retrieved.");
+  });
+
   /** Reads optional `from`/`to` query params into a date range (no validation). */
   private static readDateRange(query: Request["query"]): RateDateRange {
     const range: RateDateRange = {};
     if (typeof query.from === "string") range.from = query.from;
     if (typeof query.to === "string") range.to = query.to;
     return range;
+  }
+
+  /** Reads the optional `limit` query param into a positive integer. */
+  private static readLimit(query: Request["query"]): number | undefined {
+    if (typeof query.limit === "string") {
+      const limit = Number(query.limit);
+      if (Number.isInteger(limit) && limit > 0) return limit;
+    }
+    return undefined;
   }
 }

@@ -5,6 +5,22 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Today's date as "YYYY-MM-DD" in the SERVER'S LOCAL timezone.
+ *
+ * Deliberately not `toISOString().slice(0, 10)`: that returns the UTC date,
+ * which is one day behind local time for UTC+3 (Ethiopia) between midnight
+ * and 03:00. Rates are dated by local calendar day, so staleness must be
+ * measured against the local date.
+ */
+export function todayLocalIso(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /** Parses an ISO string safely; returns null when invalid. */
 export function parseIso(value: string): Date | null {
   const date = new Date(value);

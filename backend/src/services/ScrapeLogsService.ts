@@ -1,12 +1,14 @@
 import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
 import type { ScrapeLogRow } from "@/types/database";
+import { categorizeLogStatus, type LogBucket } from "./helpers/Statistics";
 import { sortLogsNewestFirst } from "./helpers/Sorting";
 
 /** Optional filters for listing scrape logs. */
 export interface ScrapeLogFilter {
   bankCode?: string;
   runId?: string;
-  status?: string;
+  /** Canonical bucket (success | failed) — matched against categorized rows. */
+  status?: LogBucket;
   scenario?: string;
 }
 
@@ -62,7 +64,9 @@ export class ScrapeLogsServiceImpl implements ScrapeLogsService {
     const filtered = rows.filter((row) => {
       if (filter?.bankCode && row.bank_code !== filter.bankCode) return false;
       if (filter?.runId && row.run_id !== filter.runId) return false;
-      if (filter?.status && row.status !== filter.status) return false;
+      // D3: compare the row's CANONICAL bucket, not raw free text — a row
+      // stored as "error"/"failure" must match `status=failed`.
+      if (filter?.status && categorizeLogStatus(row.status) !== filter.status) return false;
       if (filter?.scenario && row.scenario !== filter.scenario) return false;
       return true;
     });

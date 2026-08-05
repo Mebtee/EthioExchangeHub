@@ -12,9 +12,9 @@ import {
 
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { EmptyState } from "@/components/shared/async-states";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { useDashboardStats, useRateTrend, useScrapeLogs } from "@/hooks/use-admin";
+import { useDashboardStats, useRateTrend } from "@/hooks/use-admin";
 import { formatRelativeTime } from "@/lib/format";
 import { logStatusTone } from "@/lib/status";
 
@@ -22,9 +22,26 @@ const STAT_ICONS = [Building2, Coins, Activity, ShieldCheck] as const;
 const STAT_TONES = ["primary", "gold", "neutral", "success"] as const;
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading } = useDashboardStats();
-  const { data: trend } = useRateTrend();
-  const { data: recentLogs } = useScrapeLogs();
+  const {
+    data: dashboard,
+    isLoading,
+    isError: statsError,
+    error: statsErrorObj,
+    refetch: refetchStats,
+  } = useDashboardStats();
+  const {
+    data: trend,
+    isLoading: trendLoading,
+    isError: trendError,
+    error: trendErrorObj,
+    refetch: refetchTrend,
+  } = useRateTrend();
+
+  // The dashboard query already fetches /banks + /scrape-logs?limit=5 once and
+  // shares them across the stat cards and the recent-activity feed — no
+  // separate useScrapeLogs call (avoids duplicate HTTP requests).
+  const stats = dashboard?.stats ?? [];
+  const recentLogs = dashboard?.recentLogs ?? [];
 
   return (
     <div className="space-y-8">
@@ -44,14 +61,20 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      {!isLoading && (stats ?? []).length === 0 ? (
+      {statsError ? (
+        <ErrorState
+          title="Unable to load dashboard statistics"
+          message={statsErrorObj instanceof Error ? statsErrorObj.message : undefined}
+          onRetry={() => void refetchStats()}
+        />
+      ) : !isLoading && stats.length === 0 ? (
         <EmptyState
           title="No dashboard statistics available"
           message="Statistics will appear here once the backend starts reporting."
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {(stats ?? []).map((stat, i) => (
+          {stats.map((stat, i) => (
             <StatCard
               key={stat.label}
               label={stat.label}
@@ -80,58 +103,73 @@ export default function AdminDashboardPage() {
             <StatusBadge tone="success">Live</StatusBadge>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trend ?? []} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="buyFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="sellFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--gold)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="var(--gold)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={["dataMin - 0.05", "dataMax + 0.05"]}
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={42}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cashBuying"
-                  name="Cash buying"
-                  stroke="var(--primary)"
-                  strokeWidth={2}
-                  fill="url(#buyFill)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cashSelling"
-                  name="Cash selling"
-                  stroke="var(--gold)"
-                  strokeWidth={2}
-                  fill="url(#sellFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {trendLoading ? (
+              <LoadingState label="Loading rate trend…" />
+            ) : trendError ? (
+              <ErrorState
+                title="Unable to load rate trend"
+                message={trendErrorObj instanceof Error ? trendErrorObj.message : undefined}
+                onRetry={() => void refetchTrend()}
+              />
+            ) : (trend ?? []).length === 0 ? (
+              <EmptyState
+                title="No rate trend data available"
+                message="The trend will appear once exchange-rate history is available."
+              />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trend ?? []} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="buyFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="sellFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--gold)" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="var(--gold)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={["dataMin - 0.05", "dataMax + 0.05"]}
+                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={42}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cashBuying"
+                    name="Cash buying"
+                    stroke="var(--primary)"
+                    strokeWidth={2}
+                    fill="url(#buyFill)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cashSelling"
+                    name="Cash selling"
+                    stroke="var(--gold)"
+                    strokeWidth={2}
+                    fill="url(#sellFill)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </SurfaceCard>
 
@@ -141,15 +179,15 @@ export default function AdminDashboardPage() {
             <h2 className="font-semibold">Recent activity</h2>
           </div>
           <ul className="flex-1 divide-y divide-border/60">
-            {(recentLogs ?? []).slice(0, 5).map((log) => (
+            {recentLogs.map((log) => (
               <li key={log.id} className="flex items-start gap-3 px-6 py-3.5">
                 <StatusBadge tone={logStatusTone(log.status)} className="mt-0.5 shrink-0">
                   {log.status}
                 </StatusBadge>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{log.message}</p>
+                  <p className="truncate text-sm font-medium">{log.message ?? log.scenario}</p>
                   <p className="text-xs text-muted-foreground">
-                    {log.scraper} · {formatRelativeTime(log.timestamp)}
+                    {log.bankName} · {formatRelativeTime(log.ranAt ?? "")}
                   </p>
                 </div>
               </li>

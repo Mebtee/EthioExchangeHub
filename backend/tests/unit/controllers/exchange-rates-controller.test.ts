@@ -92,6 +92,38 @@ describe("ExchangeRatesController.getLatestRateByBankAndCurrency", () => {
   });
 });
 
+describe("ExchangeRatesController.getMarketTicker", () => {
+  it("delegates without a limit and sends 200", async () => {
+    const { service, controller } = makeController();
+    service.getMarketTicker.mockResolvedValue([{ pair: "USD/ETB", value: 120.5, change: 0.42 }]);
+    const res = createMockResponse();
+
+    controller.getMarketTicker(createMockRequest(), res, createMockNext());
+    await flushPromises();
+
+    expect(service.getMarketTicker).toHaveBeenCalledWith(undefined);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      message: "Market ticker retrieved.",
+      data: [{ pair: "USD/ETB", value: 120.5, change: 0.42 }],
+    });
+  });
+
+  it("reads the optional limit query param", async () => {
+    const { service, controller } = makeController();
+    service.getMarketTicker.mockResolvedValue([]);
+
+    controller.getMarketTicker(
+      createMockRequest({ query: { limit: "3" } }),
+      createMockResponse(),
+      createMockNext(),
+    );
+    await flushPromises();
+
+    expect(service.getMarketTicker).toHaveBeenCalledWith(3);
+  });
+});
+
 describe("ExchangeRatesController.getHistoricalRates", () => {
   it("delegates with params and range", async () => {
     const { service, controller } = makeController();

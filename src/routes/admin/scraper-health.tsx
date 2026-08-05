@@ -1,120 +1,145 @@
-import { Activity, HeartPulse, RefreshCw, ShieldAlert } from "lucide-react";
+import { Activity, CalendarClock, HeartPulse, ShieldAlert } from "lucide-react";
 
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { useScraperHealth } from "@/hooks/use-admin";
-import { formatCountOrDash, formatDurationMs, formatRelativeSchedule, formatRelativeTime } from "@/lib/format";
+import { useScraperHealth, useScraperHealthList } from "@/hooks/use-admin";
+import { formatRelativeTime } from "@/lib/format";
 import { scraperStatusTone } from "@/lib/status";
-import { toast } from "sonner";
 
 export default function AdminScraperHealthPage() {
-  const { data, isLoading } = useScraperHealth();
-  const scrapers = data ?? [];
+  const { data: summary, isLoading, isError, error, refetch } = useScraperHealth();
+  const {
+    data: rows,
+    isLoading: rowsLoading,
+    isError: rowsError,
+    error: rowsErrorObj,
+    refetch: refetchRows,
+  } = useScraperHealthList();
 
-  const counts = {
-    total: scrapers.length,
-    healthy: scrapers.filter((s) => s.status === "healthy").length,
-    degraded: scrapers.filter((s) => s.status === "degraded").length,
-    offline: scrapers.filter((s) => s.status === "offline").length,
-  };
+  const total = summary?.total ?? 0;
+  const healthy = summary?.healthy ?? 0;
+  const degraded = summary?.degraded ?? 0;
+  const offline = (summary?.failed ?? 0) + (summary?.unknown ?? 0);
+  const stale = summary?.staleCount ?? 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Scraper Health</h1>
-          <p className="mt-1 text-muted-foreground">
-            Status and performance of every bank scraper.
-          </p>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Scraper Health</h1>
+        <p className="mt-1 text-muted-foreground">
+          Status and performance of every bank scraper. Data is read-only — no trigger control is
+          shown because no scraper-run service exists yet.
+        </p>
+      </div>
+
+      {isError ? (
+        <ErrorState
+          title="Unable to load scraper summary"
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Total scrapers"
+            value={isLoading ? "…" : String(total)}
+            delta={`${healthy} healthy`}
+            direction="up"
+            icon={Activity}
+            tone="primary"
+          />
+          <StatCard
+            label="Healthy"
+            value={isLoading ? "…" : String(healthy)}
+            delta="Running normally"
+            direction="up"
+            icon={HeartPulse}
+            tone="success"
+          />
+          <StatCard
+            label="Degraded"
+            value={isLoading ? "…" : String(degraded)}
+            delta="Needs attention"
+            direction="neutral"
+            icon={ShieldAlert}
+            tone="gold"
+          />
+          <StatCard
+            label="Offline"
+            value={isLoading ? "…" : String(offline)}
+            delta="Not collecting"
+            direction="down"
+            icon={Activity}
+            tone="destructive"
+          />
+          <StatCard
+            label="Stale data"
+            value={isLoading ? "…" : String(stale)}
+            delta="Rate older than window"
+            direction={stale > 0 ? "down" : "neutral"}
+            icon={CalendarClock}
+            tone={stale > 0 ? "gold" : "neutral"}
+          />
         </div>
-        <Button variant="outline" onClick={() => toast.info("Scrape run triggered (mock)")}>
-          <RefreshCw className="size-4" />
-          Run all scrapers
-        </Button>
-      </div>
+      )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Total scrapers"
-          value={isLoading ? "…" : String(counts.total)}
-          delta={`${counts.healthy} healthy`}
-          direction="up"
-          icon={Activity}
-          tone="primary"
-        />
-        <StatCard
-          label="Healthy"
-          value={isLoading ? "…" : String(counts.healthy)}
-          delta="Running normally"
-          direction="up"
-          icon={HeartPulse}
-          tone="success"
-        />
-        <StatCard
-          label="Degraded"
-          value={isLoading ? "…" : String(counts.degraded)}
-          delta="Needs attention"
-          direction="neutral"
-          icon={ShieldAlert}
-          tone="gold"
-        />
-        <StatCard
-          label="Offline"
-          value={isLoading ? "…" : String(counts.offline)}
-          delta="Not collecting"
-          direction="down"
-          icon={Activity}
-          tone="destructive"
-        />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {scrapers.map((scraper) => (
-          <SurfaceCard key={scraper.id} className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{scraper.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{scraper.bank}</p>
-              </div>
-              <StatusBadge tone={scraperStatusTone(scraper.status)} className="shrink-0">
-                {scraper.status}
-              </StatusBadge>
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Success rate</span>
-                <span className="font-semibold text-foreground">
-                  {scraper.successRate > 0 ? `${scraper.successRate}%` : "—"}
-                </span>
-              </div>
-              <Progress value={scraper.successRate} />
-            </div>
-
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <div>
-                <dt className="text-xs text-muted-foreground">Last run</dt>
-                <dd className="font-medium">{formatRelativeTime(scraper.lastRun)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Records</dt>
-                <dd className="font-medium tabular">{formatCountOrDash(scraper.records)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Avg duration</dt>
-                <dd className="font-medium tabular">{formatDurationMs(scraper.avgDurationMs)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Next run</dt>
-                <dd className="font-medium">{formatRelativeSchedule(scraper.nextRun)}</dd>
-              </div>
-            </dl>
-          </SurfaceCard>
-        ))}
-      </div>
+      <SurfaceCard className="p-0">
+        {rowsError ? (
+          <div className="p-6">
+            <ErrorState
+              title="Unable to load scraper details"
+              message={rowsErrorObj instanceof Error ? rowsErrorObj.message : undefined}
+              onRetry={() => void refetchRows()}
+            />
+          </div>
+        ) : rowsLoading ? (
+          <div className="p-6">
+            <LoadingState label="Loading scrapers…" />
+          </div>
+        ) : (rows ?? []).length === 0 ? (
+          <div className="p-6">
+            <EmptyState
+              title="No scraper records yet"
+              message="Per-bank health rows will appear here once scrapers start reporting."
+            />
+          </div>
+        ) : (
+          <ul className="divide-y divide-border/60">
+            {(rows ?? []).map((row) => (
+              <li
+                key={row.bankCode}
+                className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{row.bankName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {row.bankCode} · Rate as of {row.lastRateDate ?? "—"}
+                  </p>
+                </div>
+                <StatusBadge tone={scraperStatusTone(row.status)}>{row.status}</StatusBadge>
+                <div className="w-32 text-right">
+                  <p className="text-sm font-medium tabular">{row.responseTimeMs ?? "—"} ms</p>
+                  <p className="text-xs text-muted-foreground">response time</p>
+                </div>
+                <div className="w-36 text-right">
+                  <p className="text-sm font-medium tabular">
+                    {row.consecutiveFailures === null ? "—" : `${row.consecutiveFailures}×`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">consecutive failures</p>
+                </div>
+                <div className="w-36 text-right">
+                  <p className="truncate text-sm font-medium">
+                    {row.lastSuccess ? formatRelativeTime(row.lastSuccess) : "never"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">last success</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SurfaceCard>
     </div>
   );
 }

@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useAdminProfile } from "@/hooks/use-admin";
+import { useAdminProfile, useUpdateAdminProfile } from "@/hooks/use-admin";
 import { useHydrateOnce } from "@/hooks/use-hydrate-once";
 import { formatRelativeTime } from "@/lib/format";
 import { toast } from "sonner";
 
 export default function AdminProfilePage() {
   const { data, isLoading } = useAdminProfile();
+  const updateProfile = useUpdateAdminProfile();
   const profile = data ?? null;
 
   const [name, setName] = useState("");
@@ -26,8 +27,23 @@ export default function AdminProfilePage() {
   useHydrateOnce(data, (profile) => {
     setName(profile.name);
     setEmail(profile.email);
-    setBio("Keeping Ethiopia's exchange-rate data fresh and accurate.");
   });
+
+  function handleSave() {
+    updateProfile.mutate(
+      { name: name.trim(), email: email.trim() },
+      {
+        onSuccess: (updated) => {
+          setName(updated.name);
+          setEmail(updated.email);
+          toast.success("Profile updated.");
+        },
+        onError: (err) => {
+          toast.error(err instanceof Error ? err.message : "Failed to save profile.");
+        },
+      },
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -117,14 +133,8 @@ export default function AdminProfilePage() {
               <Textarea id="bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
             </div>
             <div className="flex justify-end">
-              <Button
-                onClick={() =>
-                  toast.success("Profile updated", {
-                    description: "Your changes have been saved (mock).",
-                  })
-                }
-              >
-                Save changes
+              <Button onClick={handleSave} disabled={updateProfile.isPending}>
+                {updateProfile.isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>
           </div>

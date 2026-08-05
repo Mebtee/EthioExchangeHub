@@ -19,14 +19,23 @@ function HomePage() {
 
   const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
+  // D2: the hero prefers fresh rates — stale rows are never silently shown as
+  // "best". When no fresh rate exists for the primary currency, it falls back
+  // to the best available (possibly stale) rate and flags it on the card.
+  const freshRates = useMemo(() => rates.filter((r) => !r.stale), [rates]);
+
   const bestBuy = useMemo(
-    () => getBestRate(rates, primaryCurrency, "cashBuying", "max"),
-    [rates, primaryCurrency],
+    () =>
+      getBestRate(freshRates, primaryCurrency, "cashBuying", "max") ??
+      getBestRate(rates, primaryCurrency, "cashBuying", "max"),
+    [freshRates, rates, primaryCurrency],
   );
 
   const bestSell = useMemo(
-    () => getBestRate(rates, primaryCurrency, "cashSelling", "min"),
-    [rates, primaryCurrency],
+    () =>
+      getBestRate(freshRates, primaryCurrency, "cashSelling", "min") ??
+      getBestRate(rates, primaryCurrency, "cashSelling", "min"),
+    [freshRates, rates, primaryCurrency],
   );
 
   const latestUpdate = useMemo(() => getLatestUpdate(rates), [rates]);
@@ -80,6 +89,7 @@ function HomePage() {
               currency={`ETB/${primaryCurrency || "—"}`}
               bank={bestBuy?.bankName ?? "—"}
               accent="primary"
+              stale={bestBuy?.stale}
             />
             <RateHero
               icon={<Tag className="size-5" />}
@@ -88,6 +98,7 @@ function HomePage() {
               currency={`ETB/${primaryCurrency || "—"}`}
               bank={bestSell?.bankName ?? "—"}
               accent="gold"
+              stale={bestSell?.stale}
             />
           </section>
         </div>

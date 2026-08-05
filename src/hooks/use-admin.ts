@@ -1,4 +1,8 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import {
+  createManualRate,
+  deleteManualRate,
   fetchAdminDashboard,
   fetchAdminProfile,
   fetchAdminSettings,
@@ -6,89 +10,123 @@ import {
   fetchRateTrend,
   fetchScrapeLogs,
   fetchScraperHealth,
+  fetchScraperHealthList,
+  updateAdminProfile,
+  updateAdminSettings,
+  updateManualRate,
 } from "@/lib/api/admin";
 import { adminKeys } from "@/lib/query-keys";
-import {
-  ADMIN_PROFILE,
-  ADMIN_SETTINGS,
-  DASHBOARD_STATS,
-  MANUAL_RATES,
-  RATE_TREND,
-  SCRAPE_LOGS,
-  SCRAPERS,
-} from "@/mocks/admin";
-import { useMockableQuery } from "./use-mockable-query";
+import type { ManualRateUpdate } from "@/types/admin";
 
 /**
- * Admin data hooks.
- *
- * ENDPOINT AVAILABILITY (verified): none of the admin endpoints exist yet
- * (no running backend; the workspace Express backend has no admin routes), so
- * every hook serves mock data from `src/mocks/` while `VITE_USE_MOCKS=true`
- * (the default) and is marked with `TODO`. Once the backend ships the routes
- * below, set `VITE_USE_MOCKS=false` and each hook transparently switches to
- * the matching function in `src/lib/api/admin.ts` — no component changes.
+ * Admin data hooks — every hook calls the real backend through the matching
+ * function in `src/lib/api/admin.ts`. No mock data exists anywhere; failures
+ * surface as loading/empty/API-error states.
  */
 
-// TODO: GET /api/admin/dashboard is unavailable — mock retained.
 export function useDashboardStats() {
-  return useMockableQuery({
+  return useQuery({
     queryKey: adminKeys.dashboard(),
-    mockData: DASHBOARD_STATS,
     queryFn: fetchAdminDashboard,
   });
 }
 
-// TODO: no trend endpoint agreed yet — mock retained.
 export function useRateTrend() {
-  return useMockableQuery({
+  return useQuery({
     queryKey: adminKeys.rateTrend(),
-    mockData: RATE_TREND,
     queryFn: fetchRateTrend,
   });
 }
 
-// TODO: GET /api/admin/manual-rates is unavailable — mock retained.
 export function useManualRates() {
-  return useMockableQuery({
+  return useQuery({
     queryKey: adminKeys.manualRates(),
-    mockData: MANUAL_RATES,
     queryFn: fetchManualRates,
   });
 }
 
-// TODO: GET /api/admin/scrape-logs is unavailable — mock retained.
-export function useScrapeLogs() {
-  return useMockableQuery({
-    queryKey: adminKeys.scrapeLogs(),
-    mockData: SCRAPE_LOGS,
-    queryFn: fetchScrapeLogs,
+export function useScrapeLogs(limit?: number) {
+  return useQuery({
+    queryKey: adminKeys.scrapeLogs(limit),
+    queryFn: () => fetchScrapeLogs(limit),
   });
 }
 
-// TODO: GET /api/admin/scraper-health is unavailable — mock retained.
 export function useScraperHealth() {
-  return useMockableQuery({
+  return useQuery({
     queryKey: adminKeys.scraperHealth(),
-    mockData: SCRAPERS,
     queryFn: fetchScraperHealth,
   });
 }
 
-// TODO: no profile endpoint agreed yet — mock retained.
+export function useScraperHealthList() {
+  return useQuery({
+    queryKey: adminKeys.scraperHealthList(),
+    queryFn: fetchScraperHealthList,
+  });
+}
+
 export function useAdminProfile() {
-  return useMockableQuery({
+  return useQuery({
     queryKey: adminKeys.profile(),
-    mockData: ADMIN_PROFILE,
     queryFn: fetchAdminProfile,
   });
 }
 
-// TODO: no settings endpoint agreed yet — mock retained.
 export function useAdminSettings() {
-  return useMockableQuery({
+  return useQuery({
     queryKey: adminKeys.settings(),
-    mockData: ADMIN_SETTINGS,
     queryFn: fetchAdminSettings,
+  });
+}
+
+export function useUpdateAdminProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateAdminProfile,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.profile() });
+    },
+  });
+}
+
+export function useUpdateAdminSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateAdminSettings,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.settings() });
+    },
+  });
+}
+
+export function useCreateManualRate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createManualRate,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.manualRates() });
+    },
+  });
+}
+
+export function useUpdateManualRate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: ManualRateUpdate }) =>
+      updateManualRate(id, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.manualRates() });
+    },
+  });
+}
+
+export function useDeleteManualRate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteManualRate,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.manualRates() });
+    },
   });
 }

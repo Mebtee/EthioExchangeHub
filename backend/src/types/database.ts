@@ -107,6 +107,41 @@ export type ScrapeLogRow = {
 };
 
 /**
+ * `settings` — key/value admin configuration. `key` is the natural key; the
+ * value is stored as text (booleans/numbers are serialized by the service
+ * layer). Used to persist the admin profile and platform settings.
+ */
+export type SettingRow = {
+  /** Setting natural key (e.g. "site_name", "admin_email"). */
+  key: string;
+  /** Stored value as text. */
+  value: string;
+  updated_at: string | null;
+};
+
+/**
+ * `users` — administrator accounts backing JWT authentication (A1). The
+ * configured admin is provisioned from server config (`ADMIN_EMAIL` +
+ * `ADMIN_PASSWORD`) on first login; `password_hash` is a scrypt-derived
+ * hash, never the plaintext password.
+ */
+export type UserRow = {
+  id: string;
+  /** Unique login identifier. */
+  email: string;
+  /** Display name (e.g. "Root Admin"). */
+  name: string;
+  /** Authorization role (e.g. "admin" / "super_admin"). */
+  role: string;
+  /** scrypt password hash (format `salt:hash` hex). */
+  password_hash: string;
+  avatar_url: string | null;
+  created_at: string | null;
+  /** Stamped on every successful login. */
+  last_login_at: string | null;
+};
+
+/**
  * Minimal database schema map for the Supabase client generic.
  *
  * Rows returned by `supabase.from("banks").select()` are typed as
@@ -143,6 +178,18 @@ export type DatabaseTables = {
     Row: ScrapeLogRow;
     Insert: Partial<ScrapeLogRow>;
     Update: Partial<ScrapeLogRow>;
+    Relationships: [];
+  };
+  settings: {
+    Row: SettingRow;
+    Insert: Partial<SettingRow>;
+    Update: Partial<SettingRow>;
+    Relationships: [];
+  };
+  users: {
+    Row: UserRow;
+    Insert: Partial<UserRow>;
+    Update: Partial<UserRow>;
     Relationships: [];
   };
 };

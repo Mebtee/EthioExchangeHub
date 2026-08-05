@@ -62,6 +62,72 @@ describe("BaseRepository.findAll", () => {
   });
 });
 
+describe("BaseRepository.findAll pagination", () => {
+  /** Generates `count` bank rows with unique codes so pagination can be asserted. */
+  function makeBankRows(count: number): Array<Record<string, unknown>> {
+    return Array.from({ length: count }, (_, index) => ({
+      id: `bank-${index}`,
+      bank_code: `BK${String(index).padStart(4, "0")}`,
+      bank_name: `Bank ${index}`,
+      bank_type: "private",
+      source_url: null,
+      is_active: true,
+      created_at: null,
+    }));
+  }
+
+  it("returns all 1500 rows across multiple pages", async () => {
+    const rows = makeBankRows(1500);
+    const { repo } = makeRepo({ banks: rows });
+    const all = await repo.findAll();
+    expect(all).toHaveLength(1500);
+    expect(all.map((r) => r.id)).toEqual(rows.map((r) => r.id));
+  });
+
+  it("returns exactly 1000 rows when the table holds one full page", async () => {
+    const { repo } = makeRepo({ banks: makeBankRows(1000) });
+    expect(await repo.findAll()).toHaveLength(1000);
+  });
+
+  it("returns 1001 rows when the table spills into a second page", async () => {
+    const { repo } = makeRepo({ banks: makeBankRows(1001) });
+    const all = await repo.findAll();
+    expect(all).toHaveLength(1001);
+    expect(all[1000]?.id).toBe("bank-1000");
+  });
+
+  it("returns every row exactly once across pages (no duplicates)", async () => {
+    const { repo } = makeRepo({ banks: makeBankRows(1500) });
+    const ids = (await repo.findAll()).map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("returns an empty array when the table is empty", async () => {
+    const { repo } = makeRepo({ banks: [] });
+    expect(await repo.findAll()).toEqual([]);
+  });
+
+  it("respects a limit larger than one page without over-fetching", async () => {
+    const { repo } = makeRepo({ banks: makeBankRows(2500) });
+    const all = await repo.findAll({ limit: 1500 });
+    expect(all).toHaveLength(1500);
+    expect(all.map((r) => r.id)).toEqual(
+      makeBankRows(2500)
+        .slice(0, 1500)
+        .map((r) => r.id),
+    );
+  });
+
+  it("keeps ordering stable across page boundaries", async () => {
+    const { repo } = makeRepo({ banks: makeBankRows(1500) });
+    const all = await repo.findAll({ orderBy: "bank_code", ascending: true });
+    const expected = makeBankRows(1500)
+      .map((r) => r.bank_code as string)
+      .sort((a, b) => a.localeCompare(b));
+    expect(all.map((r) => r.bank_code)).toEqual(expected);
+  });
+});
+
 describe("BaseRepository.findOneBy", () => {
   it("returns the matching row", async () => {
     const { repo } = makeRepo();

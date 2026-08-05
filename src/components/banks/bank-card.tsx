@@ -43,7 +43,7 @@ export const BankCard = memo(function BankCard({ bank, rate }: { bank: Bank; rat
         </div>
         <div className="mt-4 flex items-center justify-between text-xs">
           <span className="text-muted-foreground">
-            Updated {formatRelativeTime(rate.lastUpdated)}
+            Rate date {formatRelativeTime(rate.rateDate)}
           </span>
           <span className="inline-flex items-center text-primary font-semibold">
             View details <ChevronRight className="size-3.5" />

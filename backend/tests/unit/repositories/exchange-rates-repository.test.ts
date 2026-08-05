@@ -37,4 +37,21 @@ describe("ExchangeRatesRepository", () => {
     const rows = await makeRepo().findByCurrency("USD");
     expect(rows).toHaveLength(3);
   });
+
+  it("findAll returns all 1500 rows past PostgREST's single-page cap", async () => {
+    const seeded = Array.from({ length: 1500 }, (_, index) => ({
+      ...exchangeRates[0]!,
+      id: `rate-${index}`,
+      bank_code: `BK${String(index).padStart(4, "0")}`,
+      rate_date: index === 1499 ? "2026-08-05" : "2026-08-04",
+    }));
+    const repo = new ExchangeRatesRepository(
+      createFakeSupabaseClient({ exchange_rates: seeded }) as unknown as SupabaseClient<Database>,
+    );
+
+    const all = await repo.findAll();
+    expect(all).toHaveLength(1500);
+    expect(all[1499]?.rate_date).toBe("2026-08-05");
+    expect(new Set(all.map((r) => r.id)).size).toBe(all.length);
+  });
 });

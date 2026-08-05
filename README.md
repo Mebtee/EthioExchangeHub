@@ -44,23 +44,17 @@ npm run dev   # or: bun run dev
 
 ## Configuration
 
-The app reads an optional `VITE_API_BASE_URL` environment variable to point at
-the exchange-rate backend. When unset, it falls back to
-`http://localhost:5000/api/v1`. See `src/lib/api/client.ts` for details.
+The app reads `VITE_API_BASE_URL` (required) to point at the backend API
+(e.g. `http://localhost:5000/api/v1`). There is no mock, demo, or fallback
+data anywhere in the runtime — every hook calls the real backend, and pages
+render loading, empty, or API-error states when an endpoint is unavailable.
 
-### Mock data mode
-
-While the backend is under development, the admin UI is powered by mock data
-isolated in `src/mocks/`. Set `VITE_USE_MOCKS=true` (the default) to keep
-using mocks, or `VITE_USE_MOCKS=false` once the backend endpoints exist — the
-TanStack Query hooks in `src/hooks/use-admin.ts` switch over to the real API
-(`src/lib/api/admin.ts`) without any component changes.
-
-**Endpoint availability (verified):** `GET /api/exchange-rates` is wired to
-the real API (no mock). The admin endpoints (`/api/admin/dashboard`,
-`/api/admin/manual-rates`, `/api/admin/scraper-health`, `/api/admin/scrape-logs`)
-are not available yet, so their hooks keep serving mock data and are marked
-with `TODO` until the backend exposes them.
+**Endpoint availability (verified):** the public endpoints (`/banks`,
+`/rates/latest`, `/manual-rates`, `/scraper-health`, `/scrape-logs`, `/news`)
+are wired to the real API. The admin endpoints (`/admin/dashboard/rate-trend`,
+`/admin/profile`, `/admin/settings`), the auth endpoints (`/auth/*`), and
+`/market-ticker` are not shipped yet — the corresponding UI sections render
+empty/error states until the backend exposes them.
 
 ## Project structure
 
@@ -68,7 +62,7 @@ with `TODO` until the backend exposes them.
 src/
   components/   Reusable UI components (layout, ticker, rankings, shadcn/ui)
   hooks/        Custom React hooks (rankings, exchange rates, mobile)
-  lib/          API client, demo data, and utilities
+  lib/          API client, adapters, and utilities
   routes/       Page-level route components
   types/        Shared TypeScript types
   styles.css    Global styles and Tailwind entry point

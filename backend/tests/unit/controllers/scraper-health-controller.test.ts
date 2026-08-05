@@ -46,6 +46,24 @@ describe("ScraperHealthController.getHealth", () => {
   });
 });
 
+describe("ScraperHealthController.getHealthList", () => {
+  it("delegates to listAll and sends 200 with the rows", async () => {
+    const { service, controller } = makeController();
+    service.listAll.mockResolvedValue(scraperHealth);
+    const res = createMockResponse();
+
+    controller.getHealthList(createMockRequest(), res, createMockNext());
+    await flushPromises();
+
+    expect(service.listAll).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      message: "Scraper health list retrieved.",
+      data: scraperHealth,
+    });
+  });
+});
+
 describe("ScraperHealthController.getHealthByBank", () => {
   it("delegates with the bankCode param and sends 200", async () => {
     const { service, controller } = makeController();

@@ -1,8 +1,12 @@
 import { type DocPathItem } from "../helpers";
 
+import { adminPaths } from "./admin";
+import { authPaths } from "./auth";
 import { banksPaths } from "./banks";
 import { exchangeRatesPaths } from "./exchange-rates";
 import { manualRatesPaths } from "./manual-rates";
+import { marketTickerPaths } from "./market-ticker";
+import { newsPaths } from "./news";
 import { scraperHealthPaths } from "./scraper-health";
 import { scrapeLogsPaths } from "./scrape-logs";
 
@@ -13,9 +17,13 @@ import { scrapeLogsPaths } from "./scrape-logs";
  * base); it is mentioned in `info.description` instead.
  */
 export const apiPaths: Record<string, DocPathItem> = {
+  ...adminPaths,
+  ...authPaths,
   ...banksPaths,
   ...exchangeRatesPaths,
   ...manualRatesPaths,
+  ...marketTickerPaths,
+  ...newsPaths,
   ...scraperHealthPaths,
   ...scrapeLogsPaths,
 };

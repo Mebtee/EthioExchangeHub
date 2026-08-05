@@ -8,8 +8,15 @@ export interface RateRecord {
   cashSelling: number;
   transactionBuying: number;
   transactionSelling: number;
+  rateDate: string;
   lastUpdated: string;
   source: RateSource;
+  /**
+   * Computed freshness flag (D2): true when the rate_date is older than the
+   * backend's MAX_RATE_AGE_DAYS window. Stale rows are still served — views
+   * decide how to show them (hero may exclude, rankings may badge).
+   */
+  stale: boolean;
 }
 
 export interface ExchangeRate extends RateRecord {

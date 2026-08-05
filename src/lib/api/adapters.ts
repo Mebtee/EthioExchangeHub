@@ -1,4 +1,11 @@
 import { bankAccentClass } from "@/lib/bank";
+import type {
+  LogStatus,
+  ManualRate,
+  ScrapeLog,
+  ScraperHealthRow,
+  ScraperStatus,
+} from "@/types/admin";
 import type { Bank } from "@/types/bank";
 import type { Currency } from "@/types/currency";
 import type { ExchangeRate } from "@/types/exchange-rate";
@@ -25,6 +32,55 @@ export interface BackendExchangeRateRow {
   rate_date: string;
   source: string | null;
   scraped_at: string | null;
+  /** Computed freshness flag — always present on resolved rows (D2). */
+  stale: boolean;
+}
+
+export interface BackendManualRateRow {
+  id: string;
+  bank_code: string;
+  currency_code: string;
+  buying_rate: number | null;
+  selling_rate: number | null;
+  rate_date: string;
+  entered_by: string | null;
+  note: string | null;
+  created_at: string | null;
+}
+
+export interface BackendScrapeLogRow {
+  id: string;
+  run_id: string;
+  bank_code: string;
+  status: string;
+  scenario: string;
+  currencies_count: number | null;
+  error_message: string | null;
+  duration_ms: number | null;
+  ran_at: string | null;
+}
+
+export interface BackendScraperHealthSummary {
+  total: number;
+  healthy: number;
+  degraded: number;
+  failed: number;
+  unknown: number;
+  averageResponseTimeMs: number | null;
+  averageConsecutiveFailures: number | null;
+  /** Scrapers whose last_rate_date is missing or older than the window (D2). */
+  staleCount: number;
+}
+
+export interface BackendScraperHealthRow {
+  bank_code: string;
+  status: string;
+  consecutive_failures: number | null;
+  last_success: string | null;
+  last_failure: string | null;
+  last_rate_date: string | null;
+  response_time_ms: number | null;
+  updated_at: string | null;
 }
 
 const CURRENCY_META: Record<string, { label: string; category: string }> = {
@@ -60,6 +116,28 @@ function normalizeBankType(value: string): Bank["type"] {
   return value === "state_owned" ? "State Owned" : "Private Bank";
 }
 
+/**
+ * Maps the backend's free-text scraper status to the canonical bucket (D3):
+ * healthy / degraded / failed / unknown. Mirrors `categorizeScraperStatus` on
+ * the backend so both sides share one vocabulary.
+ */
+function toScraperStatus(status: string): ScraperStatus {
+  const value = status.trim().toLowerCase();
+  if (value === "healthy") return "healthy";
+  if (value === "degraded") return "degraded";
+  if (value === "failed") return "failed";
+  return "unknown";
+}
+
+/**
+ * Maps the backend's free-text scrape-log status to the canonical bucket
+ * (D3): only `success` is success; everything else is `failed`. Mirrors
+ * `categorizeLogStatus` on the backend so both sides share one vocabulary.
+ */
+function toLogStatus(status: string): LogStatus {
+  return status.trim().toLowerCase() === "success" ? "success" : "failed";
+}
+
 export function mapBankRow(row: BackendBankRow): Bank {
   return {
     slug: row.bank_code,
@@ -78,23 +156,74 @@ export function mapBankRow(row: BackendBankRow): Bank {
   };
 }
 
-export function mapExchangeRateRow(
-  row: BackendExchangeRateRow,
-  bankName?: string,
-): ExchangeRate {
+export function mapExchangeRateRow(row: BackendExchangeRateRow, bankName?: string): ExchangeRate {
   return {
-    id: hashString(`${row.bank_code}:${row.currency_code}:${row.rate_date}:${row.scraped_at ?? ""}`),
+    id: hashString(
+      `${row.bank_code}:${row.currency_code}:${row.rate_date}:${row.scraped_at ?? ""}`,
+    ),
     bankId: hashString(row.bank_code),
     bankCode: row.bank_code,
     bankName: bankName ?? row.bank_code,
     currency: row.currency_code,
     cashBuying: toDisplayRate(row.buying_rate),
     cashSelling: toDisplayRate(row.selling_rate),
-    transactionBuying: toDisplayRate(row.transactional_buying ?? row.buying_rate),
-    transactionSelling: toDisplayRate(row.transactional_selling ?? row.selling_rate),
+    // Transactional rates are surfaced only when the backend actually reports
+    // them — never faked by falling back to cash rates (D5). A null column
+    // maps to NaN, which renders as an em-dash and is excluded from rankings.
+    transactionBuying: toDisplayRate(row.transactional_buying),
+    transactionSelling: toDisplayRate(row.transactional_selling),
+    rateDate: row.rate_date,
     lastUpdated: row.scraped_at ?? `${row.rate_date}T00:00:00.000Z`,
     source: normalizeSource(row.source),
+    // Always present on resolved rows (D2) — no fallback needed.
+    stale: row.stale,
     logo: "",
+  };
+}
+
+export function mapManualRateRow(row: BackendManualRateRow, bankName?: string): ManualRate {
+  return {
+    id: row.id,
+    bankCode: row.bank_code,
+    bankName: bankName ?? row.bank_code,
+    currency: row.currency_code,
+    buyingRate: toDisplayRate(row.buying_rate),
+    sellingRate: toDisplayRate(row.selling_rate),
+    rateDate: row.rate_date,
+    note: row.note,
+    createdAt: row.created_at,
+  };
+}
+
+export function mapScraperHealthRow(
+  row: BackendScraperHealthRow,
+  bankName?: string,
+): ScraperHealthRow {
+  return {
+    bankCode: row.bank_code,
+    bankName: bankName ?? row.bank_code,
+    status: toScraperStatus(row.status),
+    consecutiveFailures: row.consecutive_failures,
+    lastSuccess: row.last_success,
+    lastFailure: row.last_failure,
+    lastRateDate: row.last_rate_date,
+    responseTimeMs: row.response_time_ms,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function mapScrapeLogRow(row: BackendScrapeLogRow, bankName?: string): ScrapeLog {
+  return {
+    id: row.id,
+    runId: row.run_id,
+    bankCode: row.bank_code,
+    bankName: bankName ?? row.bank_code,
+    status: toLogStatus(row.status),
+    scenario: row.scenario,
+    records: row.currencies_count ?? 0,
+    durationMs: row.duration_ms ?? 0,
+    message: row.error_message ?? row.scenario,
+    ranAt: row.ran_at,
   };
 }
 

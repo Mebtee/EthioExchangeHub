@@ -15,6 +15,7 @@ export const manualRatesPaths: Record<string, DocPathItem> = {
       summary: "List manual rates",
       description: "Lists human-entered rate overrides, newest first, with optional filters.",
       operationId: "listManualRates",
+      security: [{ bearerAuth: [] }],
       parameters: [
         queryParam("bankCode", "Bank code (e.g. ABY)."),
         queryParam("currencyCode", "3-letter currency code (e.g. USD)."),
@@ -31,6 +32,7 @@ export const manualRatesPaths: Record<string, DocPathItem> = {
       description:
         "Creates a manual rate override after validating the bank, currency, date, positive rates, and uniqueness.",
       operationId: "createManualRate",
+      security: [{ bearerAuth: [] }],
       requestBody: {
         required: true,
         content: {
@@ -54,6 +56,7 @@ export const manualRatesPaths: Record<string, DocPathItem> = {
       summary: "Update a manual rate",
       description: "Updates a manual rate by id. At least one field must be provided.",
       operationId: "updateManualRate",
+      security: [{ bearerAuth: [] }],
       parameters: [pathParam("id", "Manual rate id.", "uuid")],
       requestBody: {
         required: true,
@@ -76,6 +79,7 @@ export const manualRatesPaths: Record<string, DocPathItem> = {
       summary: "Delete a manual rate",
       description: "Deletes a manual rate by id.",
       operationId: "deleteManualRate",
+      security: [{ bearerAuth: [] }],
       parameters: [pathParam("id", "Manual rate id.", "uuid")],
       responses: {
         "200": successResponse("Manual rate deleted.", { type: "null" }),

@@ -30,6 +30,8 @@ interface OpState {
   filters: Array<[string, unknown]>;
   orders: Array<[string, boolean]>;
   limit?: number;
+  /** Inclusive window `[from, to]` — mirrors PostgREST's `Range` header. */
+  range?: [number, number];
   single?: boolean;
   insertPayload?: Record<string, unknown>;
   updatePayload?: Record<string, unknown>;
@@ -59,6 +61,11 @@ class FakeBuilder {
 
   limit(count: number): this {
     this.state.limit = count;
+    return this;
+  }
+
+  range(from: number, to: number): this {
+    this.state.range = [from, to];
     return this;
   }
 
@@ -149,6 +156,10 @@ class FakeBuilder {
     }
     if (state.limit !== undefined) {
       selected = selected.slice(0, state.limit);
+    }
+    if (state.range !== undefined) {
+      const [from, to] = state.range;
+      selected = selected.slice(from, to + 1);
     }
     return { data: state.single ? (selected[0] ?? null) : selected, error: null };
   }

@@ -10,6 +10,8 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { hashPassword } from "@/lib/password";
+
 vi.mock("@/lib/supabase", async () => {
   const { getFakeClient, isDatabaseConnected } = await import("../../helpers/supabase");
   return {
@@ -33,6 +35,20 @@ beforeEach(() => {
   seedFakeClient(defaultSeed);
   setDatabaseConnected(true);
 });
+
+/**
+ * Logs in as the bootstrap admin (provisioned on first login from the test
+ * env) and returns the Authorization header for protected requests.
+ */
+async function adminAuth(): Promise<{ Authorization: string }> {
+  const res = await request(app).post("/api/v1/auth/login").send({
+    email: process.env.ADMIN_EMAIL,
+    password: process.env.ADMIN_PASSWORD,
+  });
+  expect(res.status).toBe(200);
+  const tokens = res.body.data.tokens as { accessToken: string };
+  return { Authorization: `Bearer ${tokens.accessToken}` };
+}
 
 describe("GET /health", () => {
   it("returns server + database healthy when connected", async () => {
@@ -117,17 +133,48 @@ describe("Banks endpoints", () => {
 });
 
 describe("Exchange-rate endpoints", () => {
-  it("GET /api/v1/rates/latest resolves one row per bank+currency", async () => {
+  it("GET /api/v1/rates/latest resolves one row per bank+currency (manual overrides included)", async () => {
     const res = await request(app).get("/api/v1/rates/latest");
     expect(res.status).toBe(200);
-    expect(res.body.data).toHaveLength(3);
+    // Scraped pairs (ABY/EUR, CBE/USD) plus manual-only/manual-newest pairs
+    // (ABY/USD manual 08-02, CBE/EUR manual 08-01) — 4 resolved rows.
+    expect(res.body.data).toHaveLength(4);
     expect(res.body.data[0]!.rate_date).toBe("2026-08-01");
+  });
+
+  it("GET /api/v1/rates/latest applies manual overrides to the resolved snapshot", async () => {
+    const res = await request(app).get("/api/v1/rates/latest");
+    const abyUsd = res.body.data.find(
+      (r: { bank_code: string; currency_code: string }) =>
+        r.bank_code === "ABY" && r.currency_code === "USD",
+    );
+    expect(abyUsd).toMatchObject({
+      buying_rate: 121.4,
+      selling_rate: 122.2,
+      rate_date: "2026-08-02",
+      source: "MANUAL",
+    });
+    // A pair with no scraped row appears from the manual entry alone.
+    const cbeEur = res.body.data.find(
+      (r: { bank_code: string; currency_code: string }) =>
+        r.bank_code === "CBE" && r.currency_code === "EUR",
+    );
+    expect(cbeEur).toMatchObject({ source: "MANUAL", rate_date: "2026-08-01" });
+  });
+
+  it("GET /api/v1/rates/latest annotates every row with a boolean stale flag (D2)", async () => {
+    const res = await request(app).get("/api/v1/rates/latest");
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    for (const row of res.body.data as Array<{ stale?: unknown }>) {
+      expect(typeof row.stale).toBe("boolean");
+    }
   });
 
   it("GET /api/v1/rates/latest?from=... filters by date range", async () => {
     const res = await request(app).get("/api/v1/rates/latest?from=2026-08-01");
     expect(res.status).toBe(200);
-    expect(res.body.data).toHaveLength(3);
+    expect(res.body.data).toHaveLength(4);
   });
 
   it("GET /api/v1/rates/latest rejects an impossible calendar date", async () => {
@@ -148,11 +195,13 @@ describe("Exchange-rate endpoints", () => {
     expect(res.status).toBe(404);
   });
 
-  it("GET /api/v1/rates/latest/:bankCode/:currencyCode returns the newest single rate", async () => {
+  it("GET /api/v1/rates/latest/:bankCode/:currencyCode returns the newest single rate (manual override)", async () => {
     const res = await request(app).get("/api/v1/rates/latest/ABY/USD");
     expect(res.status).toBe(200);
-    expect(res.body.data.buying_rate).toBe(121.5);
-    expect(res.body.data.rate_date).toBe("2026-08-01");
+    // The manual ABY/USD row (08-02) is newer than the scraped 08-01 row.
+    expect(res.body.data.buying_rate).toBe(121.4);
+    expect(res.body.data.rate_date).toBe("2026-08-02");
+    expect(res.body.data.source).toBe("MANUAL");
   });
 
   it("GET /api/v1/rates/latest/:bankCode/:currencyCode rejects a bad currency code", async () => {
@@ -160,19 +209,50 @@ describe("Exchange-rate endpoints", () => {
     expect(res.status).toBe(422);
   });
 
-  it("GET /api/v1/rates/history/:bankCode/:currencyCode returns oldest-first history", async () => {
+  it("GET /api/v1/market-ticker derives real mean rates + change per currency", async () => {
+    const res = await request(app).get("/api/v1/market-ticker");
+    expect(res.status).toBe(200);
+    // EUR (08-01): ABY scraped 140.0 + CBE manual 139.0 → mean 139.5, no prior
+    // date → change 0. USD: newest 08-02 manual 121.4 vs 08-01 mean
+    // (121.5+119.5)/2 = 120.5 → change ≈ 0.75.
+    expect(res.body.data).toEqual([
+      { pair: "EUR/ETB", value: 139.5, change: 0 },
+      { pair: "USD/ETB", value: 121.4, change: 0.75 },
+    ]);
+  });
+
+  it("GET /api/v1/market-ticker respects the limit query", async () => {
+    const res = await request(app).get("/api/v1/market-ticker?limit=1");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([{ pair: "EUR/ETB", value: 139.5, change: 0 }]);
+  });
+
+  it("GET /api/v1/market-ticker rejects a bad limit with 422", async () => {
+    const res = await request(app).get("/api/v1/market-ticker?limit=0");
+    expect(res.status).toBe(422);
+  });
+
+  it("GET /api/v1/rates/history/:bankCode/:currencyCode returns oldest-first history (manual override included)", async () => {
     const res = await request(app).get("/api/v1/rates/history/ABY/USD");
     expect(res.status).toBe(200);
+    // Scraped 07-30 + 08-01, plus the manual ABY/USD override on 08-02.
     expect(res.body.data.map((r: { rate_date: string }) => r.rate_date)).toEqual([
       "2026-07-30",
       "2026-08-01",
+      "2026-08-02",
     ]);
+    expect(res.body.data[2]!.source).toBe("MANUAL");
+    for (const row of res.body.data as Array<{ stale?: unknown }>) {
+      expect(typeof row.stale).toBe("boolean");
+    }
   });
 });
 
 describe("Manual-rate endpoints", () => {
   it("GET /api/v1/manual-rates lists rows newest-first", async () => {
-    const res = await request(app).get("/api/v1/manual-rates");
+    const res = await request(app)
+      .get("/api/v1/manual-rates")
+      .set(await adminAuth());
     expect(res.status).toBe(200);
     expect(res.body.data.map((r: { rate_date: string }) => r.rate_date)).toEqual([
       "2026-08-02",
@@ -181,13 +261,16 @@ describe("Manual-rate endpoints", () => {
   });
 
   it("POST /api/v1/manual-rates creates a rate and responds 201", async () => {
-    const res = await request(app).post("/api/v1/manual-rates").send({
-      bank_code: "ABY",
-      currency_code: "EUR",
-      buying_rate: 140.5,
-      selling_rate: 141.5,
-      rate_date: "2026-08-03",
-    });
+    const res = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "EUR",
+        buying_rate: 140.5,
+        selling_rate: 141.5,
+        rate_date: "2026-08-03",
+      });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.bank_code).toBe("ABY");
@@ -195,68 +278,88 @@ describe("Manual-rate endpoints", () => {
   });
 
   it("POST with a duplicate (bank, currency, date) responds 409", async () => {
-    const res = await request(app).post("/api/v1/manual-rates").send({
-      bank_code: "ABY",
-      currency_code: "USD",
-      buying_rate: 122,
-      selling_rate: 123,
-      rate_date: "2026-08-02",
-    });
+    const res = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "USD",
+        buying_rate: 122,
+        selling_rate: 123,
+        rate_date: "2026-08-02",
+      });
     expect(res.status).toBe(409);
     expect(res.body.success).toBe(false);
     expect(res.body.data).toBeNull();
   });
 
   it("POST with an invalid body responds 422", async () => {
-    const res = await request(app).post("/api/v1/manual-rates").send({
-      bank_code: "ABY",
-      currency_code: "USD",
-      buying_rate: -1,
-      selling_rate: 123,
-      rate_date: "2026-08-02",
-    });
+    const res = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "USD",
+        buying_rate: -1,
+        selling_rate: 123,
+        rate_date: "2026-08-02",
+      });
     expect(res.status).toBe(422);
     expect(res.body.message).toContain("Invalid request body");
   });
 
   it("POST with an unknown key responds 422 (strict body)", async () => {
-    const res = await request(app).post("/api/v1/manual-rates").send({
-      bank_code: "ABY",
-      currency_code: "USD",
-      buying_rate: 122,
-      selling_rate: 123,
-      rate_date: "2026-08-02",
-      typo_field: true,
-    });
+    const res = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "USD",
+        buying_rate: 122,
+        selling_rate: 123,
+        rate_date: "2026-08-02",
+        typo_field: true,
+      });
     expect(res.status).toBe(422);
   });
 
   it("PUT /api/v1/manual-rates/:id updates an existing rate", async () => {
-    const created = await request(app).post("/api/v1/manual-rates").send({
-      bank_code: "ABY",
-      currency_code: "EUR",
-      buying_rate: 140.5,
-      selling_rate: 141.5,
-      rate_date: "2026-08-03",
-    });
+    const created = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "EUR",
+        buying_rate: 140.5,
+        selling_rate: 141.5,
+        rate_date: "2026-08-03",
+      });
     const id = created.body.data.id as string;
 
-    const res = await request(app).put(`/api/v1/manual-rates/${id}`).send({ selling_rate: 142 });
+    const res = await request(app)
+      .put(`/api/v1/manual-rates/${id}`)
+      .set(await adminAuth())
+      .send({ selling_rate: 142 });
     expect(res.status).toBe(200);
     expect(res.body.data.selling_rate).toBe(142);
   });
 
   it("DELETE /api/v1/manual-rates/:id removes a rate and responds 200", async () => {
-    const created = await request(app).post("/api/v1/manual-rates").send({
-      bank_code: "ABY",
-      currency_code: "EUR",
-      buying_rate: 140.5,
-      selling_rate: 141.5,
-      rate_date: "2026-08-03",
-    });
+    const created = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "EUR",
+        buying_rate: 140.5,
+        selling_rate: 141.5,
+        rate_date: "2026-08-03",
+      });
     const id = created.body.data.id as string;
 
-    const res = await request(app).delete(`/api/v1/manual-rates/${id}`);
+    const res = await request(app)
+      .delete(`/api/v1/manual-rates/${id}`)
+      .set(await adminAuth());
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
@@ -264,12 +367,17 @@ describe("Manual-rate endpoints", () => {
       data: null,
     });
 
-    const gone = await request(app).get(`/api/v1/manual-rates/${id}`);
+    const gone = await request(app)
+      .get(`/api/v1/manual-rates/${id}`)
+      .set(await adminAuth());
     expect(gone.status).toBe(404);
   });
 
   it("rejects a non-UUID id with 422", async () => {
-    const res = await request(app).put("/api/v1/manual-rates/not-a-uuid").send({ note: "x" });
+    const res = await request(app)
+      .put("/api/v1/manual-rates/not-a-uuid")
+      .set(await adminAuth())
+      .send({ note: "x" });
     expect(res.status).toBe(422);
   });
 });
@@ -287,6 +395,19 @@ describe("Scraper-health endpoints", () => {
       averageResponseTimeMs: 360,
       averageConsecutiveFailures: 1.75,
     });
+    // D2: staleCount is always present (value is time-dependent here).
+    expect(typeof res.body.data.staleCount).toBe("number");
+  });
+
+  it("GET /api/v1/scraper-health/list returns every row alphabetically", async () => {
+    const res = await request(app).get("/api/v1/scraper-health/list");
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((r: { bank_code: string }) => r.bank_code)).toEqual([
+      "ABY",
+      "CBE",
+      "DASH",
+      "ZZZ",
+    ]);
   });
 
   it("GET /api/v1/scraper-health/:bankCode returns the row for a bank", async () => {
@@ -353,6 +474,352 @@ describe("Scrape-log endpoints", () => {
   it("GET /api/v1/scrape-logs/:runId rejects a non-UUID runId", async () => {
     const res = await request(app).get("/api/v1/scrape-logs/not-a-uuid");
     expect(res.status).toBe(422);
+  });
+});
+
+describe("Admin profile endpoints", () => {
+  it("GET /api/v1/admin/profile returns the persisted profile merged with defaults", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/profile")
+      .set(await adminAuth());
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      name: "Root Admin",
+      initials: "RA",
+      role: "Administrator",
+    });
+  });
+
+  it("PUT /api/v1/admin/profile persists changes and the next GET reflects them", async () => {
+    const res = await request(app)
+      .put("/api/v1/admin/profile")
+      .set(await adminAuth())
+      .send({ name: "Jane Doe", email: "jane@example.com" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe("Jane Doe");
+    expect(res.body.data.email).toBe("jane@example.com");
+    expect(res.body.data.initials).toBe("JD");
+
+    const after = await request(app)
+      .get("/api/v1/admin/profile")
+      .set(await adminAuth());
+    expect(after.body.data.name).toBe("Jane Doe");
+  });
+
+  it("PUT /api/v1/admin/profile rejects an empty body and unknown keys with 422", async () => {
+    const empty = await request(app)
+      .put("/api/v1/admin/profile")
+      .set(await adminAuth())
+      .send({});
+    expect(empty.status).toBe(422);
+
+    const unknown = await request(app)
+      .put("/api/v1/admin/profile")
+      .set(await adminAuth())
+      .send({ name: "Jane", typo_field: true });
+    expect(unknown.status).toBe(422);
+  });
+});
+
+describe("Admin settings endpoints", () => {
+  it("GET /api/v1/admin/settings returns persisted values merged with defaults", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/settings")
+      .set(await adminAuth());
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      siteName: "Ethio Exchange Hub",
+      defaultCurrency: "USD",
+      emailAlerts: true,
+      weeklyReport: false,
+      timezone: "Africa/Addis_Ababa",
+    });
+  });
+
+  it("PUT /api/v1/admin/settings persists booleans and strings", async () => {
+    const res = await request(app)
+      .put("/api/v1/admin/settings")
+      .set(await adminAuth())
+      .send({ weeklyReport: true, siteName: "New Hub" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.weeklyReport).toBe(true);
+    expect(res.body.data.siteName).toBe("New Hub");
+
+    const after = await request(app)
+      .get("/api/v1/admin/settings")
+      .set(await adminAuth());
+    expect(after.body.data.siteName).toBe("New Hub");
+    expect(after.body.data.weeklyReport).toBe(true);
+  });
+
+  it("PUT /api/v1/admin/settings rejects a non-boolean alert value with 422", async () => {
+    const res = await request(app)
+      .put("/api/v1/admin/settings")
+      .set(await adminAuth())
+      .send({ emailAlerts: "yes" });
+    expect(res.status).toBe(422);
+  });
+});
+
+describe("Admin rate-trend endpoint", () => {
+  it("GET /api/v1/admin/dashboard/rate-trend aggregates by rate date", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/dashboard/rate-trend")
+      .set(await adminAuth());
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((p: { label: string }) => p.label)).toEqual([
+      "2026-07-30",
+      "2026-08-01",
+    ]);
+    expect(res.body.data[1]).toEqual({ label: "2026-08-01", cashBuying: 127, cashSelling: 128.17 });
+  });
+
+  it("GET /api/v1/admin/dashboard/rate-trend?days=1 returns only the newest point", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/dashboard/rate-trend?days=1")
+      .set(await adminAuth());
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((p: { label: string }) => p.label)).toEqual(["2026-08-01"]);
+  });
+
+  it("GET /api/v1/admin/dashboard/rate-trend?currency=USD averages USD rows only", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/dashboard/rate-trend?currency=USD")
+      .set(await adminAuth());
+    expect(res.status).toBe(200);
+    // 2026-08-01 USD-only: buying mean (121.5+119.5)/2 = 120.5 (EUR row excluded)
+    expect(res.body.data[1]).toEqual({
+      label: "2026-08-01",
+      cashBuying: 120.5,
+      cashSelling: 121.5,
+    });
+  });
+
+  it("GET /api/v1/admin/dashboard/rate-trend rejects invalid params", async () => {
+    const badDays = await request(app)
+      .get("/api/v1/admin/dashboard/rate-trend?days=0")
+      .set(await adminAuth());
+    expect(badDays.status).toBe(422);
+
+    const badCurrency = await request(app)
+      .get("/api/v1/admin/dashboard/rate-trend?currency=usd")
+      .set(await adminAuth());
+    expect(badCurrency.status).toBe(422);
+  });
+});
+
+describe("Auth endpoints", () => {
+  it("POST /auth/login provisions the bootstrap admin and returns tokens + user", async () => {
+    const res = await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.tokens.accessToken).toBeTypeOf("string");
+    expect(res.body.data.tokens.refreshToken).toBeTypeOf("string");
+    expect(res.body.data.user).toMatchObject({
+      email: process.env.ADMIN_EMAIL,
+      name: "Root Admin",
+      role: "super_admin",
+    });
+    expect(res.body.data.user.id).toBeTypeOf("string");
+  });
+
+  it("POST /auth/login rejects a wrong password with 401", async () => {
+    const res = await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: "definitely-wrong",
+    });
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      success: false,
+      message: "Invalid email or password.",
+      data: null,
+    });
+  });
+
+  it("POST /auth/login rejects an unknown email identically (no enumeration)", async () => {
+    const res = await request(app).post("/api/v1/auth/login").send({
+      email: "nobody@example.com",
+      password: "whatever",
+    });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe("Invalid email or password.");
+  });
+
+  it("POST /auth/login rejects a malformed email with 422", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: "not-an-email", password: "x" });
+    expect(res.status).toBe(422);
+  });
+
+  it("GET /auth/me requires a token (401 without one)", async () => {
+    const res = await request(app).get("/api/v1/auth/me");
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /auth/me resolves the authenticated user with a valid token", async () => {
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+    const token = login.body.data.tokens.accessToken as string;
+
+    const res = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ email: process.env.ADMIN_EMAIL, role: "super_admin" });
+  });
+
+  it("POST /auth/refresh exchanges a refresh token for a fresh pair", async () => {
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+    const refreshToken = login.body.data.tokens.refreshToken as string;
+
+    const res = await request(app).post("/api/v1/auth/refresh").send({ refreshToken });
+    expect(res.status).toBe(200);
+    expect(res.body.data.accessToken).toBeTypeOf("string");
+    expect(res.body.data.refreshToken).toBeTypeOf("string");
+  });
+
+  it("POST /auth/refresh rejects a garbage token with 401", async () => {
+    const res = await request(app).post("/api/v1/auth/refresh").send({ refreshToken: "garbage" });
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/logout answers a stateless success", async () => {
+    const res = await request(app).post("/api/v1/auth/logout");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+  });
+
+  it("POST /auth/forgot-password never reveals whether the email exists", async () => {
+    // Log in first so the bootstrap admin exists and the known-email branch
+    // actually issues a token (the unknown-email branch answers identically).
+    await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+
+    const known = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: process.env.ADMIN_EMAIL });
+    expect(known.status).toBe(200);
+    expect(known.body.data.sent).toBe(true);
+    // Non-production build: the genuinely issued token is returned as devToken.
+    expect(known.body.data.devToken).toBeTypeOf("string");
+
+    const unknown = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "nobody@example.com" });
+    expect(unknown.status).toBe(200);
+    expect(unknown.body.data).toEqual({ sent: true });
+  });
+
+  it("POST /auth/reset-password changes the password (old stops working, new works)", async () => {
+    // Provision the bootstrap admin so forgot-password issues a real token.
+    await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+    const forgot = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: process.env.ADMIN_EMAIL });
+    const devToken = forgot.body.data.devToken as string;
+
+    const reset = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ token: devToken, password: "brand-new-password-456" });
+    expect(reset.status).toBe(200);
+
+    const oldLogin = await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app).post("/api/v1/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: "brand-new-password-456",
+    });
+    expect(newLogin.status).toBe(200);
+  });
+});
+
+describe("Route protection (A2)", () => {
+  it("admin endpoints return 401 without a bearer token", async () => {
+    const res = await request(app).get("/api/v1/admin/profile");
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      success: false,
+      message: "Authentication required.",
+      data: null,
+    });
+  });
+
+  it("manual-rate writes return 401 without a bearer token", async () => {
+    const res = await request(app).post("/api/v1/manual-rates").send({
+      bank_code: "ABY",
+      currency_code: "USD",
+      buying_rate: 122,
+      selling_rate: 123,
+      rate_date: "2026-08-02",
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("admin endpoints accept a valid admin token", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/profile")
+      .set(await adminAuth());
+    expect(res.status).toBe(200);
+  });
+
+  it("non-admin roles are rejected with 403", async () => {
+    const client = getFakeClient();
+    client.tables.get("users")!.push({
+      id: "user-viewer",
+      email: "viewer@ethioexchange.test",
+      name: "Viewer",
+      role: "viewer",
+      password_hash: hashPassword("viewer-password-123"),
+      avatar_url: null,
+      created_at: "2026-01-01T09:00:00.000Z",
+      last_login_at: null,
+    });
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email: "viewer@ethioexchange.test",
+      password: "viewer-password-123",
+    });
+    expect(login.status).toBe(200);
+    const viewerToken = login.body.data.tokens.accessToken as string;
+
+    const res = await request(app)
+      .get("/api/v1/admin/profile")
+      .set("Authorization", `Bearer ${viewerToken}`);
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      success: false,
+      message: "You do not have permission to perform this action.",
+      data: null,
+    });
+  });
+
+  it("manual-rate writes accept a valid admin token", async () => {
+    const res = await request(app)
+      .post("/api/v1/manual-rates")
+      .set(await adminAuth())
+      .send({
+        bank_code: "ABY",
+        currency_code: "EUR",
+        buying_rate: 140.5,
+        selling_rate: 141.5,
+        rate_date: "2026-08-03",
+      });
+    expect(res.status).toBe(201);
   });
 });
 

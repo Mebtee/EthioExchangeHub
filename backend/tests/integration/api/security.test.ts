@@ -132,6 +132,27 @@ describe("Health endpoints bypass security throttling", () => {
   );
 });
 
+describe("Protected routes (A2)", () => {
+  it("admin endpoints reject requests without a bearer token with 401", async () => {
+    const res = await request(app).get("/api/v1/admin/settings");
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(res.body.data).toBeNull();
+  });
+
+  it("manual-rate writes reject requests without a bearer token with 401", async () => {
+    const res = await request(app).delete(
+      "/api/v1/manual-rates/11111111-1111-4111-8111-111111111111",
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("public endpoints stay reachable without a token", async () => {
+    const res = await request(app).get("/api/v1/rates/latest");
+    expect(res.status).toBe(200);
+  });
+});
+
 describe("Rate limiting", () => {
   it("attaches standard RateLimit headers to API responses", async () => {
     const res = await request(app).get("/api/v1/banks");

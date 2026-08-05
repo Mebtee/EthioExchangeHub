@@ -64,8 +64,9 @@ export function createApp(): Express {
   // falls back to the legacy FRONTEND_URL when unset). Unknown origins are
   // rejected — no Access-Control-Allow-Origin header is emitted, so browsers
   // block the response. Non-browser clients (no Origin header) pass through
-  // untouched. `credentials: false`: the API is authentication-free, so we
-  // never advertise credential support (OWASP: avoid Allow-Credentials:true).
+  // untouched. `credentials: false`: authentication uses Bearer tokens (no
+  // cookies), so we never advertise credential support (OWASP: avoid
+  // Allow-Credentials:true).
   const allowedOrigins = new Set<string>(
     env.ALLOWED_ORIGINS.length > 0 ? env.ALLOWED_ORIGINS : [env.FRONTEND_URL],
   );

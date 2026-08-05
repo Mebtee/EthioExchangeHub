@@ -9,10 +9,11 @@ import type { LogStatus } from "@/types/admin";
 import { formatCountOrDash, formatDurationMs, formatRelativeTime } from "@/lib/format";
 import { logStatusTone } from "@/lib/status";
 
-const STATUS_FILTERS: Array<"ALL" | LogStatus> = ["ALL", "success", "warning", "error"];
+// D3: canonical statuses only — the backend validator rejects any other value.
+const STATUS_FILTERS: Array<"ALL" | LogStatus> = ["ALL", "success", "failed"];
 
 export default function AdminScrapeLogsPage() {
-  const { data, isLoading } = useScrapeLogs();
+  const { data, isLoading, isError, error, refetch } = useScrapeLogs();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | LogStatus>("ALL");
 
@@ -24,7 +25,7 @@ export default function AdminScrapeLogsPage() {
     return logs.filter((log) => {
       const matchesStatus = status === "ALL" ? true : log.status === status;
       const matchesQuery = q
-        ? log.scraper.toLowerCase().includes(q) || log.bank.toLowerCase().includes(q)
+        ? log.runId.toLowerCase().includes(q) || log.bankName.toLowerCase().includes(q)
         : true;
       return matchesStatus && matchesQuery;
     });
@@ -42,7 +43,7 @@ export default function AdminScrapeLogsPage() {
           type="text"
           value={query}
           onChange={setQuery}
-          placeholder="Search scraper or bank..."
+          placeholder="Search run id or bank..."
           wrapperClassName="w-64"
         />
         <div className="inline-flex items-center gap-1 rounded-xl bg-surface-low p-1">
@@ -67,47 +68,48 @@ export default function AdminScrapeLogsPage() {
           rows={filtered}
           rowKey={(log) => log.id}
           isLoading={isLoading}
+          isError={isError}
+          errorMessage={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
           emptyTitle="No logs match your filters"
           emptyMessage="Try clearing the search or switching the status filter."
           footer={`Showing ${filtered.length} of ${logs.length} log entries`}
           columns={[
             {
-              key: "timestamp",
+              key: "ranAt",
               header: "Time",
               cell: (log) => (
                 <span className="whitespace-nowrap tabular">
-                  {formatRelativeTime(log.timestamp)}
+                  {formatRelativeTime(log.ranAt ?? "")}
                 </span>
               ),
             },
             {
-              key: "scraper",
-              header: "Scraper",
-              cell: (log) => <span className="font-medium">{log.scraper}</span>,
+              key: "runId",
+              header: "Run",
+              cell: (log) => <span className="font-medium">{log.runId.slice(0, 8)}…</span>,
             },
             {
               key: "bank",
               header: "Bank",
-              cell: (log) => <span className="text-muted-foreground">{log.bank}</span>,
+              cell: (log) => <span className="text-muted-foreground">{log.bankName}</span>,
             },
             {
               key: "status",
               header: "Status",
-              cell: (log) => <StatusBadge tone={logStatusTone(log.status)}>{log.status}</StatusBadge>,
+              cell: (log) => (
+                <StatusBadge tone={logStatusTone(log.status)}>{log.status}</StatusBadge>
+              ),
             },
             {
               key: "records",
               header: "Records",
-              cell: (log) => (
-                <span className="tabular">{formatCountOrDash(log.records)}</span>
-              ),
+              cell: (log) => <span className="tabular">{formatCountOrDash(log.records)}</span>,
             },
             {
               key: "duration",
               header: "Duration",
-              cell: (log) => (
-                <span className="tabular">{formatDurationMs(log.durationMs)}</span>
-              ),
+              cell: (log) => <span className="tabular">{formatDurationMs(log.durationMs)}</span>,
             },
             {
               key: "message",
@@ -115,9 +117,9 @@ export default function AdminScrapeLogsPage() {
               cell: (log) => (
                 <span
                   className="block max-w-[260px] truncate text-muted-foreground"
-                  title={log.message}
+                  title={log.message ?? ""}
                 >
-                  {log.message}
+                  {log.message ?? log.scenario}
                 </span>
               ),
             },
