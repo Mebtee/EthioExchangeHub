@@ -46,7 +46,7 @@ npm run dev   # or: bun run dev
 
 The app reads an optional `VITE_API_BASE_URL` environment variable to point at
 the exchange-rate backend. When unset, it falls back to
-`http://localhost:5000/api`. See `src/lib/api/client.ts` for details.
+`http://localhost:5000/api/v1`. See `src/lib/api/client.ts` for details.
 
 ### Mock data mode
 
