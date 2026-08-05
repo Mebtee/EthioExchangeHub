@@ -3,11 +3,13 @@ import { Router } from "express";
 import { BanksController } from "@/controllers/BanksController";
 import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
+import { NewsController } from "@/controllers/NewsController";
 import { ScraperHealthController } from "@/controllers/ScraperHealthController";
 import { ScrapeLogsController } from "@/controllers/ScrapeLogsController";
 import { BanksRepository } from "@/repositories/BanksRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
 import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
+import { NewsService } from "@/services/NewsService";
 import { ScraperHealthRepository } from "@/repositories/ScraperHealthRepository";
 import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
 import { BanksServiceImpl } from "@/services/BanksService";
@@ -18,6 +20,7 @@ import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { banksRouter } from "./banks.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
+import { newsRouter } from "./news.routes";
 import { scraperHealthRouter } from "./scraper-health.routes";
 import { scrapeLogsRouter } from "./scrape-logs.routes";
 
@@ -45,6 +48,9 @@ const manualRatesRepository = new ManualRatesRepository();
 const manualRatesService = new ManualRatesServiceImpl(manualRatesRepository, banksService);
 const manualRatesController = new ManualRatesController(manualRatesService);
 
+const newsService = new NewsService();
+const newsController = new NewsController(newsService);
+
 const scraperHealthRepository = new ScraperHealthRepository();
 const scraperHealthService = new ScraperHealthServiceImpl(scraperHealthRepository);
 const scraperHealthController = new ScraperHealthController(scraperHealthService);
@@ -59,5 +65,6 @@ export const apiRouter = Router();
 apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));
 apiRouter.use("/manual-rates", manualRatesRouter(manualRatesController));
+apiRouter.use("/news", newsRouter(newsController));
 apiRouter.use("/scraper-health", scraperHealthRouter(scraperHealthController));
 apiRouter.use("/scrape-logs", scrapeLogsRouter(scrapeLogsController));

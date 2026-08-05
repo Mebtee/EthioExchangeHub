@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { demoExchangeRates } from "@/data/public-demo";
 import { getSupabase } from "@/lib/supabase";
 import type { Database, ExchangeRateRow } from "@/types/database";
 import { BaseRepository } from "./BaseRepository";
+import { compareIsoDates } from "@/services/helpers/RateResolution";
 
 /**
  * `exchange_rates` repository (realigned to the live schema, Phase 2C).
@@ -17,6 +19,11 @@ export class ExchangeRatesRepository extends BaseRepository<"exchange_rates"> {
     super(client, "exchange_rates");
   }
 
+  override async findAll(): Promise<ExchangeRateRow[]> {
+    const rows = await super.findAll();
+    return rows.length > 0 ? rows : [...demoExchangeRates];
+  }
+
   /**
    * Finds the most recent rate for a (bank, currency) pair. `id` is a stable
    * tie-breaker when multiple rows share the latest `rate_date`.
@@ -25,11 +32,16 @@ export class ExchangeRatesRepository extends BaseRepository<"exchange_rates"> {
     bankCode: string,
     currencyCode: string,
   ): Promise<ExchangeRateRow | null> {
-    return this.findLatestBy(
-      { bank_code: bankCode, currency_code: currencyCode },
-      "rate_date",
-      "id",
-    );
+    return super.findLatestBy({ bank_code: bankCode, currency_code: currencyCode }, "rate_date", "id").then((row) => {
+      if (row) return row;
+      const fallback = demoExchangeRates
+        .filter((rate) => rate.bank_code === bankCode && rate.currency_code === currencyCode)
+        .sort((a, b) => {
+          const byDate = compareIsoDates(b.rate_date, a.rate_date);
+          return byDate !== 0 ? byDate : b.id.localeCompare(a.id);
+        })[0];
+      return fallback ?? null;
+    });
   }
 
   /**
@@ -42,17 +54,23 @@ export class ExchangeRatesRepository extends BaseRepository<"exchange_rates"> {
     rateDate?: string,
   ): Promise<ExchangeRateRow | null> {
     if (rateDate) {
-      return this.findOneBy({
+      return super.findOneBy({
         bank_code: bankCode,
         currency_code: currencyCode,
         rate_date: rateDate,
-      });
+      }).then((row) => row ?? demoExchangeRates.find(
+        (rate) =>
+          rate.bank_code === bankCode && rate.currency_code === currencyCode && rate.rate_date === rateDate,
+      ) ?? null);
     }
     return this.findLatestByBankAndCurrency(bankCode, currencyCode);
   }
 
   /** Returns all rate rows for a currency (all banks and dates). */
   findByCurrency(currencyCode: string): Promise<ExchangeRateRow[]> {
-    return this.findManyBy({ currency_code: currencyCode });
+    return super.findManyBy({ currency_code: currencyCode }).then((rows) => {
+      if (rows.length > 0) return rows;
+      return demoExchangeRates.filter((rate) => rate.currency_code === currencyCode);
+    });
   }
 }
