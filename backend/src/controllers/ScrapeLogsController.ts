@@ -6,6 +6,7 @@ import type {
   ScrapeLogQueryOptions,
   ScrapeLogsService,
 } from "@/services/ScrapeLogsService";
+import { categorizeLogStatus } from "@/services/helpers/Statistics";
 import { successResponse } from "@/utils/api-response";
 
 /**
@@ -40,7 +41,9 @@ export class ScrapeLogsController {
     const filter: ScrapeLogFilter = {};
     if (typeof query.bankCode === "string") filter.bankCode = query.bankCode;
     if (typeof query.runId === "string") filter.runId = query.runId;
-    if (typeof query.status === "string") filter.status = query.status;
+    // Transport coercion: normalize the validated status to the canonical
+    // bucket so the service only ever compares canonical values.
+    if (typeof query.status === "string") filter.status = categorizeLogStatus(query.status);
     if (typeof query.scenario === "string") filter.scenario = query.scenario;
     return filter;
   }

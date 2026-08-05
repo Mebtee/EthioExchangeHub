@@ -1,28 +1,22 @@
 import { useState } from "react";
-import { Bell, Globe, Save, Trash2 } from "lucide-react";
+import { Bell, Globe, Save } from "lucide-react";
 
 import { SurfaceCard } from "@/components/shared/surface-card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useAdminSettings } from "@/hooks/use-admin";
+import { useAdminSettings, useUpdateAdminSettings } from "@/hooks/use-admin";
+import { useCurrencies } from "@/hooks";
 import { useHydrateOnce } from "@/hooks/use-hydrate-once";
-import { CURRENCY_OPTIONS } from "@/mocks/currencies";
 import { toast } from "sonner";
 
 export default function AdminSettingsPage() {
-  const { data } = useAdminSettings();
+  const { data, isError, error } = useAdminSettings();
+  // Separate mutation instances so each Save button shows its own pending state.
+  const updateGeneral = useUpdateAdminSettings();
+  const updateNotifications = useUpdateAdminSettings();
+  const { data: currencies = [] } = useCurrencies();
 
   // Form state starts at defaults and is hydrated once settings arrive — the
   // hydration effect below is the single source of truth for initial values.
@@ -32,7 +26,6 @@ export default function AdminSettingsPage() {
   const [failureAlerts, setFailureAlerts] = useState(false);
   const [dailyDigest, setDailyDigest] = useState(false);
   const [weeklyReport, setWeeklyReport] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
 
   // Hydrate the form once settings arrive; never clobber local edits on refetch.
   useHydrateOnce(data, (settings) => {
@@ -44,6 +37,40 @@ export default function AdminSettingsPage() {
     setWeeklyReport(settings.weeklyReport);
   });
 
+  function handleSaveGeneral() {
+    updateGeneral.mutate(
+      { siteName: siteName.trim(), defaultCurrency },
+      {
+        onSuccess: (updated) => {
+          setSiteName(updated.siteName);
+          setDefaultCurrency(updated.defaultCurrency);
+          toast.success("Settings saved.");
+        },
+        onError: (err) => {
+          toast.error(err instanceof Error ? err.message : "Failed to save settings.");
+        },
+      },
+    );
+  }
+
+  function handleSaveNotifications() {
+    updateNotifications.mutate(
+      { emailAlerts, failureAlerts, dailyDigest, weeklyReport },
+      {
+        onSuccess: (updated) => {
+          setEmailAlerts(updated.emailAlerts);
+          setFailureAlerts(updated.failureAlerts);
+          setDailyDigest(updated.dailyDigest);
+          setWeeklyReport(updated.weeklyReport);
+          toast.success("Preferences saved.");
+        },
+        onError: (err) => {
+          toast.error(err instanceof Error ? err.message : "Failed to save preferences.");
+        },
+      },
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -52,6 +79,13 @@ export default function AdminSettingsPage() {
           Platform preferences, notifications, and maintenance actions.
         </p>
       </div>
+
+      {isError && (
+        <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+          Unable to load settings:{" "}
+          {error instanceof Error ? error.message : "please try again later."}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* General */}
@@ -75,17 +109,17 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setDefaultCurrency(e.target.value)}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                {CURRENCY_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {currencies.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code}
                   </option>
                 ))}
               </select>
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => toast.success("General settings saved (mock)")}>
+              <Button onClick={handleSaveGeneral} disabled={updateGeneral.isPending}>
                 <Save className="size-4" />
-                Save changes
+                {updateGeneral.isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>
           </div>
@@ -127,53 +161,15 @@ export default function AdminSettingsPage() {
             <div className="flex justify-end pt-2">
               <Button
                 variant="outline"
-                onClick={() => toast.success("Notification settings saved (mock)")}
+                onClick={handleSaveNotifications}
+                disabled={updateNotifications.isPending}
               >
-                Save preferences
+                {updateNotifications.isPending ? "Saving…" : "Save preferences"}
               </Button>
             </div>
           </div>
         </SurfaceCard>
       </div>
-
-      {/* Danger zone */}
-      <SurfaceCard className="border-destructive/30 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="font-semibold text-destructive">Danger zone</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reset all demo data back to its initial state. This cannot be undone.
-            </p>
-          </div>
-          <Button variant="destructive" onClick={() => setConfirmReset(true)}>
-            <Trash2 className="size-4" />
-            Reset demo data
-          </Button>
-        </div>
-      </SurfaceCard>
-
-      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset demo data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              All mock rates, logs, and scraper records will be restored to their defaults. This
-              action is irreversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setConfirmReset(false);
-                toast.success("Demo data reset (mock)");
-              }}
-            >
-              Reset data
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

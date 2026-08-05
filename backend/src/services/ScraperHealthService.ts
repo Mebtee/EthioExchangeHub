@@ -1,5 +1,7 @@
 import { ScraperHealthRepository } from "@/repositories/ScraperHealthRepository";
 import type { ScraperHealthRow } from "@/types/database";
+import { todayLocalIso } from "@/utils/date";
+import { DEFAULT_MAX_RATE_AGE_DAYS } from "./helpers/RateResolution";
 import {
   categorizeScraperStatus,
   summarizeHealth,
@@ -18,6 +20,8 @@ export interface ScraperHealthService {
   listDegraded(): Promise<ScraperHealthRow[]>;
   /** Health rows bucketed as failed (alphabetical by bank code). */
   listFailed(): Promise<ScraperHealthRow[]>;
+  /** Every health row, alphabetical by bank code (the per-scraper admin list). */
+  listAll(): Promise<ScraperHealthRow[]>;
   /** The health row for a single bank, or null when it has no row yet. */
   findByBankCode(bankCode: string): Promise<ScraperHealthRow | null>;
 }
@@ -31,11 +35,20 @@ export interface ScraperHealthService {
  * summary returned by `getSummary()`; the list methods return the rows.
  */
 export class ScraperHealthServiceImpl implements ScraperHealthService {
-  constructor(private readonly scraperHealthRepository: ScraperHealthRepository) {}
+  constructor(
+    private readonly scraperHealthRepository: ScraperHealthRepository,
+    /** Staleness window (D2) — injected so tests stay deterministic. */
+    private readonly maxRateAgeDays: number = DEFAULT_MAX_RATE_AGE_DAYS,
+    private readonly todayProvider: () => string = todayLocalIso,
+  ) {}
 
   /** Computes the aggregate summary over all health rows. */
   async getSummary(): Promise<ScraperHealthSummary> {
-    return summarizeHealth(await this.scraperHealthRepository.findAll());
+    return summarizeHealth(
+      await this.scraperHealthRepository.findAll(),
+      this.todayProvider(),
+      this.maxRateAgeDays,
+    );
   }
 
   /** Lists rows categorized as healthy. */
@@ -51,6 +64,11 @@ export class ScraperHealthServiceImpl implements ScraperHealthService {
   /** Lists rows categorized as failed. */
   async listFailed(): Promise<ScraperHealthRow[]> {
     return this.listByBucket("failed");
+  }
+
+  /** Lists every health row, alphabetical by bank code. */
+  async listAll(): Promise<ScraperHealthRow[]> {
+    return sortByBankCode(await this.scraperHealthRepository.findAll());
   }
 
   /** Returns a bank's health row (null when absent — no row is not an error). */

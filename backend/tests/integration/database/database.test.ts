@@ -37,19 +37,24 @@ describe("Repository + service flows against the fake database", () => {
     expect(bank.bank_name).toBe("Commercial Bank of Ethiopia");
   });
 
-  it("exchange rates: resolves the newest row per bank+currency", async () => {
+  it("exchange rates: resolves the newest row per bank+currency (manual overrides applied)", async () => {
     const service = new ExchangeRatesServiceImpl(
       new ExchangeRatesRepository(getFakeClient() as never),
       new BanksServiceImpl(new BanksRepository(getFakeClient() as never)),
+      new ManualRatesRepository(getFakeClient() as never),
     );
 
     const latest = await service.getLatestRates();
-    expect(latest).toHaveLength(3);
+    // Scraped pairs (ABY/EUR, CBE/USD) plus manual-newest ABY/USD (08-02) and
+    // manual-only CBE/EUR (08-01) — 4 resolved rows.
+    expect(latest).toHaveLength(4);
     const abyUsd = latest.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
-    expect(abyUsd?.rate_date).toBe("2026-08-01");
+    expect(abyUsd?.rate_date).toBe("2026-08-02");
+    expect(abyUsd?.source).toBe("MANUAL");
 
     const history = await service.getHistoricalRates("ABY", "USD");
-    expect(history.map((r) => r.rate_date)).toEqual(["2026-07-30", "2026-08-01"]);
+    // Scraped 07-30 + 08-01, plus the manual ABY/USD override on 08-02.
+    expect(history.map((r) => r.rate_date)).toEqual(["2026-07-30", "2026-08-01", "2026-08-02"]);
   });
 
   it("manual rates: create → duplicate conflict → update → delete lifecycle", async () => {

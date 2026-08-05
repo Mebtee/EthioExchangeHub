@@ -7,6 +7,7 @@ export function RateHero({
   currency,
   bank,
   accent,
+  stale,
 }: {
   icon: ReactNode;
   label: string;
@@ -14,6 +15,8 @@ export function RateHero({
   currency: string;
   bank: string;
   accent: "primary" | "gold";
+  /** When true, the shown rate is older than the backend staleness window (D2). */
+  stale?: boolean;
 }) {
   const border = accent === "primary" ? "border-l-primary" : "border-l-[color:var(--gold)]";
   const labelColor = accent === "primary" ? "text-primary" : "text-[color:var(--gold-foreground)]";
@@ -40,6 +43,11 @@ export function RateHero({
         <p className="text-sm text-muted-foreground mt-1">
           Available at <span className={`font-semibold ${labelColor}`}>{bank}</span>
         </p>
+        {stale && (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[color:var(--gold-soft)] px-2 py-1 text-[11px] font-semibold text-[color:var(--gold-foreground)]">
+            Stale rate — no newer bank data yet
+          </p>
+        )}
       </div>
       <div className={`text-[10px] font-semibold uppercase tracking-[0.15em] ${labelColor}`}>
         {label}

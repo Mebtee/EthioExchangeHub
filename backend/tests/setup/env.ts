@@ -21,6 +21,11 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
 process.env.JWT_SECRET = "test-secret-that-is-long-enough";
 process.env.JWT_EXPIRES_IN = "15m";
 process.env.REFRESH_TOKEN_EXPIRES_IN = "30d";
+process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN = "30m";
+// Bootstrap admin credentials used by auth integration tests (provisioned on
+// first login against the in-memory fake client — no real users table needed).
+process.env.ADMIN_EMAIL = "admin@ethioexchange.test";
+process.env.ADMIN_PASSWORD = "test-admin-password-123";
 process.env.LOG_LEVEL = "fatal";
 
 // Phase 3A security hardening: set very high limits so the test suite (which
@@ -30,6 +35,7 @@ process.env.TRUST_PROXY = "0";
 process.env.RATE_LIMIT_WINDOW_MS = "60000";
 process.env.RATE_LIMIT_MAX = "100000";
 process.env.RATE_LIMIT_STRICT_MAX = "100000";
+process.env.AUTH_RATE_LIMIT_MAX = "100000";
 process.env.SLOW_DOWN_WINDOW_MS = "60000";
 process.env.SLOW_DOWN_DELAY_AFTER = "100000";
 process.env.SLOW_DOWN_MAX_DELAY_MS = "2000";

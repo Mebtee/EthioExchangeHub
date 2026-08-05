@@ -20,6 +20,11 @@ export const exchangeRateSchema: OpenAPIV3_1.SchemaObject = {
     rate_date: { type: "string", format: "date", description: "ISO date (YYYY-MM-DD)." },
     source: { type: ["string", "null"], description: 'Origin of the row (e.g. "SCRAPER").' },
     scraped_at: { type: ["string", "null"], format: "date-time", description: "Scrape timestamp." },
+    stale: {
+      type: "boolean",
+      description:
+        "Computed freshness flag (D2): true when the rate_date is older than MAX_RATE_AGE_DAYS before today. Stale rows are always served — never dropped.",
+    },
   },
-  required: ["id", "bank_code", "currency_code", "rate_date"],
+  required: ["id", "bank_code", "currency_code", "rate_date", "stale"],
 };

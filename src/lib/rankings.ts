@@ -40,7 +40,13 @@ export function dedupeLatestRates(rates: ExchangeRate[]): ExchangeRate[] {
   for (const r of rates) {
     const key = `${r.bankName}\u0000${r.currency}`;
     const existing = byKey.get(key);
-    if (!existing || r.lastUpdated > existing.lastUpdated) byKey.set(key, r);
+    if (
+      !existing ||
+      r.rateDate > existing.rateDate ||
+      (r.rateDate === existing.rateDate && r.lastUpdated > existing.lastUpdated)
+    ) {
+      byKey.set(key, r);
+    }
   }
   return Array.from(byKey.values());
 }
@@ -67,7 +73,7 @@ export function getRatesForBank(rates: ExchangeRate[], bankName: string): Exchan
 /** Timestamp of the newest rate record across the list (undefined when empty). */
 export function getLatestUpdate(rates: ExchangeRate[]): string | undefined {
   return rates.reduce<string | undefined>(
-    (latest, r) => (!latest || r.lastUpdated > latest ? r.lastUpdated : latest),
+    (latest, r) => (!latest || r.rateDate > latest ? r.rateDate : latest),
     undefined,
   );
 }
@@ -82,12 +88,10 @@ export function getBestRate(
   field: RateField,
   direction: "max" | "min",
 ): ExchangeRate | undefined {
-  const candidates = rates.filter(
-    (r) => r.currency === currency && Number.isFinite(r[field]),
-  );
+  const candidates = rates.filter((r) => r.currency === currency && Number.isFinite(r[field]));
   if (candidates.length === 0) return undefined;
   return candidates.reduce((best, r) =>
-    direction === "max" ? (r[field] > best[field] ? r : best) : (r[field] < best[field] ? r : best),
+    direction === "max" ? (r[field] > best[field] ? r : best) : r[field] < best[field] ? r : best,
   );
 }
 

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Pencil, Plus, TriangleAlert, Trash2 } from "lucide-react";
 
 import { DataTable } from "@/components/admin/data-table";
-import { StatusBadge } from "@/components/admin/status-badge";
 import { SearchInput } from "@/components/shared/search-input";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { Button } from "@/components/ui/button";
@@ -26,62 +25,55 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useManualRates } from "@/hooks/use-admin";
-import { useHydrateOnce } from "@/hooks/use-hydrate-once";
-import { BANK_OPTIONS } from "@/mocks/admin";
-import { CURRENCY_OPTIONS } from "@/mocks/currencies";
-import type { ManualRate } from "@/types/admin";
-import { formatRateOrDash, formatRelativeTime } from "@/lib/format";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  useBanks,
+  useCreateManualRate,
+  useCurrencies,
+  useDeleteManualRate,
+  useManualRates,
+  useUpdateManualRate,
+} from "@/hooks";
+import { formatRateOrDash } from "@/lib/format";
+import type { ManualRate, ManualRatePayload } from "@/types/admin";
 import { toast } from "sonner";
 
 interface RateFormState {
-  bankName: string;
+  bankCode: string;
   currency: string;
-  cashBuying: string;
-  cashSelling: string;
-  transactionBuying: string;
-  transactionSelling: string;
+  buying: string;
+  selling: string;
+  rateDate: string;
+  note: string;
+}
+
+function todayIsoDate(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 const EMPTY_FORM: RateFormState = {
-  bankName: "",
-  currency: "USD",
-  cashBuying: "",
-  cashSelling: "",
-  transactionBuying: "",
-  transactionSelling: "",
+  bankCode: "",
+  currency: "",
+  buying: "",
+  selling: "",
+  rateDate: todayIsoDate(),
+  note: "",
 };
 
-function parseRateForm(form: RateFormState): ManualRate | null {
-  if (!form.bankName) return null;
-  const cashBuying = Number(form.cashBuying);
-  const cashSelling = Number(form.cashSelling);
-  const transactionBuying = Number(form.transactionBuying);
-  const transactionSelling = Number(form.transactionSelling);
-  if (![cashBuying, cashSelling, transactionBuying, transactionSelling].every((n) => n > 0)) {
-    return null;
-  }
-  return {
-    id: Date.now(),
-    bankName: form.bankName,
-    currency: form.currency,
-    cashBuying,
-    cashSelling,
-    transactionBuying,
-    transactionSelling,
-    lastUpdated: new Date().toISOString(),
-    source: "manual",
-  };
-}
-
 export default function AdminManualRatesPage() {
-  const { data, isLoading } = useManualRates();
-  const [rates, setRates] = useState<ManualRate[]>([]);
+  const { data, isLoading, isError, error, refetch } = useManualRates();
+  const { data: banks = [], isLoading: banksLoading } = useBanks();
+  const { data: currencies = [] } = useCurrencies();
+  const createRate = useCreateManualRate();
+  const updateRate = useUpdateManualRate();
+  const deleteRate = useDeleteManualRate();
 
-  // Hydrate the working copy from the data source (mock data today, the real
-  // API once VITE_USE_MOCKS=false). Only seeds once so local add/edit/delete
-  // edits are never clobbered by a later refetch.
-  useHydrateOnce(data, setRates);
+  // Stable reference so filter memos below don't recompute each render.
+  const rates = useMemo(() => data ?? [], [data]);
+
   const [query, setQuery] = useState("");
   const [currency, setCurrency] = useState("ALL");
 
@@ -89,7 +81,6 @@ export default function AdminManualRatesPage() {
   const [editing, setEditing] = useState<ManualRate | null>(null);
   const [form, setForm] = useState<RateFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
-
   const [deleting, setDeleting] = useState<ManualRate | null>(null);
 
   const filtered = useMemo(() => {
@@ -103,7 +94,7 @@ export default function AdminManualRatesPage() {
 
   function openAdd() {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, rateDate: todayIsoDate() });
     setFormError(null);
     setDialogOpen(true);
   }
@@ -111,43 +102,72 @@ export default function AdminManualRatesPage() {
   function openEdit(rate: ManualRate) {
     setEditing(rate);
     setForm({
-      bankName: rate.bankName,
+      bankCode: rate.bankCode,
       currency: rate.currency,
-      cashBuying: String(rate.cashBuying),
-      cashSelling: String(rate.cashSelling),
-      transactionBuying: String(rate.transactionBuying),
-      transactionSelling: String(rate.transactionSelling),
+      buying: Number.isFinite(rate.buyingRate) ? String(rate.buyingRate) : "",
+      selling: Number.isFinite(rate.sellingRate) ? String(rate.sellingRate) : "",
+      rateDate: rate.rateDate,
+      note: rate.note ?? "",
     });
     setFormError(null);
     setDialogOpen(true);
   }
 
-  function handleSave() {
-    const parsed = parseRateForm(form);
-    if (!parsed) {
-      setFormError("Fill in the bank and all four positive rate values.");
-      return;
+  function parseForm(): ManualRatePayload | null {
+    const buying = Number(form.buying);
+    const selling = Number(form.selling);
+    if (!form.bankCode || !form.currency) {
+      setFormError("Select a bank and a currency.");
+      return null;
     }
-    if (editing) {
-      setRates((prev) =>
-        prev.map((r) => (r.id === editing.id ? { ...parsed, id: editing.id } : r)),
-      );
-      toast.success("Rate updated");
-    } else {
-      setRates((prev) => [parsed, ...prev]);
-      toast.success("Rate added");
+    if (!Number.isFinite(buying) || buying <= 0 || !Number.isFinite(selling) || selling <= 0) {
+      setFormError("Buying and selling rates must be positive numbers.");
+      return null;
     }
-    setDialogOpen(false);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.rateDate)) {
+      setFormError("Rate date must be an ISO date (YYYY-MM-DD).");
+      return null;
+    }
+    return {
+      bank_code: form.bankCode,
+      currency_code: form.currency,
+      buying_rate: buying,
+      selling_rate: selling,
+      rate_date: form.rateDate,
+      note: form.note.trim() === "" ? null : form.note.trim(),
+    };
   }
 
-  function handleDelete() {
+  async function handleSave() {
+    const payload = parseForm();
+    if (!payload) return;
+    setFormError(null);
+    try {
+      if (editing) {
+        await updateRate.mutateAsync({ id: editing.id, payload });
+        toast.success("Rate updated");
+      } else {
+        await createRate.mutateAsync(payload);
+        toast.success("Rate added");
+      }
+      setDialogOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to save the rate.");
+    }
+  }
+
+  async function handleDelete() {
     if (!deleting) return;
-    setRates((prev) => prev.filter((r) => r.id !== deleting.id));
-    toast.success("Rate deleted");
-    setDeleting(null);
+    try {
+      await deleteRate.mutateAsync(deleting.id);
+      toast.success("Rate deleted");
+      setDeleting(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to delete the rate.");
+    }
   }
 
-  const rateField = (value: number | undefined) => formatRateOrDash(value);
+  const busy = createRate.isPending || updateRate.isPending || deleteRate.isPending;
 
   return (
     <div className="space-y-6">
@@ -179,9 +199,9 @@ export default function AdminManualRatesPage() {
           className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="ALL">All currencies</option>
-          {CURRENCY_OPTIONS.map((c) => (
-            <option key={c} value={c}>
-              {c}
+          {currencies.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.code}
             </option>
           ))}
         </select>
@@ -192,6 +212,9 @@ export default function AdminManualRatesPage() {
           rows={filtered}
           rowKey={(r) => r.id}
           isLoading={isLoading}
+          isError={isError}
+          errorMessage={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
           emptyTitle="No rates match your filters"
           emptyMessage="Try adjusting the search or currency filter, or add a new rate."
           footer={`Showing ${filtered.length} of ${rates.length} manual rates`}
@@ -202,7 +225,7 @@ export default function AdminManualRatesPage() {
               cell: (r) => (
                 <span className="font-medium">
                   {r.bankName}
-                  <span className="ml-2 text-xs text-muted-foreground">{r.source}</span>
+                  {r.note && <span className="ml-2 text-xs text-muted-foreground">{r.note}</span>}
                 </span>
               ),
             },
@@ -212,31 +235,19 @@ export default function AdminManualRatesPage() {
               cell: (r) => <span className="font-semibold">{r.currency}</span>,
             },
             {
-              key: "cashBuying",
-              header: "Cash Buy",
-              cell: (r) => <span className="tabular">{rateField(r.cashBuying)}</span>,
+              key: "buying",
+              header: "Buy",
+              cell: (r) => <span className="tabular">{formatRateOrDash(r.buyingRate)}</span>,
             },
             {
-              key: "cashSelling",
-              header: "Cash Sell",
-              cell: (r) => <span className="tabular">{rateField(r.cashSelling)}</span>,
+              key: "selling",
+              header: "Sell",
+              cell: (r) => <span className="tabular">{formatRateOrDash(r.sellingRate)}</span>,
             },
             {
-              key: "transactionBuying",
-              header: "Trans. Buy",
-              cell: (r) => <span className="tabular">{rateField(r.transactionBuying)}</span>,
-            },
-            {
-              key: "transactionSelling",
-              header: "Trans. Sell",
-              cell: (r) => <span className="tabular">{rateField(r.transactionSelling)}</span>,
-            },
-            {
-              key: "updated",
-              header: "Updated",
-              cell: (r) => (
-                <StatusBadge tone="neutral">{formatRelativeTime(r.lastUpdated)}</StatusBadge>
-              ),
+              key: "rateDate",
+              header: "Rate date",
+              cell: (r) => <span className="whitespace-nowrap tabular">{r.rateDate}</span>,
             },
             {
               key: "actions",
@@ -287,16 +298,26 @@ export default function AdminManualRatesPage() {
               <Label htmlFor="bank">Bank</Label>
               <select
                 id="bank"
-                value={form.bankName}
-                onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+                value={form.bankCode}
+                onChange={(e) => setForm((f) => ({ ...f, bankCode: e.target.value }))}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">Select a bank…</option>
-                {BANK_OPTIONS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
+                {banksLoading ? (
+                  <option value="" disabled>
+                    Loading banks…
                   </option>
-                ))}
+                ) : banks.length === 0 ? (
+                  <option value="" disabled>
+                    No banks available
+                  </option>
+                ) : (
+                  banks.map((b) => (
+                    <option key={b.slug} value={b.slug}>
+                      {b.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -308,36 +329,61 @@ export default function AdminManualRatesPage() {
                 onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                {CURRENCY_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                <option value="">Select a currency…</option>
+                {currencies.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {(
-                [
-                  ["cashBuying", "Cash buying"],
-                  ["cashSelling", "Cash selling"],
-                  ["transactionBuying", "Transaction buying"],
-                  ["transactionSelling", "Transaction selling"],
-                ] as const
-              ).map(([key, labelText]) => (
-                <div key={key} className="grid gap-2">
-                  <Label htmlFor={key}>{labelText}</Label>
-                  <Input
-                    id={key}
-                    type="number"
-                    min="0"
-                    step="0.0001"
-                    placeholder="0.0000"
-                    value={form[key]}
-                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                  />
-                </div>
-              ))}
+              <div className="grid gap-2">
+                <Label htmlFor="buying">Buying rate</Label>
+                <Input
+                  id="buying"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  placeholder="0.0000"
+                  value={form.buying}
+                  onChange={(e) => setForm((f) => ({ ...f, buying: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="selling">Selling rate</Label>
+                <Input
+                  id="selling"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  placeholder="0.0000"
+                  value={form.selling}
+                  onChange={(e) => setForm((f) => ({ ...f, selling: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="rateDate">Rate date</Label>
+              <Input
+                id="rateDate"
+                type="date"
+                value={form.rateDate}
+                onChange={(e) => setForm((f) => ({ ...f, rateDate: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="note">Note (optional)</Label>
+              <Textarea
+                id="note"
+                rows={2}
+                placeholder="Optional context for this rate"
+                value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+              />
             </div>
 
             {formError && (
@@ -352,7 +398,9 @@ export default function AdminManualRatesPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>{editing ? "Save changes" : "Add rate"}</Button>
+            <Button onClick={() => void handleSave()} disabled={busy}>
+              {editing ? "Save changes" : "Add rate"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -370,7 +418,9 @@ export default function AdminManualRatesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={() => void handleDelete()} disabled={busy}>
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

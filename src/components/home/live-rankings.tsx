@@ -7,8 +7,10 @@ import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { slugifyBankName, sourceLabel } from "@/lib/bank";
 import { getCurrencyOptions } from "@/lib/rankings";
-import { PREFERRED_TABS } from "@/mocks/currencies";
 import type { ExchangeRate } from "@/types/exchange-rate";
+
+/** Preferred tab ordering (display preference only — filtered to API currencies). */
+const PREFERRED_TAB_ORDER = ["USD", "EUR", "GBP"];
 
 export function LiveRankings({
   rates,
@@ -25,8 +27,9 @@ export function LiveRankings({
 }) {
   const available = useMemo(() => getCurrencyOptions(rates), [rates]);
   const tabs = useMemo(() => {
-    const preferred = PREFERRED_TABS.filter((c) => available.includes(c));
-    return preferred.length > 0 ? preferred : available;
+    const preferred = PREFERRED_TAB_ORDER.filter((c) => available.includes(c));
+    const rest = available.filter((c) => !PREFERRED_TAB_ORDER.includes(c));
+    return [...preferred, ...rest];
   }, [available]);
 
   const [selected, setSelected] = useState<string>("");

@@ -3,6 +3,22 @@ import type { OpenAPIV3_1 } from "openapi-types";
 import { env } from "@/utils/validate-env";
 import { apiPaths } from "./paths";
 import { commonResponses } from "./responses";
+import {
+  adminProfileInputSchema,
+  adminProfileSchema,
+  adminSettingsInputSchema,
+  adminSettingsSchema,
+  rateTrendPointSchema,
+} from "./schemas/admin";
+import {
+  authSessionSchema,
+  authTokensSchema,
+  authUserSchema,
+  forgotPasswordRequestSchema,
+  loginRequestSchema,
+  refreshRequestSchema,
+  resetPasswordRequestSchema,
+} from "./schemas/auth";
 import { bankSchema } from "./schemas/bank";
 import { exchangeRateSchema } from "./schemas/exchange-rate";
 import {
@@ -10,6 +26,8 @@ import {
   manualRateSchema,
   manualRateUpdateInputSchema,
 } from "./schemas/manual-rate";
+import { marketTickerItemSchema } from "./schemas/market-ticker";
+import { newsCategorySchema, newsItemSchema } from "./schemas/news";
 import { scraperHealthSchema, scraperHealthSummarySchema } from "./schemas/scraper-health";
 import { scrapeLogSchema } from "./schemas/scrape-log";
 import { apiTags } from "./tags";
@@ -38,7 +56,7 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       "",
       "**Operations (Phase 2K)**: unversioned infrastructure endpoints — `GET /live` (liveness, no DB call), `GET /ready` (readiness), and `GET /metrics` (Prometheus) — are also outside `/api/v1` and not listed above.",
       "",
-      "**Authentication**: currently not required — all endpoints are public. A `bearerAuth` (JWT) security scheme is declared for future use and can be enabled per-endpoint without changing paths.",
+      "**Authentication**: the admin surface (`/admin`, `/manual-rates`, `/auth/me`) requires a `bearerAuth` (JWT) access token obtained from `POST /auth/login`. All public endpoints (`/banks`, `/rates`, `/news`, `/scraper-health`, `/scrape-logs`) remain open. Protected operations declare `security: [{ bearerAuth: [] }]`.",
     ].join("\n"),
   },
   servers: [
@@ -58,15 +76,31 @@ export const openApiDocument: OpenAPIV3_1.Document = {
         type: "http",
         scheme: "bearer",
         bearerFormat: "JWT",
-        description: "Not currently enforced — reserved for future authentication.",
+        description:
+          "Access token from `POST /auth/login` (or the refreshed pair). Required on the admin surface.",
       },
     },
     schemas: {
+      AdminProfile: adminProfileSchema,
+      AdminProfileInput: adminProfileInputSchema,
+      AdminSettings: adminSettingsSchema,
+      AdminSettingsInput: adminSettingsInputSchema,
+      RateTrendPoint: rateTrendPointSchema,
+      AuthUser: authUserSchema,
+      AuthTokens: authTokensSchema,
+      AuthSession: authSessionSchema,
+      LoginRequest: loginRequestSchema,
+      RefreshRequest: refreshRequestSchema,
+      ForgotPasswordRequest: forgotPasswordRequestSchema,
+      ResetPasswordRequest: resetPasswordRequestSchema,
       Bank: bankSchema,
       ExchangeRate: exchangeRateSchema,
       ManualRate: manualRateSchema,
       ManualRateInput: manualRateInputSchema,
       ManualRateUpdateInput: manualRateUpdateInputSchema,
+      MarketTickerItem: marketTickerItemSchema,
+      NewsItem: newsItemSchema,
+      NewsCategory: newsCategorySchema,
       ScraperHealth: scraperHealthSchema,
       ScraperHealthSummary: scraperHealthSummarySchema,
       ScrapeLog: scrapeLogSchema,

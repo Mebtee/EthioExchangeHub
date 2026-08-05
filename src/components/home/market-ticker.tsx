@@ -17,7 +17,10 @@ export function MarketTicker() {
         {items.map((t, i) => {
           const up = t.change >= 0;
           return (
-            <div key={`${t.pair}-${i}`} className="flex items-center gap-2 text-sm font-medium tabular pl-12">
+            <div
+              key={`${t.pair}-${i}`}
+              className="flex items-center gap-2 text-sm font-medium tabular pl-12"
+            >
               <span className="text-background/70">{t.pair}</span>
               <span className="font-semibold">{t.value.toFixed(2)}</span>
               <span

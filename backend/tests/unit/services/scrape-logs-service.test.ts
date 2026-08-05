@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
+import { categorizeLogStatus } from "@/services/helpers/Statistics";
 
 import { scrapeLogs } from "../../fixtures/scrape-logs";
 import { createMockScrapeLogsRepository } from "../../mocks/repositories";
+
+describe("categorizeLogStatus", () => {
+  it("maps only explicit success to the success bucket (D3)", () => {
+    expect(categorizeLogStatus("success")).toBe("success");
+    expect(categorizeLogStatus("SUCCESS")).toBe("success");
+    expect(categorizeLogStatus("failed")).toBe("failed");
+    expect(categorizeLogStatus("error")).toBe("failed");
+    expect(categorizeLogStatus("failure")).toBe("failed");
+    expect(categorizeLogStatus("warning")).toBe("failed");
+    expect(categorizeLogStatus("unknown")).toBe("failed");
+  });
+});
 
 function makeService() {
   const repository = createMockScrapeLogsRepository();
@@ -27,6 +40,26 @@ describe("ScrapeLogsServiceImpl.listLogs", () => {
     expect(await service.listLogs({ runId: "run-b" })).toHaveLength(2);
     expect(await service.listLogs({ status: "failed" })).toHaveLength(1);
     expect(await service.listLogs({ scenario: "stale" })).toHaveLength(1);
+  });
+
+  it("matches rows by canonical bucket even when the raw status differs (D3)", async () => {
+    const { service, repository } = makeService();
+    repository.findAll.mockResolvedValue([
+      ...scrapeLogs,
+      {
+        id: "log-5",
+        run_id: "run-c",
+        bank_code: "NIB",
+        status: "error", // free-text synonym — must match `status=failed`
+        scenario: "failed",
+        currencies_count: 0,
+        error_message: "Timeout",
+        duration_ms: 3000,
+        ran_at: "2026-08-03T08:00:00.000Z",
+      },
+    ]);
+    const failed = await service.listLogs({ status: "failed" });
+    expect(failed.map((r) => r.id)).toEqual(["log-5", "log-3"]); // newest first
   });
 
   it("applies limit and offset", async () => {

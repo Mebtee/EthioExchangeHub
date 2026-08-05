@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, BadgeCheck } from "lucide-react";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { ListRowsSkeleton } from "@/components/shared/skeletons";
@@ -94,65 +93,49 @@ function NewsPage() {
                 ))}
               </ul>
             </div>
-
-            <div className="rounded-2xl bg-[color:var(--gold-soft)] border border-[color:var(--gold)]/30 p-5">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-[color:var(--gold-foreground)] mb-1 inline-flex items-center gap-1">
-                <BadgeCheck className="size-3.5" /> Official Alert
-              </p>
-              <h4 className="font-semibold text-[color:var(--gold-foreground)]">
-                NBE Policy Update
-              </h4>
-              <p className="text-sm text-[color:var(--gold-foreground)]/80 mt-1">
-                New directives regarding foreign currency accounts for exporters have been released.
-              </p>
-              <a
-                href="#"
-                className="mt-3 inline-flex items-center text-sm font-semibold text-[color:var(--gold-foreground)] hover:underline"
-              >
-                Read Directive <ArrowRight className="size-3.5 ml-1" />
-              </a>
-            </div>
           </aside>
 
           <div>
             {/* Featured */}
             {isLoading ? (
               <ListRowsSkeleton count={3} />
-            ) : featured && (
-              <article className="rounded-2xl bg-card border border-border/60 shadow-[0_4px_16px_rgba(0,0,0,0.04)] overflow-hidden grid md:grid-cols-2">
-                <div className="relative">
-                  <img
-                    src={featured.image}
-                    alt={featured.title}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                  />
-                  <span className="absolute top-4 left-4 rounded-md bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">
-                    Featured
-                  </span>
-                </div>
-                <div className="p-6 flex flex-col">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {featured.category} · {featured.date}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-bold tracking-tight">{featured.title}</h2>
-                  <p className="mt-3 text-sm text-muted-foreground">{featured.excerpt}</p>
-                  <div className="mt-auto pt-5 flex items-center gap-3">
+            ) : (
+              featured && (
+                <article className="rounded-2xl bg-card border border-border/60 shadow-[0_4px_16px_rgba(0,0,0,0.04)] overflow-hidden grid md:grid-cols-2">
+                  <div className="relative">
                     <img
-                      src={featured.authorAvatar}
-                      alt=""
+                      src={featured.image}
+                      alt={featured.title}
                       loading="lazy"
                       decoding="async"
-                      className="size-10 rounded-full object-cover"
+                      className="w-full h-full object-cover"
                     />
-                    <div>
-                      <p className="text-sm font-semibold">{featured.author}</p>
-                      <p className="text-xs text-muted-foreground">{featured.authorRole}</p>
+                    <span className="absolute top-4 left-4 rounded-md bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">
+                      Featured
+                    </span>
+                  </div>
+                  <div className="p-6 flex flex-col">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {featured.category} · {featured.date}
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold tracking-tight">{featured.title}</h2>
+                    <p className="mt-3 text-sm text-muted-foreground">{featured.excerpt}</p>
+                    <div className="mt-auto pt-5 flex items-center gap-3">
+                      <img
+                        src={featured.authorAvatar}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="size-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold">{featured.author}</p>
+                        <p className="text-xs text-muted-foreground">{featured.authorRole}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              )
             )}
 
             <div className="mt-6 grid gap-6 sm:grid-cols-2">

@@ -37,6 +37,16 @@ import type { Database, DatabaseTables } from "@/types/database";
  * express their queries as typed partial rows and need no casts at all.
  */
 
+/**
+ * Rows fetched per `.range()` window.
+ *
+ * PostgREST caps any single response at its `max-rows` server default (1000),
+ * so an unbounded `select()` silently drops rows past that boundary. `findAll`
+ * pages through the table in windows of this size to always read the complete
+ * dataset.
+ */
+const PAGE_SIZE = 1000;
+
 export type TableName = keyof DatabaseTables;
 
 /** Row type of a given table (the typed domain model returned by queries). */
@@ -67,15 +77,56 @@ export abstract class BaseRepository<T extends TableName> {
     this.table = table;
   }
 
-  /** Returns all rows for the table, optionally limited/sorted. */
+  /**
+   * Returns all rows for the table, optionally limited/sorted.
+   *
+   * Reads the WHOLE table by paging through it with `.range()`. Because
+   * PostgREST returns at most `PAGE_SIZE` rows per request, an unbounded
+   * `select()` would silently drop the tail of any larger table. Pages are
+   * fetched until one returns fewer than PAGE_SIZE rows (end of table) or the
+   * requested `limit` is reached. Ordering, when given, is applied to every
+   * page so the concatenated result stays deterministic.
+   */
   async findAll(options?: FindAllOptions<T>): Promise<RowOf<T>[]> {
+    const requestedLimit = options?.limit;
+    const rows: RowOf<T>[] = [];
+
+    let offset = 0;
+    for (;;) {
+      const pageSize =
+        requestedLimit === undefined
+          ? PAGE_SIZE
+          : Math.min(PAGE_SIZE, requestedLimit - rows.length);
+      if (pageSize <= 0) break;
+
+      const page = await this.findPage(options, offset, pageSize);
+      rows.push(...page);
+
+      // A short page means the table has no more rows.
+      if (page.length < pageSize) break;
+      if (requestedLimit !== undefined && rows.length >= requestedLimit) break;
+      offset += PAGE_SIZE;
+    }
+
+    return rows;
+  }
+
+  /**
+   * Fetches one window of up to `pageSize` rows starting at `offset`, applying
+   * the caller's ordering (none when omitted — natural/primary-key order is
+   * stable across pages). Errors surface as `DatabaseError` via the shared
+   * guard, identical to every other read.
+   */
+  private async findPage(
+    options: FindAllOptions<T> | undefined,
+    offset: number,
+    pageSize: number,
+  ): Promise<RowOf<T>[]> {
     let query = this.client.from(this.table).select();
     if (options?.orderBy) {
       query = query.order(options.orderBy, { ascending: options.ascending ?? true });
     }
-    if (options?.limit !== undefined) {
-      query = query.limit(options.limit);
-    }
+    query = query.range(offset, offset + pageSize - 1);
     const { data, error } = (await query) as unknown as QueryResult<RowOf<T>[]>;
     this.throwIfError(error, "findAll");
     return data ?? [];

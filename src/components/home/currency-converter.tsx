@@ -22,7 +22,10 @@ export function CurrencyConverter({
   return (
     <SurfaceCard className="p-6">
       <h3 className="text-lg font-semibold mb-4">Currency Converter</h3>
-      <label htmlFor="converter-from" className="block text-xs font-semibold text-muted-foreground mb-1">
+      <label
+        htmlFor="converter-from"
+        className="block text-xs font-semibold text-muted-foreground mb-1"
+      >
         From
       </label>
       <div className="flex items-stretch gap-2 mb-2">
@@ -58,7 +61,10 @@ export function CurrencyConverter({
           <ArrowUpDown className="size-4" />
         </button>
       </div>
-      <label htmlFor="converter-to" className="block text-xs font-semibold text-muted-foreground mb-1">
+      <label
+        htmlFor="converter-to"
+        className="block text-xs font-semibold text-muted-foreground mb-1"
+      >
         To
       </label>
       <div className="flex items-stretch gap-2 mb-3">

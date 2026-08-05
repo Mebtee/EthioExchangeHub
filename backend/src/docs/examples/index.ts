@@ -25,6 +25,7 @@ export const apiExamples = {
     rate_date: "2026-08-02",
     source: "SCRAPER",
     scraped_at: "2026-08-02T08:00:00.000Z",
+    stale: false,
   },
   manualRate: {
     id: "3fbf920e-2cf7-47d2-95d7-80b29d9a00d7",
@@ -64,6 +65,7 @@ export const apiExamples = {
     unknown: 29,
     averageResponseTimeMs: 380,
     averageConsecutiveFailures: 0,
+    staleCount: 12,
   },
   scrapeLog: {
     id: "dc9f919f-cc93-421e-9163-0669713f8723",
@@ -75,5 +77,29 @@ export const apiExamples = {
     error_message: null,
     duration_ms: 1820,
     ran_at: "2026-08-02T08:00:00.000Z",
+  },
+  adminProfile: {
+    name: "Administrator",
+    email: "admin@ethioexchangehub.com",
+    role: "Administrator",
+    initials: "AD",
+    memberSince: "2026-01-01",
+    lastLogin: "2026-08-01T08:00:00.000Z",
+  },
+  adminSettings: {
+    siteName: "Ethio Exchange Hub",
+    defaultCurrency: "USD",
+    refreshInterval: "15m",
+    timezone: "Africa/Addis_Ababa",
+    retentionDays: "30",
+    emailAlerts: false,
+    failureAlerts: false,
+    dailyDigest: false,
+    weeklyReport: false,
+  },
+  rateTrendPoint: {
+    label: "2026-08-02",
+    cashBuying: 120.25,
+    cashSelling: 121.35,
   },
 } as const;

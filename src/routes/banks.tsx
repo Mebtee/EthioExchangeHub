@@ -33,9 +33,7 @@ function BanksPage() {
   /** Banks that have published a rate for the primary currency, with their newest record. */
   const bankEntries = useMemo(() => {
     // Reuses the shared newest-per-bank+currency dedupe from lib/rankings.
-    const latestByBank = dedupeLatestRates(
-      rates.filter((r) => r.currency === primaryCurrency),
-    );
+    const latestByBank = dedupeLatestRates(rates.filter((r) => r.currency === primaryCurrency));
     const rateByBank = new Map(latestByBank.map((r) => [key(r.bankName), r]));
     return banks
       .filter((b) => rateByBank.has(key(b.name)))

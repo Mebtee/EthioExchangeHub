@@ -6,6 +6,8 @@ const required = {
   SUPABASE_URL: "https://x.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-key",
   JWT_SECRET: "super-secret-value",
+  // Required secrets added with auth (A1) — no defaults.
+  ADMIN_PASSWORD: "admin-password-123",
 };
 
 describe("validateEnv", () => {

@@ -4,12 +4,13 @@ export const ADMIN_ROLES = ["admin", "super_admin"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 export interface AuthUser {
-  id: number;
+  /** User id (uuid from the backend `users` table). */
+  id: string;
   name: string;
   email: string;
   role: string;
-  /** Optional avatar URL; falls back to initials when absent. */
-  avatarUrl?: string;
+  /** Avatar URL, or null when the user has none; falls back to initials. */
+  avatarUrl?: string | null;
 }
 
 export interface AuthTokens {

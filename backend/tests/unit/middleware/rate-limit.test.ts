@@ -2,7 +2,11 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import { createGeneralLimiter, createStrictLimiter } from "@/middleware/rate-limit";
+import {
+  createAuthLimiter,
+  createGeneralLimiter,
+  createStrictLimiter,
+} from "@/middleware/rate-limit";
 
 /** Tiny app that mounts a limiter in front of one route (real HTTP stack). */
 function buildApp(limiter: ReturnType<typeof createGeneralLimiter>) {
@@ -52,10 +56,20 @@ describe("rate-limit middleware (Phase 3A)", () => {
     await request(app).get("/ping").expect(429);
   });
 
+  it("exposes a dedicated tighter limiter for /auth (brute-force protection)", async () => {
+    const app = buildApp(createAuthLimiter({ windowMs: 60_000, limit: 2 }));
+
+    await request(app).get("/ping").expect(200);
+    await request(app).get("/ping").expect(200);
+    await request(app).get("/ping").expect(429);
+  });
+
   it("defaults come from the environment (used by createApp)", () => {
     const general = createGeneralLimiter();
     const strict = createStrictLimiter();
+    const auth = createAuthLimiter();
     expect(typeof general).toBe("function");
     expect(typeof strict).toBe("function");
+    expect(typeof auth).toBe("function");
   });
 });

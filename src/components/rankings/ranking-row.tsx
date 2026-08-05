@@ -30,11 +30,18 @@ export const RankingRow = memo(function RankingRow({
         }`}
       >
         {item.rank}
-      </span>
+      </span>{" "}
       <div className="flex items-center gap-3 min-w-0">
         <BankAvatar name={item.bankName} logo={item.logo} className="size-10 rounded-full" />
         <div className="min-w-0">
-          <p className="font-semibold truncate">{item.bankName}</p>
+          <p className="font-semibold truncate flex items-center gap-2">
+            {item.bankName}
+            {item.stale && (
+              <span className="shrink-0 rounded-md bg-[color:var(--gold-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--gold-foreground)] uppercase tracking-wider">
+                Stale
+              </span>
+            )}
+          </p>
           <p className="text-xs text-muted-foreground">{sourceLabel(item.source)}</p>
         </div>
       </div>
@@ -56,7 +63,7 @@ export const RankingRow = memo(function RankingRow({
         );
       })}
       <div className="text-sm font-semibold text-muted-foreground">{item.currency}</div>
-      <span className="text-sm text-muted-foreground">{formatRelativeTime(item.lastUpdated)}</span>
+      <span className="text-sm text-muted-foreground">{formatRelativeTime(item.rateDate)}</span>
       <Link
         to={`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`}
         className="ml-auto rounded-lg bg-surface-high px-4 py-2 text-xs font-semibold hover:bg-surface-high/80"

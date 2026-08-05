@@ -33,6 +33,11 @@ export const scraperHealthSummarySchema: OpenAPIV3_1.SchemaObject = {
     unknown: { type: "number" },
     averageResponseTimeMs: { type: ["number", "null"] },
     averageConsecutiveFailures: { type: ["number", "null"] },
+    staleCount: {
+      type: "number",
+      description:
+        "Scrapers whose last_rate_date is missing or older than MAX_RATE_AGE_DAYS before today.",
+    },
   },
   required: [
     "total",
@@ -42,5 +47,6 @@ export const scraperHealthSummarySchema: OpenAPIV3_1.SchemaObject = {
     "unknown",
     "averageResponseTimeMs",
     "averageConsecutiveFailures",
+    "staleCount",
   ],
 };

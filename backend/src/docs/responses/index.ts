@@ -23,6 +23,14 @@ function errorResponse(description: string, exampleMessage: string): OpenAPIV3_1
  */
 export const commonResponses = {
   BadRequest: errorResponse("The request was malformed.", "Bad request."),
+  AuthenticationError: errorResponse(
+    "The request is missing, or carries an invalid/expired, bearer token.",
+    "Invalid or expired token.",
+  ),
+  AuthorizationError: errorResponse(
+    "The authenticated user is not allowed to perform this action.",
+    "You do not have permission to perform this action.",
+  ),
   NotFound: errorResponse("The requested resource does not exist.", 'Bank "ZZZZ" not found.'),
   Conflict: errorResponse(
     "The request conflicts with the current state of the resource.",

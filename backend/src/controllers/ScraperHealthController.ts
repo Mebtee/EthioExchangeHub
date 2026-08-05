@@ -17,6 +17,12 @@ export class ScraperHealthController {
     successResponse(res, summary, "Scraper health summary retrieved.");
   });
 
+  /** Returns every health row (per-scraper admin list), alphabetical by code. */
+  getHealthList = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const rows = await this.scraperHealthService.listAll();
+    successResponse(res, rows, "Scraper health list retrieved.");
+  });
+
   /** Returns the health row for a single bank. */
   getHealthByBank = asyncHandler(
     async (req: Request<{ bankCode: string }>, res: Response): Promise<void> => {

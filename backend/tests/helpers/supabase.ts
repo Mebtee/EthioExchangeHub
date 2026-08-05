@@ -25,6 +25,8 @@ import { exchangeRates } from "../fixtures/exchange-rates";
 import { manualRates } from "../fixtures/manual-rates";
 import { scraperHealth } from "../fixtures/scraper-health";
 import { scrapeLogs } from "../fixtures/scrape-logs";
+import { settings } from "../fixtures/settings";
+import { users } from "../fixtures/users";
 
 /** The standard seed — every live table populated with typed fixtures. */
 export const defaultSeed: FakeSeed = {
@@ -33,6 +35,8 @@ export const defaultSeed: FakeSeed = {
   manual_rates: manualRates,
   scraper_health: scraperHealth,
   scrape_logs: scrapeLogs,
+  settings,
+  users,
 };
 
 let client: FakeSupabaseClient | null = null;
