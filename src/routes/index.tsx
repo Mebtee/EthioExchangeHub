@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ShoppingCart, Tag, TrendingUp, RefreshCw } from "lucide-react";
+import { ShoppingCart, Tag, TrendingUp, CalendarDays } from "lucide-react";
 import { useMemo } from "react";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
@@ -9,7 +9,7 @@ import { LiveRankings } from "@/components/home/live-rankings";
 import { CurrencyConverter } from "@/components/home/currency-converter";
 import { FinancialNews } from "@/components/home/financial-news";
 import { getBestRate, getLatestUpdate, getPrimaryCurrency } from "@/lib/rankings";
-import { formatRelativeTime } from "@/lib/format";
+import { formatRateDate } from "@/lib/format";
 import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
 
 function HomePage() {
@@ -73,9 +73,9 @@ function HomePage() {
               </Link>
             </div>
             <p className="mt-5 text-xs text-muted-foreground flex items-center gap-2">
-              <RefreshCw className="size-3" /> Last Updated:{" "}
+              <CalendarDays className="size-3" /> Rates as of{" "}
               <span className="font-semibold text-foreground">
-                {latestUpdate ? formatRelativeTime(latestUpdate) : "—"}
+                {latestUpdate ? formatRateDate(latestUpdate) : "—"}
               </span>
             </p>
           </section>

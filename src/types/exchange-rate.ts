@@ -9,7 +9,6 @@ export interface RateRecord {
   transactionBuying: number;
   transactionSelling: number;
   rateDate: string;
-  lastUpdated: string;
   source: RateSource;
   /**
    * Computed freshness flag (D2): true when the rate_date is older than the

@@ -32,7 +32,9 @@ export function getRate(rate: ExchangeRate, field: RateField): number {
 }
 
 /**
- * Keeps the most recently updated record for each bank + currency pair.
+ * Keeps the newest record per bank + currency pair, judged by `rateDate` only.
+ * Same-date ties have already been resolved by the backend (manual override →
+ * scraped_at → UUID), so the first occurrence is kept deterministically.
  * A no-op when the API already returns one record per pair (the intended design).
  */
 export function dedupeLatestRates(rates: ExchangeRate[]): ExchangeRate[] {
@@ -40,11 +42,7 @@ export function dedupeLatestRates(rates: ExchangeRate[]): ExchangeRate[] {
   for (const r of rates) {
     const key = `${r.bankName}\u0000${r.currency}`;
     const existing = byKey.get(key);
-    if (
-      !existing ||
-      r.rateDate > existing.rateDate ||
-      (r.rateDate === existing.rateDate && r.lastUpdated > existing.lastUpdated)
-    ) {
+    if (!existing || r.rateDate > existing.rateDate) {
       byKey.set(key, r);
     }
   }

@@ -158,9 +158,9 @@ export function mapBankRow(row: BackendBankRow): Bank {
 
 export function mapExchangeRateRow(row: BackendExchangeRateRow, bankName?: string): ExchangeRate {
   return {
-    id: hashString(
-      `${row.bank_code}:${row.currency_code}:${row.rate_date}:${row.scraped_at ?? ""}`,
-    ),
+    // Keyed by business identity only — scraped_at is operational metadata and
+    // must never influence identity, selection, ranking, filtering, or dates.
+    id: hashString(`${row.bank_code}:${row.currency_code}:${row.rate_date}`),
     bankId: hashString(row.bank_code),
     bankCode: row.bank_code,
     bankName: bankName ?? row.bank_code,
@@ -173,7 +173,6 @@ export function mapExchangeRateRow(row: BackendExchangeRateRow, bankName?: strin
     transactionBuying: toDisplayRate(row.transactional_buying),
     transactionSelling: toDisplayRate(row.transactional_selling),
     rateDate: row.rate_date,
-    lastUpdated: row.scraped_at ?? `${row.rate_date}T00:00:00.000Z`,
     source: normalizeSource(row.source),
     // Always present on resolved rows (D2) — no fallback needed.
     stale: row.stale,

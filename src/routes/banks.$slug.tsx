@@ -18,7 +18,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-
 import { InfoItem } from "@/components/shared/info-item";
 import { Pill } from "@/components/shared/pill";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { formatRate, formatRelativeTime } from "@/lib/format";
+import { formatRate, formatRateDate } from "@/lib/format";
 import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
 
@@ -92,7 +92,7 @@ function BankDetails() {
                 icon={<Clock className="size-4 text-muted-foreground" />}
                 className="bg-surface-low text-xs"
               >
-                Updated {latestUpdate ? formatRelativeTime(latestUpdate) : "—"}
+                Rates as of {latestUpdate ? formatRateDate(latestUpdate) : "—"}
               </Pill>
             </div>
           </div>

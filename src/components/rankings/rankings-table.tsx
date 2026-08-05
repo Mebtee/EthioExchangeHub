@@ -39,7 +39,7 @@ export function RankingsTable({
             </span>
           ))}
           <span>Currency</span>
-          <span>Last Update</span>
+          <span>Rate Date</span>
           <span className="text-right">Action</span>
         </div>
 
