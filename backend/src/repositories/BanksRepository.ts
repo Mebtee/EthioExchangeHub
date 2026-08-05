@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabase } from "@/lib/supabase";
 import type { BankRow, Database } from "@/types/database";
+import { demoBanks } from "@/data/public-demo";
 import { BaseRepository } from "./BaseRepository";
+import { sortBanksByName } from "@/services/helpers/Sorting";
 
 /**
  * `banks` repository (realigned to the live schema, Phase 2C).
@@ -16,13 +18,22 @@ export class BanksRepository extends BaseRepository<"banks"> {
     super(client, "banks");
   }
 
+  override async findAll(): Promise<BankRow[]> {
+    const rows = await super.findAll();
+    return rows.length > 0 ? rows : sortBanksByName(demoBanks);
+  }
+
   /** Finds a bank by its natural key. */
   findByBankCode(bankCode: string): Promise<BankRow | null> {
-    return this.findOneBy({ bank_code: bankCode });
+    return super.findOneBy({ bank_code: bankCode }).then((row) => {
+      if (row) return row;
+      return demoBanks.find((bank) => bank.bank_code === bankCode) ?? null;
+    });
   }
 
   /** Lists banks currently flagged active. */
-  listActive(): Promise<BankRow[]> {
-    return this.findManyBy({ is_active: true });
+  async listActive(): Promise<BankRow[]> {
+    const rows = await super.findManyBy({ is_active: true });
+    return rows.length > 0 ? sortBanksByName(rows) : sortBanksByName(demoBanks.filter((bank) => bank.is_active === true));
   }
 }
