@@ -56,10 +56,23 @@ describe("mapExchangeRateRow", () => {
     expect(mapExchangeRateRow(rateRow({ stale: true })).stale).toBe(true);
   });
 
-  it("normalizes the source and falls back to the rate date for lastUpdated", () => {
+  it("normalizes the source without exposing scraped_at to the public model", () => {
     const rate = mapExchangeRateRow(rateRow({ source: "  scraper  ", scraped_at: null }));
     expect(rate.source).toBe("scraper");
-    expect(rate.lastUpdated).toBe("2026-08-01T00:00:00.000Z");
+    expect("lastUpdated" in rate).toBe(false);
+  });
+
+  it("keys the row identity by rate_date, ignoring scraped_at (operational metadata)", () => {
+    const withMorningScrape = mapExchangeRateRow(
+      rateRow({ scraped_at: "2026-08-01T06:00:00.000Z" }),
+    );
+    const withEveningScrape = mapExchangeRateRow(
+      rateRow({ scraped_at: "2026-08-01T18:00:00.000Z" }),
+    );
+    expect(withMorningScrape.id).toBe(withEveningScrape.id);
+
+    const nextDay = mapExchangeRateRow(rateRow({ rate_date: "2026-08-02" }));
+    expect(nextDay.id).not.toBe(withMorningScrape.id);
   });
 });
 

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 import { BankAvatar } from "@/components/shared/bank-avatar";
-import { formatRelativeTime } from "@/lib/format";
+import { formatRateDate } from "@/lib/format";
 import type { Bank } from "@/types/bank";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
@@ -42,9 +42,7 @@ export const BankCard = memo(function BankCard({ bank, rate }: { bank: Bank; rat
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">
-            Rate date {formatRelativeTime(rate.rateDate)}
-          </span>
+          <span className="text-muted-foreground">Rate date {formatRateDate(rate.rateDate)}</span>
           <span className="inline-flex items-center text-primary font-semibold">
             View details <ChevronRight className="size-3.5" />
           </span>

@@ -4,6 +4,7 @@ import {
   formatAmount,
   formatDurationMs,
   formatRate,
+  formatRateDate,
   formatRateOrDash,
   formatRelativeTime,
 } from "./format";
@@ -24,6 +25,16 @@ describe("formatRelativeTime", () => {
 
   it("returns an em-dash for an unparseable timestamp", () => {
     expect(formatRelativeTime("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatRateDate", () => {
+  it("renders an ISO business date as a readable date", () => {
+    expect(formatRateDate("2026-08-05")).toBe("Aug 5, 2026");
+  });
+
+  it("returns an em-dash for an unparseable date", () => {
+    expect(formatRateDate("not-a-date")).toBe("—");
   });
 });
 

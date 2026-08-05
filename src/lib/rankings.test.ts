@@ -16,7 +16,6 @@ function rate(overrides: Partial<ExchangeRate>): ExchangeRate {
     transactionBuying: Number.NaN,
     transactionSelling: Number.NaN,
     rateDate: "2026-08-01",
-    lastUpdated: "2026-08-01T08:00:00.000Z",
     source: "scraper",
     stale: false,
     logo: "",
@@ -37,21 +36,14 @@ describe("dedupeLatestRates", () => {
     expect(abyUsd?.rateDate).toBe("2026-08-01");
   });
 
-  it("breaks a same-date tie by lastUpdated", () => {
+  it("keeps the first record on a same-rate_date tie (ties are backend-resolved)", () => {
     const rates = [
-      rate({
-        bankName: "Awash Bank",
-        rateDate: "2026-08-01",
-        lastUpdated: "2026-08-01T06:00:00.000Z",
-      }),
-      rate({
-        bankName: "Awash Bank",
-        rateDate: "2026-08-01",
-        lastUpdated: "2026-08-01T09:00:00.000Z",
-      }),
+      rate({ bankName: "Awash Bank", rateDate: "2026-08-01", id: 101 }),
+      rate({ bankName: "Awash Bank", rateDate: "2026-08-01", id: 202 }),
     ];
     const deduped = dedupeLatestRates(rates);
-    expect(deduped[0]?.lastUpdated).toBe("2026-08-01T09:00:00.000Z");
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0]?.id).toBe(101);
   });
 });
 

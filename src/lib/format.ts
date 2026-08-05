@@ -13,6 +13,34 @@ export function formatRelativeTime(iso: string): string {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/**
+ * Formats an ISO business date (YYYY-MM-DD) for public display — e.g.
+ * "Aug 5, 2026". `rate_date` is the effective date of an exchange rate, so
+ * public pages show this instead of scraper-relative times. Rendered
+ * deterministically from the date part so it never depends on the runtime
+ * timezone or locale.
+ */
+export function formatRateDate(iso: string): string {
+  const date = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "—";
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
+}
+
 /** Relative time for a scheduled (future) or past timestamp. */
 export function formatRelativeSchedule(iso: string): string {
   const time = new Date(iso).getTime();

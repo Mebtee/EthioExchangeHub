@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { BankAvatar } from "@/components/shared/bank-avatar";
 import { RATE_FIELDS } from "@/lib/rankings";
 import { slugifyBankName, sourceLabel } from "@/lib/bank";
-import { formatRateOrDash, formatRelativeTime } from "@/lib/format";
+import { formatRateDate, formatRateOrDash } from "@/lib/format";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
 export const RANKING_GRID = "grid-cols-[60px_1.5fr_1fr_1fr_1fr_1fr_0.8fr_0.9fr_100px]";
@@ -63,7 +63,7 @@ export const RankingRow = memo(function RankingRow({
         );
       })}
       <div className="text-sm font-semibold text-muted-foreground">{item.currency}</div>
-      <span className="text-sm text-muted-foreground">{formatRelativeTime(item.rateDate)}</span>
+      <span className="text-sm text-muted-foreground">{formatRateDate(item.rateDate)}</span>
       <Link
         to={`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`}
         className="ml-auto rounded-lg bg-surface-high px-4 py-2 text-xs font-semibold hover:bg-surface-high/80"
