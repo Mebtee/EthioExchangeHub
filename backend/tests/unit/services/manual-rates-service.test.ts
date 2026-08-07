@@ -34,6 +34,8 @@ const validInput = {
   currency_code: "USD",
   buying_rate: 121.4,
   selling_rate: 122.2,
+  transactional_buying: 125.1,
+  transactional_selling: 126.2,
   rate_date: "2026-08-02",
 };
 
@@ -49,6 +51,38 @@ describe("ManualRatesServiceImpl.createManualRate", () => {
     // The row is really persisted in the in-memory table.
     const stored = client.tables.get("manual_rates")!.find((r) => r.id === created.id);
     expect(stored?.note).toBeNull();
+  });
+
+  it("persists all four rate values", async () => {
+    const { service } = makeService();
+    const created = await service.createManualRate(validInput);
+    expect(created.buying_rate).toBe(121.4);
+    expect(created.selling_rate).toBe(122.2);
+    expect(created.transactional_buying).toBe(125.1);
+    expect(created.transactional_selling).toBe(126.2);
+  });
+
+  it("defaults missing transactional values to null", async () => {
+    const { service } = makeService();
+    const created = await service.createManualRate({
+      bank_code: "ABY",
+      currency_code: "USD",
+      buying_rate: 121.4,
+      selling_rate: 122.2,
+      rate_date: "2026-08-02",
+    });
+    expect(created.transactional_buying).toBeNull();
+    expect(created.transactional_selling).toBeNull();
+  });
+
+  it("rejects invalid transactional rates", async () => {
+    const { service } = makeService();
+    await expect(
+      service.createManualRate({ ...validInput, transactional_buying: -1 }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      service.createManualRate({ ...validInput, transactional_selling: 0 }),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("throws ConflictError when the exact key already exists", async () => {
@@ -78,9 +112,21 @@ describe("ManualRatesServiceImpl.createManualRate", () => {
 describe("ManualRatesServiceImpl.updateManualRate", () => {
   it("updates an existing rate and re-checks duplicates excluding itself", async () => {
     const { service } = makeService(manualRates);
-    const updated = await service.updateManualRate("manual-1", { selling_rate: 123 });
+    const updated = await service.updateManualRate("manual-1", {
+      selling_rate: 123,
+      transactional_buying: 130,
+    });
     expect(updated.id).toBe("manual-1");
     expect(updated.selling_rate).toBe(123);
+    expect(updated.transactional_buying).toBe(130);
+    expect(updated.transactional_selling).toBe(126.2);
+  });
+
+  it("rejects an invalid transactional update value", async () => {
+    const { service } = makeService(manualRates);
+    await expect(
+      service.updateManualRate("manual-1", { transactional_selling: -5 }),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("throws NotFoundError when the rate does not exist", async () => {

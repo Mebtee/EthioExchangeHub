@@ -48,3 +48,14 @@ export function assertPositiveRate(value: number): void {
     throw new ValidationError("Rate must be a positive number.");
   }
 }
+
+/**
+ * Validates an optional rate field: `null`/`undefined` are allowed (absent),
+ * anything else must be a finite positive number.
+ */
+export function assertNullablePositiveRate(value: number | null | undefined): void {
+  if (value === null || value === undefined) return;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new ValidationError("Rate must be a positive number.");
+  }
+}

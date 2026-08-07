@@ -26,8 +26,14 @@ export interface ManualRate {
   bankCode: string;
   bankName: string;
   currency: string;
-  buyingRate: number;
-  sellingRate: number;
+  /** Cash buying rate. */
+  cashBuying: number;
+  /** Cash selling rate. */
+  cashSelling: number;
+  /** Transactional buying rate (NaN when the backend reports null). */
+  transactionBuying: number;
+  /** Transactional selling rate (NaN when the backend reports null). */
+  transactionSelling: number;
   /** ISO date (YYYY-MM-DD). */
   rateDate: string;
   note: string | null;
@@ -40,6 +46,9 @@ export interface ManualRatePayload {
   currency_code: string;
   buying_rate: number;
   selling_rate: number;
+  /** Transactional rates are optional; omit or pass null when not published. */
+  transactional_buying?: number | null;
+  transactional_selling?: number | null;
   rate_date: string;
   note?: string | null;
 }
