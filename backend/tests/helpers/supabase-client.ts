@@ -3,9 +3,9 @@
  *
  * Implements exactly the fluent surface the repositories use
  * (`select`/`eq`/`order`/`limit`/`maybeSingle`/`insert`/`update`/`delete`)
- * against seed data, so repository and integration tests never touch a real
- * database. Raw fixture rows are deep-copied per client so tests never share
- * mutable state.
+ * against seed data, so repository, service, controller, and integration
+ * tests never touch a real database. Raw fixture rows are deep-copied per
+ * client so tests never share mutable state.
  *
  * Error simulation: set `client.nextError` to a fake PostgREST error; the
  * NEXT executed query resolves `{ data: null, error }` and the flag clears

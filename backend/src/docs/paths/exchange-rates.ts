@@ -3,6 +3,7 @@ import {
   nullableRef,
   pathParam,
   queryParam,
+  schemaRef,
   successResponse,
   type DocPathItem,
 } from "../helpers";
@@ -11,6 +12,19 @@ const DATE_DESCRIPTION = "Inclusive ISO date (YYYY-MM-DD).";
 
 /** Exchange-rate endpoints (mounted under `/api/v1`). */
 export const exchangeRatesPaths: Record<string, DocPathItem> = {
+  "/rates/date-range": {
+    get: {
+      tags: ["Exchange Rates"],
+      summary: "Get the rate date range",
+      description:
+        "The oldest and newest rate_date across all published rates (scraped + manual). Clients use it to bound date pickers to the data that actually exists.",
+      operationId: "getRateDateRange",
+      parameters: [],
+      responses: {
+        "200": successResponse("Rate date range retrieved.", schemaRef("RateDateRange")),
+      },
+    },
+  },
   "/rates/latest": {
     get: {
       tags: ["Exchange Rates"],

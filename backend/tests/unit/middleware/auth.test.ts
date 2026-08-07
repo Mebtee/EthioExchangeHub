@@ -1,16 +1,19 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import { AuthenticationError, AuthorizationError } from "@/lib/errors";
 import { signToken } from "@/lib/tokens";
 import { createRequireAuth, requireRole } from "@/middleware/auth";
+import { UsersRepository } from "@/repositories/UsersRepository";
+import type { Database, UserRow } from "@/types/database";
 
-import { createMockNext, createMockRequest, createMockResponse } from "../../mocks/express";
-import { createMockUsersRepository } from "../../mocks/repositories";
+import { createMockNext, createMockRequest, createMockResponse } from "../../helpers/http";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 // Matches tests/setup/env.ts — the validated env singleton the middleware reads.
 const TEST_SECRET = "test-secret-that-is-long-enough";
 
-function makeUser() {
+function makeUser(): UserRow {
   return {
     id: "user-1",
     email: "admin@ethioexchange.test",
@@ -23,10 +26,15 @@ function makeUser() {
   };
 }
 
+/** Builds a real UsersRepository wired to an in-memory client seeded with `users`. */
+function makeRepository(users: UserRow[] = []): UsersRepository {
+  const client = createFakeSupabaseClient({ users: [...users] });
+  return new UsersRepository(client as unknown as SupabaseClient<Database>);
+}
+
 describe("createRequireAuth", () => {
   it("attaches the authenticated user and calls next for a valid Bearer token", async () => {
-    const repository = createMockUsersRepository();
-    repository.findById.mockResolvedValue(makeUser());
+    const repository = makeRepository([makeUser()]);
     const requireAuth = createRequireAuth(repository);
     const req = createMockRequest({
       headers: {
@@ -38,7 +46,6 @@ describe("createRequireAuth", () => {
     requireAuth(req, createMockResponse(), next);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(repository.findById).toHaveBeenCalledWith("user-1");
     expect(req.user).toEqual({
       id: "user-1",
       name: "Root Admin",
@@ -50,7 +57,7 @@ describe("createRequireAuth", () => {
   });
 
   it("rejects a request without an Authorization header", async () => {
-    const requireAuth = createRequireAuth(createMockUsersRepository());
+    const requireAuth = createRequireAuth(makeRepository());
     const next = createMockNext();
 
     requireAuth(createMockRequest(), createMockResponse(), next);
@@ -62,7 +69,7 @@ describe("createRequireAuth", () => {
   });
 
   it("rejects a non-Bearer Authorization header", async () => {
-    const requireAuth = createRequireAuth(createMockUsersRepository());
+    const requireAuth = createRequireAuth(makeRepository());
     const next = createMockNext();
 
     requireAuth(
@@ -76,7 +83,7 @@ describe("createRequireAuth", () => {
   });
 
   it("rejects a garbage token", async () => {
-    const requireAuth = createRequireAuth(createMockUsersRepository());
+    const requireAuth = createRequireAuth(makeRepository());
     const next = createMockNext();
 
     requireAuth(
@@ -92,7 +99,7 @@ describe("createRequireAuth", () => {
   });
 
   it("rejects a refresh token used as an access token (kind mismatch)", async () => {
-    const requireAuth = createRequireAuth(createMockUsersRepository());
+    const requireAuth = createRequireAuth(makeRepository());
     const next = createMockNext();
 
     requireAuth(
@@ -110,9 +117,7 @@ describe("createRequireAuth", () => {
   });
 
   it("rejects a token whose user row has been deleted", async () => {
-    const repository = createMockUsersRepository();
-    repository.findById.mockResolvedValue(null);
-    const requireAuth = createRequireAuth(repository);
+    const requireAuth = createRequireAuth(makeRepository([]));
     const next = createMockNext();
 
     requireAuth(

@@ -1,5 +1,6 @@
 import { RATE_FIELDS } from "@/lib/rankings";
 import { SearchInput } from "@/components/shared/search-input";
+import { RankingsDatePicker } from "@/components/rankings/rankings-date-picker";
 import type { RateField } from "@/types/exchange-rate";
 
 interface RankingsFiltersProps {
@@ -10,6 +11,8 @@ interface RankingsFiltersProps {
   currency: string;
   currencies: string[];
   onCurrencyChange: (value: string) => void;
+  asOfDate: string;
+  onAsOfDateChange: (value: string) => void;
 }
 
 export function RankingsFilters({
@@ -20,25 +23,30 @@ export function RankingsFilters({
   currency,
   currencies,
   onCurrencyChange,
+  asOfDate,
+  onAsOfDateChange,
 }: RankingsFiltersProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-      <label className="flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-          Rank By
-        </span>
-        <select
-          value={field}
-          onChange={(e) => onFieldChange(e.target.value as RateField)}
-          className="rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          {RATE_FIELDS.map((f) => (
-            <option key={f.key} value={f.key}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Rank By
+          </span>
+          <select
+            value={field}
+            onChange={(e) => onFieldChange(e.target.value as RateField)}
+            className="rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {RATE_FIELDS.map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <RankingsDatePicker value={asOfDate} onDateChange={onAsOfDateChange} />
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput
           type="text"

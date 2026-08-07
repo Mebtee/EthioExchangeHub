@@ -67,6 +67,12 @@ export class ExchangeRatesController {
     successResponse(res, items, "Market ticker retrieved.");
   });
 
+  /** Returns the oldest and newest rate_date across all published rates. */
+  getDateRange = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const range = await this.exchangeRatesService.getDateRange();
+    successResponse(res, range, "Rate date range retrieved.");
+  });
+
   /** Reads optional `from`/`to` query params into a date range (no validation). */
   private static readDateRange(query: Request["query"]): RateDateRange {
     const range: RateDateRange = {};

@@ -1,13 +1,13 @@
 /**
  * Scraper-health statistics helpers.
  *
- * `scraper_health.status` is free text in the live database (currently only
- * "unknown" is present). The buckets below are the documented statuses; any
- * other value counts as "unknown". This categorization is business logic, so
- * it lives in the service layer — never in repositories.
+ * Health is DERIVED from `scrape_logs` (no `scraper_health` table exists).
+ * The buckets below are the documented statuses; any other value counts as
+ * "unknown". This categorization is business logic, so it lives in the
+ * service layer — never in repositories.
  */
 
-import type { ScraperHealthRow } from "@/types/database";
+import type { ScraperHealthRow } from "@/types/scraper-health";
 import { isStaleRate } from "./RateResolution";
 
 /** Business buckets for scraper health status. */

@@ -16,7 +16,6 @@ import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { BanksRepository } from "@/repositories/BanksRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
 import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
-import { ScraperHealthRepository } from "@/repositories/ScraperHealthRepository";
 import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
 import { DatabaseError } from "@/lib/errors";
 
@@ -93,17 +92,18 @@ describe("Repository + service flows against the fake database", () => {
     await expect(service.deleteManualRate(created.id)).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it("scraper health: aggregate summary over seeded rows", async () => {
+  it("scraper health: aggregate summary derived from scrape logs", async () => {
     const service = new ScraperHealthServiceImpl(
-      new ScraperHealthRepository(getFakeClient() as never),
+      new ScrapeLogsRepository(getFakeClient() as never),
     );
     const summary = await service.getSummary();
+    // Derived from the seeded logs: ABY + CBE succeeded, DASH failed.
     expect(summary).toMatchObject({
-      total: 4,
-      healthy: 1,
-      degraded: 1,
+      total: 3,
+      healthy: 2,
+      degraded: 0,
       failed: 1,
-      unknown: 1,
+      unknown: 0,
     });
   });
 

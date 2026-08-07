@@ -19,6 +19,7 @@ import {
 export function exchangeRatesRouter(controller: ExchangeRatesController): Router {
   const router = Router();
 
+  router.get("/date-range", controller.getDateRange);
   router.get("/latest", validateQuery(latestRatesQuerySchema), controller.getLatestRates);
   router.get(
     "/latest/:bankCode",

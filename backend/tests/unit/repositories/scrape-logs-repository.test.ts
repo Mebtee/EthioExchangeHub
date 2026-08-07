@@ -5,7 +5,7 @@ import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
 import type { Database } from "@/types/database";
 
 import { scrapeLogs } from "../../fixtures/scrape-logs";
-import { createFakeSupabaseClient } from "../../mocks/supabase-client";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 function makeRepo(): ScrapeLogsRepository {
   const client = createFakeSupabaseClient({ scrape_logs: [...scrapeLogs] });

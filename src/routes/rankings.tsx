@@ -14,6 +14,8 @@ function RankingsPage() {
     currencies,
     query,
     setQuery,
+    asOfDate,
+    setAsOfDate,
     rankings,
     totalBanks,
     isLoading,
@@ -42,6 +44,8 @@ function RankingsPage() {
           currency={currency}
           currencies={currencies}
           onCurrencyChange={setCurrency}
+          asOfDate={asOfDate}
+          onAsOfDateChange={setAsOfDate}
         />
 
         <RankingsTable
@@ -51,7 +55,8 @@ function RankingsPage() {
           isLoading={isLoading}
           isError={isError}
           errorMessage={error instanceof Error ? error.message : undefined}
-          hasFilters={Boolean(query.trim()) || Boolean(currency)}
+          hasFilters={Boolean(query.trim()) || Boolean(currency) || Boolean(asOfDate)}
+          asOfDate={asOfDate}
           onRetry={() => void refetch()}
         />
 

@@ -1,73 +1,68 @@
 import { describe, expect, it } from "vitest";
 
 import { ScraperHealthController } from "@/controllers/ScraperHealthController";
-import { ValidationError } from "@/lib/errors";
+import { DatabaseError } from "@/lib/errors";
+import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
+import { ScraperHealthServiceImpl } from "@/services/ScraperHealthService";
 
-import { scraperHealth } from "../../fixtures/scraper-health";
-import {
-  createMockNext,
-  createMockRequest,
-  createMockResponse,
-  flushPromises,
-} from "../../mocks/express";
-import { createMockScraperHealthService } from "../../mocks/services";
+import { scrapeLogs } from "../../fixtures/scrape-logs";
+import { createMockNext, createMockRequest, createMockResponse } from "../../helpers/http";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
+/** Builds the real controller over the real service + repository on a seeded client. */
 function makeController() {
-  const service = createMockScraperHealthService();
+  const client = createFakeSupabaseClient({ scrape_logs: [...scrapeLogs] });
+  const service = new ScraperHealthServiceImpl(
+    new ScrapeLogsRepository(client as unknown as never),
+    7,
+    () => "2026-08-05",
+  );
   const controller = new ScraperHealthController(service);
-  return { service, controller };
+  return { service, controller, client };
 }
 
 describe("ScraperHealthController.getHealth", () => {
   it("delegates to getSummary and sends 200", async () => {
-    const { service, controller } = makeController();
-    const summary = {
-      total: 4,
-      healthy: 1,
-      degraded: 1,
-      failed: 1,
-      unknown: 1,
-      averageResponseTimeMs: 360,
-      averageConsecutiveFailures: 1.75,
-    };
-    service.getSummary.mockResolvedValue(summary);
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getHealth(createMockRequest(), res, createMockNext());
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.getSummary).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Scraper health summary retrieved.",
-      data: summary,
+      data: expect.objectContaining({
+        total: 3,
+        healthy: 2,
+        degraded: 0,
+        failed: 1,
+        unknown: 0,
+        averageResponseTimeMs: 8320 / 3,
+        averageConsecutiveFailures: 1 / 3,
+      }),
     });
   });
 });
 
 describe("ScraperHealthController.getHealthList", () => {
   it("delegates to listAll and sends 200 with the rows", async () => {
-    const { service, controller } = makeController();
-    service.listAll.mockResolvedValue(scraperHealth);
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getHealthList(createMockRequest(), res, createMockNext());
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.listAll).toHaveBeenCalledTimes(1);
-    expect(res.json).toHaveBeenCalledWith({
-      success: true,
-      message: "Scraper health list retrieved.",
-      data: scraperHealth,
-    });
+    const payload = res.json.mock.calls[0]![0] as { data: Array<{ bank_code: string }> };
+    expect(payload).toMatchObject({ success: true, message: "Scraper health list retrieved." });
+    expect(payload.data.map((r) => r.bank_code)).toEqual(["ABY", "CBE", "DASH"]);
   });
 });
 
 describe("ScraperHealthController.getHealthByBank", () => {
   it("delegates with the bankCode param and sends 200", async () => {
-    const { service, controller } = makeController();
-    service.findByBankCode.mockResolvedValue(scraperHealth[0]!);
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getHealthByBank(
@@ -75,27 +70,25 @@ describe("ScraperHealthController.getHealthByBank", () => {
       res,
       createMockNext(),
     );
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.findByBankCode).toHaveBeenCalledWith("ABY");
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Scraper health retrieved.",
-      data: scraperHealth[0],
+      data: expect.objectContaining({ bank_code: "ABY", status: "healthy" }),
     });
   });
 
-  it("sends null data when a bank has no health row (not an error)", async () => {
-    const { service, controller } = makeController();
-    service.findByBankCode.mockResolvedValue(null);
+  it("sends null data when a bank has no logs (not an error)", async () => {
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getHealthByBank(
-      createMockRequest({ params: { bankCode: "ZZZ" } }),
+      createMockRequest({ params: { bankCode: "NOPE" } }),
       res,
       createMockNext(),
     );
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -105,9 +98,8 @@ describe("ScraperHealthController.getHealthByBank", () => {
   });
 
   it("forwards errors to next", async () => {
-    const { service, controller } = makeController();
-    const error = new ValidationError("bad");
-    service.findByBankCode.mockRejectedValue(error);
+    const { controller, client } = makeController();
+    client.nextError = { code: "PGRST116", message: "boom" };
     const next = createMockNext();
 
     controller.getHealthByBank(
@@ -115,8 +107,9 @@ describe("ScraperHealthController.getHealthByBank", () => {
       createMockResponse(),
       next,
     );
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(next).toHaveBeenCalledWith(error);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next.mock.calls[0]![0]).toBeInstanceOf(DatabaseError);
   });
 });

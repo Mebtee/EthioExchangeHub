@@ -18,7 +18,8 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-
 import { InfoItem } from "@/components/shared/info-item";
 import { Pill } from "@/components/shared/pill";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { formatRate, formatRateDate } from "@/lib/format";
+import { formatEtbCompact, formatPercent, formatRate, formatRateDate } from "@/lib/format";
+import type { Bank } from "@/types/bank";
 import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
 
@@ -97,6 +98,8 @@ function BankDetails() {
             </div>
           </div>
         </SurfaceCard>
+
+        {bank && <BankFinancialSnapshot bank={bank} />}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           {/* FX rates table */}
@@ -239,7 +242,8 @@ function BankDetails() {
             </div>
             <div className="rounded-xl h-44 bg-[linear-gradient(135deg,#e7e8e9_0%,#f3f4f5_100%)] flex items-end p-4">
               <span className="inline-flex items-center gap-2 text-xs font-semibold bg-card rounded-full px-3 py-1.5 shadow">
-                <MapPin className="size-3.5 text-primary" /> {bank.branches}+ Branches Nationwide
+                <MapPin className="size-3.5 text-primary" />{" "}
+                {bank.branches ? `${bank.branches}+ Branches Nationwide` : "Branches Nationwide"}
               </span>
             </div>
           </SurfaceCard>
@@ -257,6 +261,65 @@ function BankDetails() {
         </div>
       </PageContainer>
     </SiteShell>
+  );
+}
+
+/**
+ * Financial snapshot shown on the bank detail page. Renders only when the bank
+ * actually publishes financials; each metric falls back to an em-dash.
+ */
+function BankFinancialSnapshot({ bank }: { bank: Bank }) {
+  const hasFinancials =
+    bank.totalAssets !== undefined ||
+    bank.totalDeposits !== undefined ||
+    bank.totalEmployees !== undefined ||
+    bank.loanToDepositRatio !== undefined ||
+    bank.returnOnAsset !== undefined ||
+    bank.returnOnEquity !== undefined ||
+    bank.profitBeforeTax !== undefined ||
+    bank.profitAfterTax !== undefined ||
+    bank.retainedEarnings !== undefined ||
+    bank.paidUpCapital !== undefined ||
+    bank.reserves !== undefined ||
+    bank.totalLiabilities !== undefined;
+
+  if (!hasFinancials) return null;
+
+  const metrics: { label: string; value: string }[] = [
+    { label: "Total Assets", value: formatEtbCompact(bank.totalAssets) },
+    { label: "Total Liabilities", value: formatEtbCompact(bank.totalLiabilities) },
+    { label: "Total Deposits", value: formatEtbCompact(bank.totalDeposits) },
+    { label: "Paid-up Capital", value: formatEtbCompact(bank.paidUpCapital) },
+    { label: "Retained Earnings", value: formatEtbCompact(bank.retainedEarnings) },
+    { label: "Reserves", value: formatEtbCompact(bank.reserves) },
+    { label: "Profit Before Tax", value: formatEtbCompact(bank.profitBeforeTax) },
+    { label: "Profit After Tax", value: formatEtbCompact(bank.profitAfterTax) },
+    { label: "Branches", value: formatEtbCompact(bank.branches) },
+    { label: "Employees", value: formatEtbCompact(bank.totalEmployees) },
+    { label: "Loan / Deposit Ratio", value: formatPercent(bank.loanToDepositRatio) },
+    { label: "Return on Assets", value: formatPercent(bank.returnOnAsset) },
+    { label: "Return on Equity", value: formatPercent(bank.returnOnEquity) },
+  ];
+
+  return (
+    <SurfaceCard className="p-6 mt-8">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
+        <h2 className="text-lg font-semibold">Financial Snapshot</h2>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          Figures in ETB
+        </span>
+      </div>
+      <dl className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {metrics.map((m) => (
+          <div key={m.label} className="rounded-xl bg-surface-low p-4">
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              {m.label}
+            </dt>
+            <dd className="mt-1 text-base font-bold tabular">{m.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </SurfaceCard>
   );
 }
 

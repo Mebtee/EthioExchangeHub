@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ValidationError } from "@/lib/errors";
 import { errorHandler } from "@/middleware/error-handler";
 
-import { createMockRequest, createMockResponse } from "../../mocks/express";
+import { createMockRequest, createMockResponse } from "../../helpers/http";
 
 describe("errorHandler", () => {
   it("formats AppError with its own status and message", () => {

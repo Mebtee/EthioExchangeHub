@@ -48,6 +48,14 @@ export interface MarketTickerItem {
   change: number;
 }
 
+/** Inclusive `rate_date` bounds across all published rates, as served by `GET /rates/date-range`. */
+export interface RateDateRangeBounds {
+  /** Oldest `rate_date` present in the data (null when no rows exist). */
+  min: string | null;
+  /** Newest `rate_date` present in the data (null when no rows exist). */
+  max: string | null;
+}
+
 /** Public contract of the exchange-rates service. */
 export interface ExchangeRatesService {
   getLatestRates(range?: RateDateRange): Promise<ResolvedRateRow[]>;
@@ -62,6 +70,12 @@ export interface ExchangeRatesService {
     currencyCode: string,
     range?: RateDateRange,
   ): Promise<ResolvedRateRow[]>;
+  /**
+   * The oldest and newest `rate_date` across all published rates (scraped +
+   * manual), or nulls when no rows exist. Used by clients to bound date
+   * pickers to the range of data that actually exists.
+   */
+  getDateRange(): Promise<RateDateRangeBounds>;
   /**
    * Cash buying/selling trend aggregated by rate date (newest `days` points,
    * optionally for one currency only).
@@ -99,10 +113,14 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
    * Manual overrides participate: for the same (bank, currency) the newest
    * rate_date wins, and a manual override wins a date tie. Every row is
    * annotated with `stale`; stale rows are served, never dropped.
+   *
+   * When `to` is provided, only rows whose `rate_date` equals that day are
+   * returned — a bank that did not publish that day is excluded, never
+   * replaced by an older rate.
    */
   async getLatestRates(range?: RateDateRange): Promise<ResolvedRateRow[]> {
     this.validateRange(range);
-    const rows = filterByDateRange(await this.combinedRows(), range);
+    const rows = this.filterLatestRange(await this.combinedRows(), range);
     return this.markAllStale(
       sortByBankCodeAndCurrency(
         resolveLatestWithManualOverrides(rows, (r) => `${r.bank_code}\u0000${r.currency_code}`),
@@ -117,7 +135,7 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
   ): Promise<ResolvedRateRow[]> {
     assertCurrencyCode(currencyCode);
     this.validateRange(range);
-    const rows = filterByDateRange(await this.combinedRows(), range).filter(
+    const rows = this.filterLatestRange(await this.combinedRows(), range).filter(
       (r) => r.currency_code === currencyCode,
     );
     return this.markAllStale(
@@ -129,7 +147,7 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
   async getLatestRatesByBank(bankCode: string, range?: RateDateRange): Promise<ResolvedRateRow[]> {
     await this.banksService.validateBankExists(bankCode);
     this.validateRange(range);
-    const rows = filterByDateRange(await this.combinedRows(), range).filter(
+    const rows = this.filterLatestRange(await this.combinedRows(), range).filter(
       (r) => r.bank_code === bankCode,
     );
     const resolved = resolveLatestWithManualOverrides(rows, (r) => r.currency_code);
@@ -245,6 +263,23 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
   }
 
   /**
+   * Oldest and newest `rate_date` across the shared (scraped + manual) rows.
+   * Returns nulls when there is no published data so the client can disable
+   * the date picker instead of showing a bogus range.
+   */
+  async getDateRange(): Promise<RateDateRangeBounds> {
+    const rows = await this.combinedRows();
+    if (rows.length === 0) return { min: null, max: null };
+    let min = rows[0]!.rate_date;
+    let max = rows[0]!.rate_date;
+    for (const row of rows) {
+      if (row.rate_date < min) min = row.rate_date;
+      if (row.rate_date > max) max = row.rate_date;
+    }
+    return { min, max };
+  }
+
+  /**
    * Cash buying/selling trend, one point per `rate_date` (mean of the non-null
    * rates on that date), oldest first. Rows can be narrowed to one currency so
    * e.g. the dashboard's "USD / ETB" chart never mixes other currencies into
@@ -313,6 +348,23 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
 
     items.sort((left, right) => left.pair.localeCompare(right.pair));
     return items.slice(0, limit !== undefined && limit > 0 ? limit : DEFAULT_TICKER_LIMIT);
+  }
+
+  /**
+   * Filters rows for a "latest snapshot" query. A `to` date is an exact-day
+   * match (`rate_date === to`): a bank that did not publish on that day is
+   * excluded entirely rather than falling back to an older rate. `from`, when
+   * present, still acts as an inclusive lower bound.
+   */
+  private filterLatestRange<T extends { rate_date: string }>(
+    rows: T[],
+    range?: RateDateRange,
+  ): T[] {
+    return rows.filter((row) => {
+      if (range?.from && row.rate_date < range.from) return false;
+      if (range?.to && row.rate_date !== range.to) return false;
+      return true;
+    });
   }
 
   /** Validates an optional date range: ISO format and `from` before-or-equal `to`. */

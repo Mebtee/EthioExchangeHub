@@ -1,15 +1,72 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  mapBankRow,
   mapExchangeRateRow,
   mapManualRateRow,
   mapScrapeLogRow,
   mapScraperHealthRow,
+  type BackendBankRow,
   type BackendExchangeRateRow,
   type BackendManualRateRow,
   type BackendScrapeLogRow,
   type BackendScraperHealthRow,
 } from "./adapters";
+
+function bankRow(overrides: Partial<BackendBankRow> = {}): BackendBankRow {
+  return {
+    bank_code: "ABY",
+    bank_name: "Awash Bank",
+    bank_type: "private",
+    source_url: null,
+    is_active: true,
+    created_at: "2026-01-15T09:30:00.000Z",
+    total_assets: 91_300_000_000,
+    total_deposite: 71_900_000_000,
+    total_branches: 546,
+    total_employee: 4_651,
+    loan_to_deposite_ratio: 0.6843,
+    return_on_asset: 0.0328,
+    return_on_equity: 0.2458,
+    profit_before_tax: 4_200_000_000,
+    profit_after_tax: 3_000_000_000,
+    retained_earning: 2_000_000_000,
+    paid_up_capital: 7_000_000_000,
+    reserves: 2_400_000_000,
+    total_liabilities: 79_100_000_000,
+    ...overrides,
+  };
+}
+
+describe("mapBankRow", () => {
+  it("maps the financial snapshot fields into the camelCase Bank model", () => {
+    const bank = mapBankRow(bankRow());
+    expect(bank).toMatchObject({
+      slug: "ABY",
+      name: "Awash Bank",
+      type: "Private Bank",
+      branches: 546,
+      totalAssets: 91_300_000_000,
+      totalDeposits: 71_900_000_000,
+      totalEmployees: 4_651,
+      loanToDepositRatio: 0.6843,
+      returnOnAsset: 0.0328,
+      returnOnEquity: 0.2458,
+      profitBeforeTax: 4_200_000_000,
+      profitAfterTax: 3_000_000_000,
+      retainedEarnings: 2_000_000_000,
+      paidUpCapital: 7_000_000_000,
+      reserves: 2_400_000_000,
+      totalLiabilities: 79_100_000_000,
+    });
+  });
+
+  it("treats null financial columns as absent instead of zero", () => {
+    const bank = mapBankRow(bankRow({ total_assets: null, total_branches: null }));
+    expect(bank.totalAssets).toBeUndefined();
+    expect(bank.branches).toBeUndefined();
+  });
+});
 
 function rateRow(overrides: Partial<BackendExchangeRateRow> = {}): BackendExchangeRateRow {
   return {

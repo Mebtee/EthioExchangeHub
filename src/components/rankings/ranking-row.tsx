@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { BankAvatar } from "@/components/shared/bank-avatar";
 import { RATE_FIELDS } from "@/lib/rankings";
-import { slugifyBankName, sourceLabel } from "@/lib/bank";
+import { slugifyBankName } from "@/lib/bank";
 import { formatRateDate, formatRateOrDash } from "@/lib/format";
 import type { RankedExchangeRate, RateField } from "@/types/exchange-rate";
 
@@ -42,7 +42,6 @@ export const RankingRow = memo(function RankingRow({
               </span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground">{sourceLabel(item.source)}</p>
         </div>
       </div>
       {RATE_FIELDS.map((f) => {

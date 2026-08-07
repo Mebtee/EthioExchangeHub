@@ -5,7 +5,7 @@ import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository"
 import type { Database } from "@/types/database";
 
 import { exchangeRates } from "../../fixtures/exchange-rates";
-import { createFakeSupabaseClient } from "../../mocks/supabase-client";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 function makeRepo(): ExchangeRatesRepository {
   const client = createFakeSupabaseClient({ exchange_rates: [...exchangeRates] });

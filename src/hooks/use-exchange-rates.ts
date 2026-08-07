@@ -5,10 +5,10 @@ import { dedupeLatestRates } from "@/lib/rankings";
 import { exchangeRateKeys } from "@/lib/query-keys";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
-export function useExchangeRates(currency?: string) {
+export function useExchangeRates(currency?: string, asOfDate?: string) {
   return useQuery<ExchangeRate[]>({
-    queryKey: exchangeRateKeys.list(currency),
-    queryFn: () => fetchExchangeRates(currency),
+    queryKey: exchangeRateKeys.list(currency, asOfDate),
+    queryFn: () => fetchExchangeRates(currency, asOfDate),
     select: dedupeLatestRates,
     staleTime: 60_000,
     refetchOnWindowFocus: false,

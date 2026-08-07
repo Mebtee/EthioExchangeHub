@@ -1,7 +1,8 @@
 /** Centralized TanStack Query key factories. */
 export const exchangeRateKeys = {
   all: ["exchange-rates"] as const,
-  list: (currency?: string) => ["exchange-rates", { currency }] as const,
+  list: (currency?: string, asOf?: string) => ["exchange-rates", { currency, asOf }] as const,
+  dateRange: () => [...exchangeRateKeys.all, "date-range"] as const,
 };
 
 export const bankKeys = {

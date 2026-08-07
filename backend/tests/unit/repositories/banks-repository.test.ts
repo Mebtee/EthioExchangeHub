@@ -5,7 +5,7 @@ import { BanksRepository } from "@/repositories/BanksRepository";
 import type { Database } from "@/types/database";
 
 import { banks } from "../../fixtures/banks";
-import { createFakeSupabaseClient } from "../../mocks/supabase-client";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 function makeRepo(): BanksRepository {
   const client = createFakeSupabaseClient({ banks: [...banks] });

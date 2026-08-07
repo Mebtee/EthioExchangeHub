@@ -82,3 +82,29 @@ export function formatCountOrDash(value: number | undefined | null): string {
 export function formatDurationMs(value: number | undefined | null): string {
   return typeof value === "number" && value > 0 ? `${(value / 1000).toFixed(1)}s` : "—";
 }
+
+/**
+ * Renders large ETB figures compactly for card/snapshot surfaces — e.g.
+ * 91_300_000_000 → "91.3B", 7_000_000_000 → "7B". Falls back to the plain
+ * rounded integer below one thousand. Returns an em-dash for missing values.
+ */
+export function formatEtbCompact(value: number | undefined | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return `${trimTrailingZero((value / 1e12).toFixed(1))}T`;
+  if (abs >= 1e9) return `${trimTrailingZero((value / 1e9).toFixed(1))}B`;
+  if (abs >= 1e6) return `${trimTrailingZero((value / 1e6).toFixed(1))}M`;
+  if (abs >= 1e3) return `${trimTrailingZero((value / 1e3).toFixed(1))}K`;
+  return Math.round(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+/** "7.0" → "7", "91.3" stays. */
+function trimTrailingZero(fixed: string): string {
+  return fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
+}
+
+/** Renders a decimal ratio as a percentage — 0.0328 → "3.28%". Em-dash when missing. */
+export function formatPercent(value: number | undefined | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return `${(value * 100).toFixed(2)}%`;
+}

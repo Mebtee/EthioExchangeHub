@@ -5,7 +5,7 @@ import { BankAvatar } from "@/components/shared/bank-avatar";
 import { EmptyState, ErrorState } from "@/components/shared/async-states";
 import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { slugifyBankName, sourceLabel } from "@/lib/bank";
+import { slugifyBankName } from "@/lib/bank";
 import { getCurrencyOptions } from "@/lib/rankings";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
@@ -109,12 +109,7 @@ export function LiveRankings({
                     logo={item.logo}
                     className="size-9 rounded-full text-[11px]"
                   />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold truncate">{item.bankName}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {sourceLabel(item.source)}
-                    </span>
-                  </span>
+                  <span className="block text-sm font-semibold truncate">{item.bankName}</span>
                 </Link>
                 <span
                   className={`text-right tabular text-sm font-semibold ${i === 0 ? "text-primary" : ""}`}

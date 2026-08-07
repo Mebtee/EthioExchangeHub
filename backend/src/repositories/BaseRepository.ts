@@ -11,8 +11,8 @@ import type { Database, DatabaseTables } from "@/types/database";
  * surface is implemented once (DRY) and each repository only binds its table
  * name and adds table-specific queries.
  *
- * The live tables have NO uniform primary key: `banks` and `scraper_health`
- * have no `id` column at all, and the id columns that exist are UUIDs. The
+ * The live tables have NO uniform primary key: `banks` has no `id` column at
+ * all, and the id columns that exist are UUIDs. The
  * base therefore exposes *filter-based* operations (`findOneBy`,
  * `findManyBy`, `findLatestBy`, `updateBy`, `deleteBy`) keyed on natural
  * columns (e.g. `bank_code`) instead of assuming a numeric `id`. These are
