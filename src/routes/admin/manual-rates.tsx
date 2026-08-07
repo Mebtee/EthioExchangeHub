@@ -41,8 +41,10 @@ import { toast } from "sonner";
 interface RateFormState {
   bankCode: string;
   currency: string;
-  buying: string;
-  selling: string;
+  cashBuying: string;
+  cashSelling: string;
+  transactionBuying: string;
+  transactionSelling: string;
   rateDate: string;
   note: string;
 }
@@ -57,8 +59,10 @@ function todayIsoDate(): string {
 const EMPTY_FORM: RateFormState = {
   bankCode: "",
   currency: "",
-  buying: "",
-  selling: "",
+  cashBuying: "",
+  cashSelling: "",
+  transactionBuying: "",
+  transactionSelling: "",
   rateDate: todayIsoDate(),
   note: "",
 };
@@ -104,8 +108,14 @@ export default function AdminManualRatesPage() {
     setForm({
       bankCode: rate.bankCode,
       currency: rate.currency,
-      buying: Number.isFinite(rate.buyingRate) ? String(rate.buyingRate) : "",
-      selling: Number.isFinite(rate.sellingRate) ? String(rate.sellingRate) : "",
+      cashBuying: Number.isFinite(rate.cashBuying) ? String(rate.cashBuying) : "",
+      cashSelling: Number.isFinite(rate.cashSelling) ? String(rate.cashSelling) : "",
+      transactionBuying: Number.isFinite(rate.transactionBuying)
+        ? String(rate.transactionBuying)
+        : "",
+      transactionSelling: Number.isFinite(rate.transactionSelling)
+        ? String(rate.transactionSelling)
+        : "",
       rateDate: rate.rateDate,
       note: rate.note ?? "",
     });
@@ -114,14 +124,32 @@ export default function AdminManualRatesPage() {
   }
 
   function parseForm(): ManualRatePayload | null {
-    const buying = Number(form.buying);
-    const selling = Number(form.selling);
+    const cashBuying = Number(form.cashBuying);
+    const cashSelling = Number(form.cashSelling);
+    const transactionBuying =
+      form.transactionBuying.trim() === "" ? null : Number(form.transactionBuying);
+    const transactionSelling =
+      form.transactionSelling.trim() === "" ? null : Number(form.transactionSelling);
     if (!form.bankCode || !form.currency) {
       setFormError("Select a bank and a currency.");
       return null;
     }
-    if (!Number.isFinite(buying) || buying <= 0 || !Number.isFinite(selling) || selling <= 0) {
-      setFormError("Buying and selling rates must be positive numbers.");
+    if (
+      !Number.isFinite(cashBuying) ||
+      cashBuying <= 0 ||
+      !Number.isFinite(cashSelling) ||
+      cashSelling <= 0
+    ) {
+      setFormError("Cash buying and selling rates must be positive numbers.");
+      return null;
+    }
+    if (
+      (transactionBuying !== null &&
+        (!Number.isFinite(transactionBuying) || transactionBuying <= 0)) ||
+      (transactionSelling !== null &&
+        (!Number.isFinite(transactionSelling) || transactionSelling <= 0))
+    ) {
+      setFormError("Transactional rates must be positive numbers when provided.");
       return null;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.rateDate)) {
@@ -131,8 +159,10 @@ export default function AdminManualRatesPage() {
     return {
       bank_code: form.bankCode,
       currency_code: form.currency,
-      buying_rate: buying,
-      selling_rate: selling,
+      buying_rate: cashBuying,
+      selling_rate: cashSelling,
+      transactional_buying: transactionBuying,
+      transactional_selling: transactionSelling,
       rate_date: form.rateDate,
       note: form.note.trim() === "" ? null : form.note.trim(),
     };
@@ -235,14 +265,26 @@ export default function AdminManualRatesPage() {
               cell: (r) => <span className="font-semibold">{r.currency}</span>,
             },
             {
-              key: "buying",
-              header: "Buy",
-              cell: (r) => <span className="tabular">{formatRateOrDash(r.buyingRate)}</span>,
+              key: "cashBuying",
+              header: "Cash Buy",
+              cell: (r) => <span className="tabular">{formatRateOrDash(r.cashBuying)}</span>,
             },
             {
-              key: "selling",
-              header: "Sell",
-              cell: (r) => <span className="tabular">{formatRateOrDash(r.sellingRate)}</span>,
+              key: "cashSelling",
+              header: "Cash Sell",
+              cell: (r) => <span className="tabular">{formatRateOrDash(r.cashSelling)}</span>,
+            },
+            {
+              key: "transactionBuying",
+              header: "Trans. Buy",
+              cell: (r) => <span className="tabular">{formatRateOrDash(r.transactionBuying)}</span>,
+            },
+            {
+              key: "transactionSelling",
+              header: "Trans. Sell",
+              cell: (r) => (
+                <span className="tabular">{formatRateOrDash(r.transactionSelling)}</span>
+              ),
             },
             {
               key: "rateDate",
@@ -283,7 +325,7 @@ export default function AdminManualRatesPage() {
 
       {/* Add / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="flex max-h-[85vh] max-w-xl flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit rate" : "Add rate"}</DialogTitle>
             <DialogDescription>
@@ -293,7 +335,7 @@ export default function AdminManualRatesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
+          <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto py-2 pr-1">
             <div className="grid gap-2">
               <Label htmlFor="bank">Bank</Label>
               <select
@@ -338,33 +380,6 @@ export default function AdminManualRatesPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="buying">Buying rate</Label>
-                <Input
-                  id="buying"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  placeholder="0.0000"
-                  value={form.buying}
-                  onChange={(e) => setForm((f) => ({ ...f, buying: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="selling">Selling rate</Label>
-                <Input
-                  id="selling"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  placeholder="0.0000"
-                  value={form.selling}
-                  onChange={(e) => setForm((f) => ({ ...f, selling: e.target.value }))}
-                />
-              </div>
-            </div>
-
             <div className="grid gap-2">
               <Label htmlFor="rateDate">Rate date</Label>
               <Input
@@ -373,6 +388,69 @@ export default function AdminManualRatesPage() {
                 value={form.rateDate}
                 onChange={(e) => setForm((f) => ({ ...f, rateDate: e.target.value }))}
               />
+            </div>
+
+            <div className="grid gap-3 rounded-xl border border-border/60 p-3">
+              <p className="text-sm font-semibold text-foreground">Cash Rates</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="cashBuying">Cash buy</Label>
+                  <Input
+                    id="cashBuying"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    placeholder="0.0000"
+                    value={form.cashBuying}
+                    onChange={(e) => setForm((f) => ({ ...f, cashBuying: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="cashSelling">Cash sell</Label>
+                  <Input
+                    id="cashSelling"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    placeholder="0.0000"
+                    value={form.cashSelling}
+                    onChange={(e) => setForm((f) => ({ ...f, cashSelling: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 rounded-xl border border-border/60 p-3">
+              <p className="text-sm font-semibold text-foreground">Transactional Rates</p>
+              <p className="text-xs text-muted-foreground">
+                Leave blank when the bank does not publish transactional rates.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="transactionBuying">Trans. buy</Label>
+                  <Input
+                    id="transactionBuying"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    placeholder="0.0000"
+                    value={form.transactionBuying}
+                    onChange={(e) => setForm((f) => ({ ...f, transactionBuying: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="transactionSelling">Trans. sell</Label>
+                  <Input
+                    id="transactionSelling"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    placeholder="0.0000"
+                    value={form.transactionSelling}
+                    onChange={(e) => setForm((f) => ({ ...f, transactionSelling: e.target.value }))}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -394,7 +472,7 @@ export default function AdminManualRatesPage() {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>

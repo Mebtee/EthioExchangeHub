@@ -134,13 +134,15 @@ describe("mapExchangeRateRow", () => {
 });
 
 describe("mapManualRateRow", () => {
-  it("maps the manual-rate row", () => {
+  it("maps the manual-rate row with all four rate values", () => {
     const row: BackendManualRateRow = {
       id: "manual-1",
       bank_code: "ABY",
       currency_code: "USD",
       buying_rate: 121.4,
       selling_rate: 122.2,
+      transactional_buying: 125.1,
+      transactional_selling: 126.2,
       rate_date: "2026-08-02",
       entered_by: "user-1",
       note: "Adjusted",
@@ -150,9 +152,32 @@ describe("mapManualRateRow", () => {
       id: "manual-1",
       bankCode: "ABY",
       bankName: "Awash Bank",
-      buyingRate: 121.4,
+      cashBuying: 121.4,
+      cashSelling: 122.2,
+      transactionBuying: 125.1,
+      transactionSelling: 126.2,
       note: "Adjusted",
     });
+  });
+
+  it("maps null transactional values to NaN, never faking cash values", () => {
+    const row: BackendManualRateRow = {
+      id: "manual-1",
+      bank_code: "ABY",
+      currency_code: "USD",
+      buying_rate: 121.4,
+      selling_rate: 122.2,
+      transactional_buying: null,
+      transactional_selling: null,
+      rate_date: "2026-08-02",
+      entered_by: "user-1",
+      note: "Adjusted",
+      created_at: "2026-08-02T09:00:00.000Z",
+    };
+    const mapped = mapManualRateRow(row, "Awash Bank");
+    expect(mapped.cashBuying).toBe(121.4);
+    expect(mapped.transactionBuying).toBeNaN();
+    expect(mapped.transactionSelling).toBeNaN();
   });
 });
 

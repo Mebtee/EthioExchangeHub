@@ -218,8 +218,9 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
 
   /**
    * Converts a manual-rate row into the shared rate-row shape so overrides can
-   * participate in resolution. Transactional/weighted columns are absent for
-   * manual entries and stay null — never conflated with cash rates.
+   * participate in resolution. Cash and transactional columns map 1:1 from the
+   * manual row — a null transactional value stays null and is never conflated
+   * with the cash rates.
    */
   private static toRateRow(manual: ManualRateRow): ExchangeRateRow {
     return {
@@ -228,8 +229,8 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
       currency_code: manual.currency_code,
       buying_rate: manual.buying_rate,
       selling_rate: manual.selling_rate,
-      transactional_buying: null,
-      transactional_selling: null,
+      transactional_buying: manual.transactional_buying,
+      transactional_selling: manual.transactional_selling,
       weighted_avg_buying: null,
       weighted_avg_selling: null,
       rate_date: manual.rate_date,

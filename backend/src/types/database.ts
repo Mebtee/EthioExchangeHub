@@ -75,8 +75,14 @@ export type ManualRateRow = {
   id: string;
   bank_code: string;
   currency_code: string;
+  /** Cash buying rate. */
   buying_rate: number | null;
+  /** Cash selling rate. */
   selling_rate: number | null;
+  /** Transactional buying rate; null when not published. */
+  transactional_buying: number | null;
+  /** Transactional selling rate; null when not published. */
+  transactional_selling: number | null;
   /** ISO date (YYYY-MM-DD). */
   rate_date: string;
   /** FK → auth user id. */

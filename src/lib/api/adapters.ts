@@ -55,6 +55,8 @@ export interface BackendManualRateRow {
   currency_code: string;
   buying_rate: number | null;
   selling_rate: number | null;
+  transactional_buying: number | null;
+  transactional_selling: number | null;
   rate_date: string;
   entered_by: string | null;
   note: string | null;
@@ -216,8 +218,12 @@ export function mapManualRateRow(row: BackendManualRateRow, bankName?: string): 
     bankCode: row.bank_code,
     bankName: bankName ?? row.bank_code,
     currency: row.currency_code,
-    buyingRate: toDisplayRate(row.buying_rate),
-    sellingRate: toDisplayRate(row.selling_rate),
+    // Transactional values map 1:1 from the backend — a null column maps to
+    // NaN (rendered as an em-dash), never faked from the cash rates.
+    cashBuying: toDisplayRate(row.buying_rate),
+    cashSelling: toDisplayRate(row.selling_rate),
+    transactionBuying: toDisplayRate(row.transactional_buying),
+    transactionSelling: toDisplayRate(row.transactional_selling),
     rateDate: row.rate_date,
     note: row.note,
     createdAt: row.created_at,

@@ -65,6 +65,8 @@ function manualOverride(): ManualRateRow {
     currency_code: "USD",
     buying_rate: 121.4,
     selling_rate: 122.2,
+    transactional_buying: 125.1,
+    transactional_selling: 126.2,
     rate_date: "2026-08-02",
     entered_by: null,
     note: null,
@@ -288,8 +290,33 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
     expect(abyUsd?.rate_date).toBe("2026-08-02");
     expect(abyUsd?.buying_rate).toBe(121.4);
+    expect(abyUsd?.selling_rate).toBe(122.2);
+    expect(abyUsd?.transactional_buying).toBe(125.1);
+    expect(abyUsd?.transactional_selling).toBe(126.2);
     expect(abyUsd?.source).toBe("MANUAL");
+  });
+
+  it("carries the manual override's transactional values without conflating cash rates", async () => {
+    const { service, client } = makeService();
+    seedManualRates(client, [manualOverride()]);
+
+    const rates = await service.getLatestRates();
+    const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
+    expect(abyUsd?.buying_rate).toBe(121.4);
+    expect(abyUsd?.transactional_buying).toBe(125.1);
+    expect(abyUsd?.selling_rate).toBe(122.2);
+    expect(abyUsd?.transactional_selling).toBe(126.2);
+  });
+
+  it("preserves null transactional values in a manual override", async () => {
+    const { service, client } = makeService();
+    seedManualRates(client, [{ ...manualOverride(), transactional_buying: null, transactional_selling: null }]);
+
+    const rates = await service.getLatestRates();
+    const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
+    expect(abyUsd?.buying_rate).toBe(121.4);
     expect(abyUsd?.transactional_buying).toBeNull();
+    expect(abyUsd?.transactional_selling).toBeNull();
   });
 
   it("prefers a manual override when dates tie", async () => {

@@ -8,6 +8,7 @@ import {
   assertBankCode,
   assertCurrencyCode,
   assertIsoDate,
+  assertNullablePositiveRate,
   assertPositiveRate,
 } from "./helpers/Validation";
 
@@ -15,8 +16,14 @@ import {
 export interface ManualRateInput {
   bank_code: string;
   currency_code: string;
+  /** Cash buying rate (positive). */
   buying_rate: number;
+  /** Cash selling rate (positive). */
   selling_rate: number;
+  /** Transactional buying rate; null when not published. */
+  transactional_buying?: number | null;
+  /** Transactional selling rate; null when not published. */
+  transactional_selling?: number | null;
   /** ISO date (YYYY-MM-DD). */
   rate_date: string;
   note?: string | null;
@@ -61,6 +68,8 @@ export class ManualRatesServiceImpl implements ManualRatesService {
     assertIsoDate(input.rate_date);
     assertPositiveRate(input.buying_rate);
     assertPositiveRate(input.selling_rate);
+    assertNullablePositiveRate(input.transactional_buying);
+    assertNullablePositiveRate(input.transactional_selling);
 
     await this.assertNoDuplicate({
       bank_code: input.bank_code,
@@ -73,6 +82,8 @@ export class ManualRatesServiceImpl implements ManualRatesService {
       currency_code: input.currency_code,
       buying_rate: input.buying_rate,
       selling_rate: input.selling_rate,
+      transactional_buying: input.transactional_buying ?? null,
+      transactional_selling: input.transactional_selling ?? null,
       rate_date: input.rate_date,
       note: normalizeNote(input.note),
       entered_by: input.entered_by ?? null,
@@ -92,6 +103,10 @@ export class ManualRatesServiceImpl implements ManualRatesService {
     if (updates.rate_date !== undefined) assertIsoDate(updates.rate_date);
     if (updates.buying_rate !== undefined) assertPositiveRate(updates.buying_rate);
     if (updates.selling_rate !== undefined) assertPositiveRate(updates.selling_rate);
+    if (updates.transactional_buying !== undefined)
+      assertNullablePositiveRate(updates.transactional_buying);
+    if (updates.transactional_selling !== undefined)
+      assertNullablePositiveRate(updates.transactional_selling);
 
     await this.assertNoDuplicate(
       {
@@ -109,6 +124,12 @@ export class ManualRatesServiceImpl implements ManualRatesService {
         ...(updates.currency_code !== undefined ? { currency_code: updates.currency_code } : {}),
         ...(updates.buying_rate !== undefined ? { buying_rate: updates.buying_rate } : {}),
         ...(updates.selling_rate !== undefined ? { selling_rate: updates.selling_rate } : {}),
+        ...(updates.transactional_buying !== undefined
+          ? { transactional_buying: updates.transactional_buying }
+          : {}),
+        ...(updates.transactional_selling !== undefined
+          ? { transactional_selling: updates.transactional_selling }
+          : {}),
         ...(updates.rate_date !== undefined ? { rate_date: updates.rate_date } : {}),
         ...(updates.note !== undefined ? { note: normalizeNote(updates.note) } : {}),
         ...(updates.entered_by !== undefined ? { entered_by: updates.entered_by } : {}),

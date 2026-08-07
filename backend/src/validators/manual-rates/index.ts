@@ -27,6 +27,16 @@ export const createManualRateBodySchema = z
       .number()
       .positive("must be a positive number")
       .finite("must be a finite number"),
+    transactional_buying: z
+      .number()
+      .positive("must be a positive number")
+      .finite("must be a finite number")
+      .nullish(),
+    transactional_selling: z
+      .number()
+      .positive("must be a positive number")
+      .finite("must be a finite number")
+      .nullish(),
     rate_date: isoDateSchema,
     /** Empty/whitespace notes normalize to null (mirrors the service's `normalizeNote`). */
     note: z.preprocess(

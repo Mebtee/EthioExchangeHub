@@ -59,13 +59,15 @@ describe("ManualRatesController.getManualRates", () => {
 });
 
 describe("ManualRatesController.createManualRate", () => {
-  it("passes the body through and responds 201", async () => {
+  it("passes all four rate fields through and responds 201", async () => {
     const { controller } = makeController();
     const body = {
       bank_code: "CBE",
       currency_code: "GBP",
       buying_rate: 132,
       selling_rate: 133,
+      transactional_buying: 134,
+      transactional_selling: 135,
       rate_date: "2026-08-03",
     };
     const res = createMockResponse();
@@ -74,10 +76,14 @@ describe("ManualRatesController.createManualRate", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(res.status).toHaveBeenCalledWith(201);
-    const payload = res.json.mock.calls[0]![0] as { data: { id: string; bank_code: string } };
+    const payload = res.json.mock.calls[0]![0] as { data: Record<string, unknown> };
     expect(payload).toMatchObject({ success: true, message: "Manual rate created." });
     expect(payload.data.id).toBeTypeOf("string");
     expect(payload.data.bank_code).toBe("CBE");
+    expect(payload.data.buying_rate).toBe(132);
+    expect(payload.data.selling_rate).toBe(133);
+    expect(payload.data.transactional_buying).toBe(134);
+    expect(payload.data.transactional_selling).toBe(135);
   });
 
   it("forwards business errors to next", async () => {
@@ -104,7 +110,10 @@ describe("ManualRatesController.updateManualRate", () => {
     const res = createMockResponse();
 
     controller.updateManualRate(
-      createMockRequest({ params: { id: "manual-1" }, body: { selling_rate: 123 } }),
+      createMockRequest({
+        params: { id: "manual-1" },
+        body: { selling_rate: 123, transactional_buying: 129 },
+      }),
       res,
       createMockNext(),
     );
@@ -114,7 +123,11 @@ describe("ManualRatesController.updateManualRate", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Manual rate updated.",
-      data: expect.objectContaining({ id: "manual-1", selling_rate: 123 }),
+      data: expect.objectContaining({
+        id: "manual-1",
+        selling_rate: 123,
+        transactional_buying: 129,
+      }),
     });
   });
 });
