@@ -209,6 +209,13 @@ describe("Exchange-rate endpoints", () => {
     expect(res.status).toBe(422);
   });
 
+  it("GET /api/v1/rates/date-range returns the bounds across scraped + manual rows", async () => {
+    const res = await request(app).get("/api/v1/rates/date-range");
+    expect(res.status).toBe(200);
+    // Scraped rows span 2026-07-30..08-01; the manual ABY/USD override is 08-02.
+    expect(res.body.data).toEqual({ min: "2026-07-30", max: "2026-08-02" });
+  });
+
   it("GET /api/v1/market-ticker derives real mean rates + change per currency", async () => {
     const res = await request(app).get("/api/v1/market-ticker");
     expect(res.status).toBe(200);
@@ -383,17 +390,15 @@ describe("Manual-rate endpoints", () => {
 });
 
 describe("Scraper-health endpoints", () => {
-  it("GET /api/v1/scraper-health returns the aggregate summary", async () => {
+  it("GET /api/v1/scraper-health returns the aggregate summary (derived from scrape logs)", async () => {
     const res = await request(app).get("/api/v1/scraper-health");
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
-      total: 4,
-      healthy: 1,
-      degraded: 1,
+      total: 3,
+      healthy: 2,
+      degraded: 0,
       failed: 1,
-      unknown: 1,
-      averageResponseTimeMs: 360,
-      averageConsecutiveFailures: 1.75,
+      unknown: 0,
     });
     // D2: staleCount is always present (value is time-dependent here).
     expect(typeof res.body.data.staleCount).toBe("number");
@@ -406,14 +411,13 @@ describe("Scraper-health endpoints", () => {
       "ABY",
       "CBE",
       "DASH",
-      "ZZZ",
     ]);
   });
 
   it("GET /api/v1/scraper-health/:bankCode returns the row for a bank", async () => {
     const res = await request(app).get("/api/v1/scraper-health/ABY");
     expect(res.status).toBe(200);
-    expect(res.body.data.status).toBe("unknown");
+    expect(res.body.data.status).toBe("healthy");
   });
 
   it("GET /api/v1/scraper-health/:bankCode returns null data when absent", async () => {

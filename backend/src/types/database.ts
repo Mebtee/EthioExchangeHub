@@ -31,6 +31,20 @@ export type BankRow = {
   source_url: string | null;
   is_active: boolean | null;
   created_at: string | null;
+  /** Financial snapshot (ETB). Null until populated for a bank. */
+  total_assets: number | null;
+  total_deposite: number | null;
+  total_branches: number | null;
+  total_employee: number | null;
+  loan_to_deposite_ratio: number | null;
+  return_on_asset: number | null;
+  return_on_equity: number | null;
+  profit_before_tax: number | null;
+  profit_after_tax: number | null;
+  retained_earning: number | null;
+  paid_up_capital: number | null;
+  reserves: number | null;
+  total_liabilities: number | null;
 };
 
 /**
@@ -69,23 +83,6 @@ export type ManualRateRow = {
   entered_by: string | null;
   note: string | null;
   created_at: string | null;
-};
-
-/**
- * `scraper_health` — per-bank scraper operational stats. No numeric id;
- * `bank_code` is the natural key.
- */
-export type ScraperHealthRow = {
-  bank_code: string;
-  /** Observed value "unknown"; free text in the database. */
-  status: string;
-  consecutive_failures: number | null;
-  last_success: string | null;
-  last_failure: string | null;
-  /** ISO date (YYYY-MM-DD). */
-  last_rate_date: string | null;
-  response_time_ms: number | null;
-  updated_at: string | null;
 };
 
 /**
@@ -166,12 +163,6 @@ export type DatabaseTables = {
     Row: ManualRateRow;
     Insert: Partial<ManualRateRow>;
     Update: Partial<ManualRateRow>;
-    Relationships: [];
-  };
-  scraper_health: {
-    Row: ScraperHealthRow;
-    Insert: Partial<ScraperHealthRow>;
-    Update: Partial<ScraperHealthRow>;
     Relationships: [];
   };
   scrape_logs: {

@@ -6,7 +6,7 @@ import { bankListQuerySchema } from "@/validators/banks";
 import { bankCodeParamsSchema } from "@/validators/common";
 import { createManualRateBodySchema } from "@/validators/manual-rates";
 
-import { createMockNext, createMockRequest, createMockResponse } from "../../mocks/express";
+import { createMockNext, createMockRequest, createMockResponse } from "../../helpers/http";
 
 describe("validateParams", () => {
   it("passes valid params and replaces req.params with parsed values", () => {

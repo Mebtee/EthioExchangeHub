@@ -5,7 +5,7 @@ import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
 import type { Database } from "@/types/database";
 
 import { manualRates } from "../../fixtures/manual-rates";
-import { createFakeSupabaseClient } from "../../mocks/supabase-client";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 function makeRepo(): ManualRatesRepository {
   const client = createFakeSupabaseClient({ manual_rates: [...manualRates] });

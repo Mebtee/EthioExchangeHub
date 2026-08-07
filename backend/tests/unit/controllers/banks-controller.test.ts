@@ -1,96 +1,96 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import { BanksController } from "@/controllers/BanksController";
-import { NotFoundError } from "@/lib/errors";
+import { BanksRepository } from "@/repositories/BanksRepository";
+import { BanksServiceImpl } from "@/services/BanksService";
+import type { Database } from "@/types/database";
 
 import { banks } from "../../fixtures/banks";
-import {
-  createMockNext,
-  createMockRequest,
-  createMockResponse,
-  flushPromises,
-} from "../../mocks/express";
-import { createMockBanksService } from "../../mocks/services";
+import { createMockNext, createMockRequest, createMockResponse } from "../../helpers/http";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
+/** Builds the real controller wired to the real service + repository over a seeded client. */
 function makeController() {
-  const service = createMockBanksService();
+  const client = createFakeSupabaseClient({ banks: [...banks] });
+  const service = new BanksServiceImpl(
+    new BanksRepository(client as unknown as SupabaseClient<Database>),
+  );
   const controller = new BanksController(service);
   return { service, controller };
 }
 
 describe("BanksController.getBanks", () => {
   it("lists banks with an empty filter and sends the success envelope", async () => {
-    const { service, controller } = makeController();
-    service.listBanks.mockResolvedValue(banks);
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getBanks(createMockRequest(), res, createMockNext());
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.listBanks).toHaveBeenCalledWith({});
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Banks retrieved.",
-      data: banks,
+      data: expect.any(Array),
     });
+    const payload = (res.json.mock.calls[0]![0] as { data: Array<{ bank_code: string }> }).data;
+    expect(payload.map((b) => b.bank_code)).toEqual(["ABY", "CBE", "DASH"]);
   });
 
   it("passes activeOnly=true to the service", async () => {
-    const { service, controller } = makeController();
-    service.listBanks.mockResolvedValue([]);
+    const { controller } = makeController();
+    const res = createMockResponse();
 
     controller.getBanks(
       createMockRequest({ query: { activeOnly: "true" } }),
-      createMockResponse(),
+      res,
       createMockNext(),
     );
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.listBanks).toHaveBeenCalledWith({ activeOnly: true });
+    const payload = (res.json.mock.calls[0]![0] as { data: Array<{ bank_code: string }> }).data;
+    expect(payload.map((b) => b.bank_code)).toEqual(["ABY", "CBE"]);
   });
 
   it("passes bankType to the service", async () => {
-    const { service, controller } = makeController();
-    service.listBanks.mockResolvedValue([]);
+    const { controller } = makeController();
+    const res = createMockResponse();
 
     controller.getBanks(
       createMockRequest({ query: { activeOnly: "true", bankType: "state_owned" } }),
-      createMockResponse(),
+      res,
       createMockNext(),
     );
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.listBanks).toHaveBeenCalledWith({
-      activeOnly: true,
-      bankType: "state_owned",
-    });
+    const payload = (res.json.mock.calls[0]![0] as { data: Array<{ bank_code: string }> }).data;
+    expect(payload.map((b) => b.bank_code)).toEqual(["CBE"]);
   });
 });
 
 describe("BanksController.getActiveBanks", () => {
   it("delegates to listActiveBanks and sends 200", async () => {
-    const { service, controller } = makeController();
-    service.listActiveBanks.mockResolvedValue(banks);
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getActiveBanks(createMockRequest(), res, createMockNext());
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.listActiveBanks).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Active banks retrieved.",
-      data: banks,
+      data: expect.any(Array),
     });
+    const payload = (res.json.mock.calls[0]![0] as { data: Array<{ bank_code: string }> }).data;
+    expect(payload.map((b) => b.bank_code)).toEqual(["ABY", "CBE"]);
   });
 });
 
 describe("BanksController.getBankByCode", () => {
   it("reads the bankCode param and delegates", async () => {
-    const { service, controller } = makeController();
-    service.findByBankCode.mockResolvedValue(banks[0]!);
+    const { controller } = makeController();
     const res = createMockResponse();
 
     controller.getBankByCode(
@@ -98,28 +98,25 @@ describe("BanksController.getBankByCode", () => {
       res,
       createMockNext(),
     );
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(service.findByBankCode).toHaveBeenCalledWith("ABY");
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Bank retrieved.",
-      data: banks[0],
+      data: expect.objectContaining({ bank_code: "ABY", bank_name: "Awash Bank" }),
     });
   });
 
   it("forwards service errors to next without writing a response", async () => {
-    const { service, controller } = makeController();
-    const error = new NotFoundError('Bank "NOPE" not found.');
-    service.findByBankCode.mockRejectedValue(error);
+    const { controller } = makeController();
     const res = createMockResponse();
     const next = createMockNext();
 
     controller.getBankByCode(createMockRequest({ params: { bankCode: "NOPE" } }), res, next);
-    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(next).toHaveBeenCalledWith(error);
+    expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).not.toHaveBeenCalled();
   });

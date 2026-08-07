@@ -1,25 +1,36 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { BanksRepository } from "@/repositories/BanksRepository";
+import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
+import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
+import { BanksServiceImpl } from "@/services/BanksService";
 import { ExchangeRatesServiceImpl } from "@/services/ExchangeRatesService";
-import type { ExchangeRateRow, ManualRateRow } from "@/types/database";
+import type { Database, ExchangeRateRow, ManualRateRow } from "@/types/database";
 
+import { banks } from "../../fixtures/banks";
 import { exchangeRates } from "../../fixtures/exchange-rates";
-import { createMockBanksService } from "../../mocks/services";
-import {
-  createMockExchangeRatesRepository,
-  createMockManualRatesRepository,
-} from "../../mocks/repositories";
+import { createFakeSupabaseClient, type FakeSupabaseClient } from "../../helpers/supabase-client";
 
+/**
+ * Builds the real service wired to real repositories over a seeded in-memory
+ * client. Defaults: exchange_rates seeded with the fixtures, no manual
+ * overrides, and the standard banks (so `validateBankExists` succeeds for
+ * ABY/CBE/DASH). A fixed reference date + window make `stale` deterministic.
+ */
 function makeService() {
-  const repository = createMockExchangeRatesRepository();
-  const manualRepository = createMockManualRatesRepository();
-  const banksService = createMockBanksService();
-  banksService.validateBankExists.mockResolvedValue(undefined);
-  // No manual overrides by default — existing tests keep their behavior.
-  manualRepository.findAll.mockResolvedValue([]);
-  // Fixed reference date + window make the `stale` flag deterministic.
+  const client = createFakeSupabaseClient({
+    exchange_rates: [...exchangeRates],
+    manual_rates: [],
+    banks: [...banks],
+  });
+  const repository = new ExchangeRatesRepository(client as unknown as SupabaseClient<Database>);
+  const manualRepository = new ManualRatesRepository(client as unknown as SupabaseClient<Database>);
+  const banksService = new BanksServiceImpl(
+    new BanksRepository(client as unknown as SupabaseClient<Database>),
+  );
   const service = new ExchangeRatesServiceImpl(
     repository,
     banksService,
@@ -27,7 +38,23 @@ function makeService() {
     7,
     () => "2026-08-05",
   );
-  return { service, repository, manualRepository, banksService };
+  return { service, repository, manualRepository, banksService, client };
+}
+
+/** Replaces the in-memory `exchange_rates` table contents for one test. */
+function seedRates(client: FakeSupabaseClient, rows: ExchangeRateRow[]): void {
+  client.tables.set(
+    "exchange_rates",
+    rows.map((row) => ({ ...row })),
+  );
+}
+
+/** Replaces the in-memory `manual_rates` table contents for one test. */
+function seedManualRates(client: FakeSupabaseClient, rows: ManualRateRow[]): void {
+  client.tables.set(
+    "manual_rates",
+    rows.map((row) => ({ ...row })),
+  );
 }
 
 /** A manual override for ABY/USD on 2026-08-02 (newer than the scraped 08-01). */
@@ -70,8 +97,7 @@ function scrapedRow(
 
 describe("ExchangeRatesServiceImpl.getLatestRates", () => {
   it("resolves duplicates to one newest row per bank + currency, sorted", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service } = makeService();
     const rates = await service.getLatestRates();
     expect(rates).toHaveLength(3); // ABY/USD, CBE/USD, ABY/EUR
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
@@ -79,7 +105,7 @@ describe("ExchangeRatesServiceImpl.getLatestRates", () => {
   });
 
   it("resolves today's row even when it exists past row 1000 of the dataset", async () => {
-    const { service, repository } = makeService();
+    const { service, client } = makeService();
     const rows: ExchangeRateRow[] = [];
     // 500 pairs dated 08-04 (rows 0..499).
     for (let i = 0; i < 500; i += 1) {
@@ -114,7 +140,7 @@ describe("ExchangeRatesServiceImpl.getLatestRates", () => {
         ),
       );
     }
-    repository.findAll.mockResolvedValue(rows);
+    seedRates(client, rows);
 
     const rates = await service.getLatestRates();
     // The first pair's newest rate lives at index 1000 — still resolved to today.
@@ -125,15 +151,29 @@ describe("ExchangeRatesServiceImpl.getLatestRates", () => {
   });
 
   it("applies the date range before resolving", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service } = makeService();
     const rates = await service.getLatestRates({ from: "2026-08-01" });
     expect(rates.every((r) => r.rate_date >= "2026-08-01")).toBe(true);
   });
 
+  it("treats `to` as an exact-day match — no fallback to an older rate", async () => {
+    const { service } = makeService();
+    const rates = await service.getLatestRates({ to: "2026-08-01" });
+    expect(rates.length).toBeGreaterThan(0);
+    expect(rates.every((r) => r.rate_date === "2026-08-01")).toBe(true);
+  });
+
+  it("excludes banks that did not publish on the exact `to` day", async () => {
+    const { service } = makeService();
+    const rates = await service.getLatestRates({ to: "2026-07-30" });
+    // Only the row dated 07-30 (ABY/EUR in the fixture) survives — the
+    // 08-01 rows for ABY/USD and CBE/USD must NOT fall back into view.
+    expect(rates.length).toBe(1);
+    expect(rates[0]?.rate_date).toBe("2026-07-30");
+  });
+
   it("rejects an invalid date and an inverted range", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service } = makeService();
     await expect(service.getLatestRates({ from: "nope" })).rejects.toBeInstanceOf(ValidationError);
     await expect(
       service.getLatestRates({ from: "2026-08-02", to: "2026-08-01" }),
@@ -143,8 +183,8 @@ describe("ExchangeRatesServiceImpl.getLatestRates", () => {
 
 describe("ExchangeRatesServiceImpl same-date scraped tie-break", () => {
   it("keeps the newest scraped_at when two scrapes share the same rate_date", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue([
+    const { service, client } = makeService();
+    seedRates(client, [
       scrapedRow("ABY", "2026-08-05", "early-scan", "2026-08-05T06:00:00.000Z"),
       scrapedRow("ABY", "2026-08-05", "late-scan", "2026-08-05T09:30:00.000Z"),
     ]);
@@ -157,8 +197,7 @@ describe("ExchangeRatesServiceImpl same-date scraped tie-break", () => {
 
 describe("ExchangeRatesServiceImpl.getLatestRatesByCurrency", () => {
   it("returns resolved rates for the currency", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service } = makeService();
     const rates = await service.getLatestRatesByCurrency("USD");
     expect(rates).toHaveLength(2); // ABY + CBE
   });
@@ -171,31 +210,31 @@ describe("ExchangeRatesServiceImpl.getLatestRatesByCurrency", () => {
 
 describe("ExchangeRatesServiceImpl.getLatestRatesByBank", () => {
   it("validates the bank, resolves per currency, and sorts", async () => {
-    const { service, repository, banksService } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service, banksService } = makeService();
     const rates = await service.getLatestRatesByBank("ABY");
-    expect(banksService.validateBankExists).toHaveBeenCalledWith("ABY");
+    expect(banksService).toBeDefined(); // real bank service is wired in
     expect(rates.map((r) => r.currency_code)).toEqual(["EUR", "USD"]);
   });
 
   it("propagates NotFoundError when the bank does not exist", async () => {
-    const { service, banksService } = makeService();
-    banksService.validateBankExists.mockRejectedValue(new NotFoundError("nope"));
+    const { service, client } = makeService();
+    client.tables.set("banks", []);
     await expect(service.getLatestRatesByBank("NOPE")).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
 describe("ExchangeRatesServiceImpl.getLatestRateByBankAndCurrency", () => {
   it("returns the row when it exists", async () => {
-    const { service, repository } = makeService();
-    repository.findLatestByBankAndCurrency.mockResolvedValue(exchangeRates[1]!);
+    const { service, client } = makeService();
+    seedRates(client, [exchangeRates[1]!]);
     const rate = await service.getLatestRateByBankAndCurrency("ABY", "USD");
     expect(rate?.buying_rate).toBe(121.5);
   });
 
   it("returns null when no row exists", async () => {
-    const { service, repository } = makeService();
-    repository.findLatestByBankAndCurrency.mockResolvedValue(null);
+    const { service, client } = makeService();
+    seedRates(client, []);
+    seedManualRates(client, []);
     expect(await service.getLatestRateByBankAndCurrency("ABY", "USD")).toBeNull();
   });
 
@@ -209,22 +248,20 @@ describe("ExchangeRatesServiceImpl.getLatestRateByBankAndCurrency", () => {
 
 describe("ExchangeRatesServiceImpl.getHistoricalRates", () => {
   it("returns oldest-first history filtered by the range", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service } = makeService();
     const rates = await service.getHistoricalRates("ABY", "USD");
     expect(rates.map((r) => r.rate_date)).toEqual(["2026-07-30", "2026-08-01"]);
   });
 
   it("propagates NotFoundError for an unknown bank", async () => {
-    const { service, banksService } = makeService();
-    banksService.validateBankExists.mockRejectedValue(new NotFoundError("nope"));
+    const { service, client } = makeService();
+    client.tables.set("banks", []);
     await expect(service.getHistoricalRates("NOPE", "USD")).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("includes manual overrides in the dated history (one row per date)", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([manualOverride()]); // ABY/USD 08-02
+    const { service, client } = makeService();
+    seedManualRates(client, [manualOverride()]); // ABY/USD 08-02
 
     const history = await service.getHistoricalRates("ABY", "USD");
     expect(history.map((r) => r.rate_date)).toEqual(["2026-07-30", "2026-08-01", "2026-08-02"]);
@@ -232,10 +269,9 @@ describe("ExchangeRatesServiceImpl.getHistoricalRates", () => {
   });
 
   it("prefers a manual override on a same-date history tie", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service, client } = makeService();
     // Manual row sharing the scraped row's date (2026-08-01) — manual wins.
-    manualRepository.findAll.mockResolvedValue([{ ...manualOverride(), rate_date: "2026-08-01" }]);
+    seedManualRates(client, [{ ...manualOverride(), rate_date: "2026-08-01" }]);
 
     const history = await service.getHistoricalRates("ABY", "USD");
     expect(history).toHaveLength(2);
@@ -245,9 +281,8 @@ describe("ExchangeRatesServiceImpl.getHistoricalRates", () => {
 
 describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   it("applies manual overrides to the resolved latest snapshot", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([manualOverride()]);
+    const { service, client } = makeService();
+    seedManualRates(client, [manualOverride()]);
 
     const rates = await service.getLatestRates();
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
@@ -258,10 +293,9 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("prefers a manual override when dates tie", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service, client } = makeService();
     // Same date as the newest scraped ABY/USD row (2026-08-01) — manual wins.
-    manualRepository.findAll.mockResolvedValue([{ ...manualOverride(), rate_date: "2026-08-01" }]);
+    seedManualRates(client, [{ ...manualOverride(), rate_date: "2026-08-01" }]);
 
     const rates = await service.getLatestRates();
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
@@ -270,9 +304,8 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("keeps the scraped row when it is newer than the manual override", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([{ ...manualOverride(), rate_date: "2026-07-29" }]);
+    const { service, client } = makeService();
+    seedManualRates(client, [{ ...manualOverride(), rate_date: "2026-07-29" }]);
 
     const rates = await service.getLatestRates();
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
@@ -281,9 +314,8 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("introduces a pair that has no scraped row", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([
+    const { service, client } = makeService();
+    seedManualRates(client, [
       { ...manualOverride(), bank_code: "CBE", currency_code: "EUR", rate_date: "2026-08-01" },
     ]);
 
@@ -294,9 +326,8 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("applies overrides in the per-currency view", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([manualOverride()]);
+    const { service, client } = makeService();
+    seedManualRates(client, [manualOverride()]);
 
     const rates = await service.getLatestRatesByCurrency("USD");
     const abyUsd = rates.find((r) => r.bank_code === "ABY");
@@ -305,9 +336,8 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("applies overrides in the per-bank view", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([manualOverride()]);
+    const { service, client } = makeService();
+    seedManualRates(client, [manualOverride()]);
 
     const rates = await service.getLatestRatesByBank("ABY");
     const usd = rates.find((r) => r.currency_code === "USD");
@@ -316,9 +346,9 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("resolves a single pair with a manual override, newest wins", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findLatestByBankAndCurrency.mockResolvedValue(exchangeRates[1]!); // 2026-08-01
-    manualRepository.findLatestByBankAndCurrency.mockResolvedValue(manualOverride()); // 08-02
+    const { service, client } = makeService();
+    seedRates(client, [exchangeRates[1]!]); // 2026-08-01
+    seedManualRates(client, [manualOverride()]); // 08-02
 
     const rate = await service.getLatestRateByBankAndCurrency("ABY", "USD");
     expect(rate?.source).toBe("MANUAL");
@@ -326,18 +356,42 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
   });
 
   it("returns null for a pair neither source has", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findLatestByBankAndCurrency.mockResolvedValue(null);
-    manualRepository.findLatestByBankAndCurrency.mockResolvedValue(null);
+    const { service, client } = makeService();
+    seedRates(client, []);
+    seedManualRates(client, []);
 
     expect(await service.getLatestRateByBankAndCurrency("ABY", "JPY")).toBeNull();
   });
 });
 
+describe("ExchangeRatesServiceImpl.getDateRange", () => {
+  it("returns the oldest and newest rate_date across scraped + manual rows", async () => {
+    const { service } = makeService();
+    const range = await service.getDateRange();
+    expect(range).toEqual({ min: "2026-07-30", max: "2026-08-01" });
+  });
+
+  it("includes manual override dates in the range", async () => {
+    const { service, client } = makeService();
+    seedManualRates(client, [{ ...manualOverride(), rate_date: "2026-08-10" }]);
+
+    const range = await service.getDateRange();
+    expect(range).toEqual({ min: "2026-07-30", max: "2026-08-10" });
+  });
+
+  it("returns null bounds when no rows exist", async () => {
+    const { service, client } = makeService();
+    seedRates(client, []);
+    seedManualRates(client, []);
+
+    expect(await service.getDateRange()).toEqual({ min: null, max: null });
+  });
+});
+
 describe("ExchangeRatesServiceImpl malformed rate_date handling", () => {
   it("excludes malformed rows and logs a per-value warning", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue([
+    const { service, client } = makeService();
+    seedRates(client, [
       { ...exchangeRates[0]!, rate_date: "2026/07/30" },
       ...exchangeRates.slice(1),
     ]);
@@ -353,8 +407,7 @@ describe("ExchangeRatesServiceImpl malformed rate_date handling", () => {
   });
 
   it("does not warn when every rate_date is valid", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service } = makeService();
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
 
     await service.getLatestRates();
@@ -363,11 +416,11 @@ describe("ExchangeRatesServiceImpl malformed rate_date handling", () => {
   });
 
   it("warns only once per distinct malformed value in a process", async () => {
-    const { service, repository } = makeService();
+    const { service, client } = makeService();
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
     const malformedRow = { ...exchangeRates[0]!, rate_date: "2026/07/31" };
 
-    repository.findAll.mockResolvedValue([malformedRow, ...exchangeRates.slice(1)]);
+    seedRates(client, [malformedRow, ...exchangeRates.slice(1)]);
     await service.getLatestRates();
     await service.getLatestRates();
 
@@ -383,9 +436,7 @@ describe("ExchangeRatesServiceImpl malformed rate_date handling", () => {
 
 describe("ExchangeRatesServiceImpl staleness annotation (D2)", () => {
   it("marks every resolved row stale/non-stale per the window and never drops rows", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const rates = await service.getLatestRates();
     // 07-30 is older than cutoff 2026-07-29? No — 07-30 >= 07-29, so fresh.
     expect(rates).toHaveLength(3);
@@ -397,11 +448,10 @@ describe("ExchangeRatesServiceImpl staleness annotation (D2)", () => {
   });
 
   it("flags a stale manual-only row (no scraped competitor)", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service, client } = makeService();
     // CBE/EUR has no scraped row; the manual row (07-20) wins by default and
     // is older than cutoff 2026-07-29 → stale.
-    manualRepository.findAll.mockResolvedValue([
+    seedManualRates(client, [
       { ...manualOverride(), bank_code: "CBE", currency_code: "EUR", rate_date: "2026-07-20" },
     ]);
 
@@ -412,9 +462,8 @@ describe("ExchangeRatesServiceImpl staleness annotation (D2)", () => {
   });
 
   it("keeps a fresher scraped row over an older manual override (newest wins)", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-    manualRepository.findAll.mockResolvedValue([{ ...manualOverride(), rate_date: "2026-07-20" }]);
+    const { service, client } = makeService();
+    seedManualRates(client, [{ ...manualOverride(), rate_date: "2026-07-20" }]);
 
     const rates = await service.getLatestRates();
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
@@ -423,9 +472,7 @@ describe("ExchangeRatesServiceImpl staleness annotation (D2)", () => {
   });
 
   it("annotates history rows with their own stale flag", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const history = await service.getHistoricalRates("ABY", "USD");
     expect(history.map((r) => [r.rate_date, r.stale])).toEqual([
       ["2026-07-30", false],
@@ -436,9 +483,7 @@ describe("ExchangeRatesServiceImpl staleness annotation (D2)", () => {
 
 describe("ExchangeRatesServiceImpl.getRateTrend", () => {
   it("aggregates mean cash rates per rate date, oldest first", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const trend = await service.getRateTrend();
     expect(trend.map((p) => p.label)).toEqual(["2026-07-30", "2026-08-01"]);
     expect(trend[0]).toEqual({ label: "2026-07-30", cashBuying: 120, cashSelling: 121 });
@@ -448,17 +493,13 @@ describe("ExchangeRatesServiceImpl.getRateTrend", () => {
   });
 
   it("returns only the newest `days` points when requested", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const trend = await service.getRateTrend(1);
     expect(trend.map((p) => p.label)).toEqual(["2026-08-01"]);
   });
 
   it("narrows to one currency when requested", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const trend = await service.getRateTrend(undefined, "USD");
     // 2026-08-01 USD-only: buying mean (121.5+119.5)/2 = 120.5
     expect(trend[1]).toEqual({ label: "2026-08-01", cashBuying: 120.5, cashSelling: 121.5 });
@@ -470,8 +511,8 @@ describe("ExchangeRatesServiceImpl.getRateTrend", () => {
   });
 
   it("skips dates whose rates are all null and returns [] for an empty table", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue([
+    const { service, client } = makeService();
+    seedRates(client, [
       {
         id: "rate-null",
         bank_code: "ABY",
@@ -489,16 +530,14 @@ describe("ExchangeRatesServiceImpl.getRateTrend", () => {
     ]);
     expect(await service.getRateTrend()).toEqual([]);
 
-    repository.findAll.mockResolvedValue([]);
+    seedRates(client, []);
     expect(await service.getRateTrend()).toEqual([]);
   });
 });
 
 describe("ExchangeRatesServiceImpl.getMarketTicker", () => {
   it("derives the mean buying rate + percent change per currency from real rows", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const ticker = await service.getMarketTicker();
     // EUR: only 08-01 (140.0) → change 0. USD: latest 08-01 mean (121.5+119.5)/2
     // = 120.5 vs previous 07-30 (120.0) → (0.5/120)*100 ≈ 0.42.
@@ -509,18 +548,15 @@ describe("ExchangeRatesServiceImpl.getMarketTicker", () => {
   });
 
   it("respects the limit", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
-
+    const { service } = makeService();
     const ticker = await service.getMarketTicker(1);
     expect(ticker).toEqual([{ pair: "EUR/ETB", value: 140, change: 0 }]);
   });
 
   it("includes manual overrides in the newest value and its change", async () => {
-    const { service, repository, manualRepository } = makeService();
-    repository.findAll.mockResolvedValue(exchangeRates);
+    const { service, client } = makeService();
     // ABY/USD manual override on 08-02 (121.4) becomes the newest USD date.
-    manualRepository.findAll.mockResolvedValue([manualOverride()]);
+    seedManualRates(client, [manualOverride()]);
 
     const ticker = await service.getMarketTicker();
     const usd = ticker.find((t) => t.pair === "USD/ETB");
@@ -529,8 +565,8 @@ describe("ExchangeRatesServiceImpl.getMarketTicker", () => {
   });
 
   it("returns an empty list when no rows exist", async () => {
-    const { service, repository } = makeService();
-    repository.findAll.mockResolvedValue([]);
+    const { service, client } = makeService();
+    seedRates(client, []);
     expect(await service.getMarketTicker()).toEqual([]);
   });
 });

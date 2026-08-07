@@ -1,4 +1,4 @@
-import type { ScraperHealthRow } from "@/types/database";
+import type { ScraperHealthRow } from "@/types/scraper-health";
 
 /** Typed scraper-health fixtures covering every status bucket. */
 export const scraperHealth: ScraperHealthRow[] = [

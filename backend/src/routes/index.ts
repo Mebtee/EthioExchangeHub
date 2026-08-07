@@ -14,7 +14,6 @@ import { BanksRepository } from "@/repositories/BanksRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
 import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
 import { NewsService } from "@/services/NewsService";
-import { ScraperHealthRepository } from "@/repositories/ScraperHealthRepository";
 import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
 import { SettingsRepository } from "@/repositories/SettingsRepository";
 import { UsersRepository } from "@/repositories/UsersRepository";
@@ -72,14 +71,14 @@ const manualRatesController = new ManualRatesController(manualRatesService);
 const newsService = new NewsService();
 const newsController = new NewsController(newsService);
 
-const scraperHealthRepository = new ScraperHealthRepository();
+// Scraper health is DERIVED from scrape_logs (no scraper_health table), so
+// both services share the single scrape-logs repository instance.
+const scrapeLogsRepository = new ScrapeLogsRepository();
 const scraperHealthService = new ScraperHealthServiceImpl(
-  scraperHealthRepository,
+  scrapeLogsRepository,
   env.MAX_RATE_AGE_DAYS,
 );
 const scraperHealthController = new ScraperHealthController(scraperHealthService);
-
-const scrapeLogsRepository = new ScrapeLogsRepository();
 const scrapeLogsService = new ScrapeLogsServiceImpl(scrapeLogsRepository);
 const scrapeLogsController = new ScrapeLogsController(scrapeLogsService);
 

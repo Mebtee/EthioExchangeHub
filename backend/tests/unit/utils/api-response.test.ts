@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { errorResponse, successResponse } from "@/utils/api-response";
 
-import { createMockResponse } from "../../mocks/express";
+import { createMockResponse } from "../../helpers/http";
 
 describe("successResponse", () => {
   it("writes a 200 success envelope by default", () => {

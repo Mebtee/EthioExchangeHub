@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getRequestId } from "@/lib/logger";
 import { REQUEST_ID_HEADER, requestIdMiddleware } from "@/middleware/request-id";
 
-import { createMockNext, createMockRequest } from "../../mocks/express";
+import { createMockNext, createMockRequest } from "../../helpers/http";
 
 /** Mock Response with a `setHeader` spy (the shared mock only has status/json). */
 function makeMockResponse() {

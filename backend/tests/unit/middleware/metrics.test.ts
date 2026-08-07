@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { registry } from "@/lib/metrics";
 import { metricsMiddleware } from "@/middleware/metrics";
 
-import { createMockNext, createMockRequest } from "../../mocks/express";
+import { createMockNext, createMockRequest } from "../../helpers/http";
 
 /** A minimal res-like object that can emit "finish" (what the middleware hooks). */
 function makeMockResponse(statusCode = 200): Response {

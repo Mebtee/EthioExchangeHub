@@ -20,4 +20,17 @@ export interface Bank {
   rating?: number;
   reviews?: number;
   branches?: number;
+  /** Financial snapshot (ETB). Only present when the bank publishes the data. */
+  totalAssets?: number;
+  totalDeposits?: number;
+  totalEmployees?: number;
+  loanToDepositRatio?: number;
+  returnOnAsset?: number;
+  returnOnEquity?: number;
+  profitBeforeTax?: number;
+  profitAfterTax?: number;
+  retainedEarnings?: number;
+  paidUpCapital?: number;
+  reserves?: number;
+  totalLiabilities?: number;
 }

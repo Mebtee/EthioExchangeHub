@@ -6,7 +6,7 @@ import { BaseRepository } from "@/repositories/BaseRepository";
 import type { Database } from "@/types/database";
 
 import { banks } from "../../fixtures/banks";
-import { createFakeSupabaseClient } from "../../mocks/supabase-client";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 /** Concrete subclass used to test the abstract base. */
 class TestRepo extends BaseRepository<"banks"> {

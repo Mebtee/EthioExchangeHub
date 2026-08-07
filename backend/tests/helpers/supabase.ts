@@ -18,12 +18,11 @@ import {
   createFakeSupabaseClient,
   type FakeSeed,
   type FakeSupabaseClient,
-} from "../mocks/supabase-client";
+} from "./supabase-client";
 
 import { banks } from "../fixtures/banks";
 import { exchangeRates } from "../fixtures/exchange-rates";
 import { manualRates } from "../fixtures/manual-rates";
-import { scraperHealth } from "../fixtures/scraper-health";
 import { scrapeLogs } from "../fixtures/scrape-logs";
 import { settings } from "../fixtures/settings";
 import { users } from "../fixtures/users";
@@ -33,7 +32,6 @@ export const defaultSeed: FakeSeed = {
   banks,
   exchange_rates: exchangeRates,
   manual_rates: manualRates,
-  scraper_health: scraperHealth,
   scrape_logs: scrapeLogs,
   settings,
   users,

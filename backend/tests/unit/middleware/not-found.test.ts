@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { NotFoundError } from "@/lib/errors";
 import { notFoundHandler } from "@/middleware/not-found";
 
-import { createMockNext, createMockRequest, createMockResponse } from "../../mocks/express";
+import { createMockNext, createMockRequest, createMockResponse } from "../../helpers/http";
 
 describe("notFoundHandler", () => {
   it("forwards a NotFoundError with 'Route not found.'", () => {

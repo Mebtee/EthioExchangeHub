@@ -28,3 +28,23 @@ export const exchangeRateSchema: OpenAPIV3_1.SchemaObject = {
   },
   required: ["id", "bank_code", "currency_code", "rate_date", "stale"],
 };
+
+/** Inclusive `rate_date` bounds across all published rates (`GET /rates/date-range`). */
+export const rateDateRangeSchema: OpenAPIV3_1.SchemaObject = {
+  type: "object",
+  description: "The oldest and newest rate_date across all published rates.",
+  example: apiExamples.rateDateRange,
+  properties: {
+    min: {
+      type: ["string", "null"],
+      format: "date",
+      description: "Oldest rate_date (null when no data).",
+    },
+    max: {
+      type: ["string", "null"],
+      format: "date",
+      description: "Newest rate_date (null when no data).",
+    },
+  },
+  required: ["min", "max"],
+};

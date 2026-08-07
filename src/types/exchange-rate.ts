@@ -39,3 +39,9 @@ export interface RankedExchangeRate extends ExchangeRate {
   /** Value of the active ranking field for this row. */
   rate: number;
 }
+
+/** The oldest and newest rate_date across all published rates (YYYY-MM-DD), null when empty. */
+export interface RateDateRange {
+  min: string | null;
+  max: string | null;
+}

@@ -5,7 +5,7 @@ import { SettingsRepository } from "@/repositories/SettingsRepository";
 import type { Database } from "@/types/database";
 
 import { settings } from "../../fixtures/settings";
-import { createFakeSupabaseClient } from "../../mocks/supabase-client";
+import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 function makeRepo(): SettingsRepository {
   const client = createFakeSupabaseClient({ settings: [...settings] });

@@ -12,6 +12,8 @@ interface RankingsTableProps {
   isError: boolean;
   errorMessage?: string;
   hasFilters: boolean;
+  /** Selected "as of" date (YYYY-MM-DD), "" for the latest snapshot. */
+  asOfDate?: string;
   onRetry: () => void;
 }
 
@@ -23,6 +25,7 @@ export function RankingsTable({
   isError,
   errorMessage,
   hasFilters,
+  asOfDate,
   onRetry,
 }: RankingsTableProps) {
   return (
@@ -56,9 +59,11 @@ export function RankingsTable({
           <EmptyState
             title="No exchange rates available"
             message={
-              hasFilters
-                ? "No banks match your current search or currency selection."
-                : "No bank has published rate data yet. Rates will appear here as soon as they are collected."
+              asOfDate
+                ? `No bank published a rate on ${asOfDate} that matches the current selection.`
+                : hasFilters
+                  ? "No banks match your current search or currency selection."
+                  : "No bank has published rate data yet. Rates will appear here as soon as they are collected."
             }
           />
         ) : (
