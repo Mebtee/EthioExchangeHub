@@ -310,7 +310,13 @@ describe("ExchangeRatesServiceImpl manual-override resolution", () => {
 
   it("preserves null transactional values in a manual override", async () => {
     const { service, client } = makeService();
-    seedManualRates(client, [{ ...manualOverride(), transactional_buying: null, transactional_selling: null }]);
+    seedManualRates(client, [
+      {
+        ...manualOverride(),
+        transactional_buying: null,
+        transactional_selling: null,
+      },
+    ]);
 
     const rates = await service.getLatestRates();
     const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
