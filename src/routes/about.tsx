@@ -51,7 +51,6 @@ function AboutPage() {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                 Live Updates
               </p>
-              <p className="text-2xl font-bold text-primary leading-tight">Every 15m</p>
               <p className="text-xs text-muted-foreground">Sync with Central Bank</p>
             </div>
           </div>
