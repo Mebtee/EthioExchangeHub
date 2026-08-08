@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ContactRepository } from "@/repositories/ContactRepository";
 import { ContactServiceImpl } from "@/services/ContactService";
 import type { ContactMessageRow, Database } from "@/types/database";
+import type { ContactMessageNotifier } from "@/lib/email";
 
 import { contactMessages } from "../../fixtures/contact-messages";
 import { createFakeSupabaseClient } from "../../helpers/supabase-client";
@@ -11,7 +12,8 @@ import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 function makeService() {
   const client = createFakeSupabaseClient({ contact_messages: [...contactMessages] });
   const repo = new ContactRepository(client as unknown as SupabaseClient<Database>);
-  return { client, service: new ContactServiceImpl(repo) };
+  const notify = vi.fn(async () => true) as unknown as ContactMessageNotifier;
+  return { client, service: new ContactServiceImpl(repo, notify), notify };
 }
 
 const validInput = {
@@ -43,6 +45,19 @@ describe("ContactServiceImpl.submitMessage", () => {
     const { service } = makeService();
     const created = await service.submitMessage(validInput);
     expect(created.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("forwards the trimmed message to the email notifier", async () => {
+    const { service, notify } = makeService();
+    await service.submitMessage(validInput);
+
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith({
+      name: "Abebe Kebede",
+      email: "abebe@example.com",
+      subject: "Question about historical rates",
+      message: "Hello, could you share how far back the historical rate data goes?",
+    });
   });
 
   it("propagates repository errors", async () => {

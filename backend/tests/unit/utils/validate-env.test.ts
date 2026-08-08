@@ -78,4 +78,35 @@ describe("validateEnv", () => {
     exit.mockRestore();
     stderr.mockRestore();
   });
+
+  it("defaults the contact recipient to the support inbox", () => {
+    const env = validateEnv({ ...required });
+    expect(env.CONTACT_RECIPIENT_EMAIL).toBe("ethioexchanges@gmail.com");
+  });
+
+  it("fails fast when RESEND_API_KEY is set without a verified sender", () => {
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    expect(() => validateEnv({ ...required, RESEND_API_KEY: "re_test" })).toThrow(
+      "process.exit called",
+    );
+    expect(stderr).toHaveBeenCalled();
+
+    exit.mockRestore();
+    stderr.mockRestore();
+  });
+
+  it("accepts a RESEND_API_KEY only together with a RESEND_FROM_EMAIL", () => {
+    const env = validateEnv({
+      ...required,
+      RESEND_API_KEY: "re_test",
+      RESEND_FROM_EMAIL: "no-reply@ethioexchange.dev",
+    });
+    expect(env.RESEND_API_KEY).toBe("re_test");
+    expect(env.RESEND_FROM_EMAIL).toBe("no-reply@ethioexchange.dev");
+    expect(env.CONTACT_RECIPIENT_EMAIL).toBe("ethioexchanges@gmail.com");
+  });
 });

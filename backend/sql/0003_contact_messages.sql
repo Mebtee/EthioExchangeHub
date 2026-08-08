@@ -6,10 +6,9 @@
 --   * Messages are appended only (no update/delete surface in the API) — the
 --     table has no CHECK that could be violated by user input beyond NOT NULL.
 --
--- Email delivery: the API persists the submission. Actually forwarding it to
--- ethioexchanges@gmail.com requires an email provider (e.g. Resend, SendGrid,
--- SMTP) configured via BACKEND environment variables; no provider is wired yet,
--- so nothing is pretended to be sent.
+-- Email delivery: the API persists the submission; it then best-effort
+-- forwards it to ethioexchanges@gmail.com via Resend when RESEND_API_KEY is
+-- configured (see src/lib/email.ts). Email is never required for a 201.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
