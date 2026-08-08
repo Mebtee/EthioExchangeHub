@@ -6,7 +6,6 @@ import { banksPaths } from "./banks";
 import { contactPaths } from "./contact";
 import { exchangeRatesPaths } from "./exchange-rates";
 import { manualRatesPaths } from "./manual-rates";
-import { marketTickerPaths } from "./market-ticker";
 import { newsPaths } from "./news";
 import { scraperHealthPaths } from "./scraper-health";
 import { scrapeLogsPaths } from "./scrape-logs";
@@ -24,7 +23,6 @@ export const apiPaths: Record<string, DocPathItem> = {
   ...contactPaths,
   ...exchangeRatesPaths,
   ...manualRatesPaths,
-  ...marketTickerPaths,
   ...newsPaths,
   ...scraperHealthPaths,
   ...scrapeLogsPaths,

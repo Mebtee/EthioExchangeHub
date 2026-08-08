@@ -47,6 +47,11 @@ export interface BackendExchangeRateRow {
   scraped_at: string | null;
   /** Computed freshness flag — always present on resolved rows (D2). */
   stale: boolean;
+  /**
+   * Percent move of the cash buying rate vs the previous resolved rate_date
+   * for the same bank + currency (null when there is no prior business date).
+   */
+  change?: number | null;
 }
 
 export interface BackendManualRateRow {
@@ -209,6 +214,9 @@ export function mapExchangeRateRow(row: BackendExchangeRateRow, bankName?: strin
     source: normalizeSource(row.source),
     // Always present on resolved rows (D2) — no fallback needed.
     stale: row.stale,
+    // Real backend-computed move vs the previous business date, or undefined
+    // when no prior date exists. Never invented here.
+    change: row.change == null ? undefined : row.change,
     logo: "",
   };
 }

@@ -39,6 +39,7 @@ export const apiExamples = {
     source: "SCRAPER",
     scraped_at: "2026-08-02T08:00:00.000Z",
     stale: false,
+    change: 0.42,
   },
   rateDateRange: {
     min: "2026-07-01",

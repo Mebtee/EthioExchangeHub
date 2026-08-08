@@ -35,7 +35,6 @@ import { banksRouter } from "./banks.routes";
 import { contactRouter } from "./contact.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
-import { marketTickerRouter } from "./market-ticker.routes";
 import { newsRouter } from "./news.routes";
 import { scraperHealthRouter } from "./scraper-health.routes";
 import { scrapeLogsRouter } from "./scrape-logs.routes";
@@ -134,8 +133,6 @@ apiRouter.use("/auth", createAuthLimiter(), authRouter(authController, requireAu
 apiRouter.use("/admin", requireAuth, requireAdmin, adminRouter(adminController));
 apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));
-// Homepage market ticker — derived from the persisted exchange_rates rows.
-apiRouter.use("/market-ticker", marketTickerRouter(exchangeRatesController));
 apiRouter.use("/manual-rates", requireAuth, requireAdmin, manualRatesRouter(manualRatesController));
 apiRouter.use("/news", newsRouter(newsController));
 apiRouter.use("/contact", contactRouter(contactController));

@@ -4,7 +4,6 @@ import {
   historyParamsSchema,
   latestByBankParamsSchema,
   latestRatesQuerySchema,
-  marketTickerQuerySchema,
   ratePairParamsSchema,
 } from "@/validators/exchange-rates";
 
@@ -41,17 +40,5 @@ describe("latestRatesQuerySchema", () => {
 
   it("rejects invalid dates", () => {
     expect(latestRatesQuerySchema.safeParse({ from: "2026-13-01" }).success).toBe(false);
-  });
-});
-
-describe("marketTickerQuerySchema", () => {
-  it("accepts an empty query and a positive limit", () => {
-    expect(marketTickerQuerySchema.safeParse({}).success).toBe(true);
-    expect(marketTickerQuerySchema.safeParse({ limit: "5" }).success).toBe(true);
-  });
-
-  it("rejects a non-positive or non-numeric limit", () => {
-    expect(marketTickerQuerySchema.safeParse({ limit: "0" }).success).toBe(false);
-    expect(marketTickerQuerySchema.safeParse({ limit: "abc" }).success).toBe(false);
   });
 });

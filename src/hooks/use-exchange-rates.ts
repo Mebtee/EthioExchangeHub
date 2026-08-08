@@ -11,6 +11,9 @@ export function useExchangeRates(currency?: string, asOfDate?: string) {
     queryFn: () => fetchExchangeRates(currency, asOfDate),
     select: dedupeLatestRates,
     staleTime: 60_000,
+    // Keeps the homepage ticker / rate tables fresh without manual refresh.
+    // TanStack pauses interval refetching while the tab is hidden.
+    refetchInterval: 5 * 60_000,
     refetchOnWindowFocus: false,
     retry: 1,
   });

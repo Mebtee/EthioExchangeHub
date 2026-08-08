@@ -14,6 +14,11 @@ import type { ExchangeRate } from "@/types/exchange-rate";
 /** Preferred tab ordering (display preference only — filtered to API currencies). */
 const PREFERRED_TAB_ORDER = ["USD", "EUR", "GBP"];
 
+/** Two-decimal rate cell; an em-dash when the bank did not report that value. */
+function formatRateCell(value: number): string {
+  return Number.isFinite(value) ? value.toFixed(2) : "—";
+}
+
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
@@ -132,7 +137,7 @@ export function LiveRankings({
             {top5.map((item, i) => (
               <li
                 key={item.id}
-                className="grid grid-cols-[28px_minmax(0,1fr)_64px_64px_56px] items-center gap-3 rounded-lg px-2 py-3.5 transition-colors hover:bg-surface-low/70"
+                className="grid grid-cols-[28px_minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] items-center gap-3 rounded-lg px-2 py-3.5 transition-colors hover:bg-surface-low/70"
               >
                 <RankBadge rank={i + 1} />
                 <Link
@@ -153,24 +158,34 @@ export function LiveRankings({
                       i === 0 ? "text-primary" : "text-foreground",
                     )}
                   >
-                    {item.cashBuying.toFixed(2)}
+                    {formatRateCell(item.cashBuying)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Buy
+                    Cash Buy
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold tabular text-foreground">
-                    {item.cashSelling.toFixed(2)}
+                    {formatRateCell(item.cashSelling)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Sell
+                    Cash Sell
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold tabular text-muted-foreground">—</p>
+                  <p className="text-sm font-bold tabular text-foreground">
+                    {formatRateCell(item.transactionBuying)}
+                  </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Trend
+                    Trans. Buy
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold tabular text-foreground">
+                    {formatRateCell(item.transactionSelling)}
+                  </p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Trans. Sell
                   </p>
                 </div>
               </li>
