@@ -179,6 +179,11 @@
   }
 }
 
+/* Pause on hover so visitors can read a specific bank's rates. */
+.ee-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Respect users who prefer reduced motion: stop the marquee and any infinite
    animations without removing the content. */
 @media (prefers-reduced-motion: reduce) {

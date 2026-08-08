@@ -27,7 +27,6 @@ import {
   manualRateSchema,
   manualRateUpdateInputSchema,
 } from "./schemas/manual-rate";
-import { marketTickerItemSchema } from "./schemas/market-ticker";
 import { newsCategorySchema, newsItemSchema } from "./schemas/news";
 import { scraperHealthSchema, scraperHealthSummarySchema } from "./schemas/scraper-health";
 import { scrapeLogSchema } from "./schemas/scrape-log";
@@ -101,7 +100,6 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       ManualRate: manualRateSchema,
       ManualRateInput: manualRateInputSchema,
       ManualRateUpdateInput: manualRateUpdateInputSchema,
-      MarketTickerItem: marketTickerItemSchema,
       NewsItem: newsItemSchema,
       NewsCategory: newsCategorySchema,
       ScraperHealth: scraperHealthSchema,

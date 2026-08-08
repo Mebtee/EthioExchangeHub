@@ -183,6 +183,59 @@ describe("ExchangeRatesServiceImpl.getLatestRates", () => {
   });
 });
 
+describe("ExchangeRatesServiceImpl change annotation", () => {
+  it("annotates change vs the previous resolved rate_date (business date, never scraped_at)", async () => {
+    const { service } = makeService();
+    const rates = await service.getLatestRates();
+    const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
+    // 08-01 (121.5) vs 07-30 (120.0) → (1.5/120)*100 = 1.25.
+    expect(abyUsd?.change).toBe(1.25);
+
+    // No prior business date for these pairs → null, never a fabricated 0.
+    const cbeUsd = rates.find((r) => r.bank_code === "CBE" && r.currency_code === "USD");
+    const abyEur = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "EUR");
+    expect(cbeUsd?.change).toBeNull();
+    expect(abyEur?.change).toBeNull();
+  });
+
+  it("compares a manual override against the prior resolved date for the same pair", async () => {
+    const { service, client } = makeService();
+    seedManualRates(client, [manualOverride()]); // ABY/USD 08-02 (121.4)
+
+    const rates = await service.getLatestRates();
+    const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
+    // 08-02 (121.4) vs 08-01 resolved (121.5) → (-0.1/121.5)*100 ≈ -0.08.
+    expect(abyUsd?.change).toBe(-0.08);
+    expect(abyUsd?.rate_date).toBe("2026-08-02");
+  });
+
+  it("computes change against the full history even when an exact-day filter hides the prior date", async () => {
+    const { service } = makeService();
+    const rates = await service.getLatestRates({ to: "2026-08-01" });
+    const abyUsd = rates.find((r) => r.bank_code === "ABY" && r.currency_code === "USD");
+    // The 07-30 predecessor is outside the `to` window but still in the dataset.
+    expect(abyUsd?.change).toBe(1.25);
+  });
+
+  it("reports null change when a row has no buying rate or no prior date", async () => {
+    const { service } = makeService();
+    const earliest = await service.getLatestRates({ to: "2026-07-30" });
+    expect(earliest[0]?.change).toBeNull();
+
+    const { service: emptyBuyingService, client } = makeService();
+    seedRates(client, [
+      {
+        ...exchangeRates[1]!,
+        id: "rate-no-buying",
+        buying_rate: null,
+        selling_rate: 122.5,
+      },
+    ]);
+    const rates = await emptyBuyingService.getLatestRates();
+    expect(rates[0]?.change).toBeNull();
+  });
+});
+
 describe("ExchangeRatesServiceImpl same-date scraped tie-break", () => {
   it("keeps the newest scraped_at when two scrapes share the same rate_date", async () => {
     const { service, client } = makeService();
@@ -565,41 +618,5 @@ describe("ExchangeRatesServiceImpl.getRateTrend", () => {
 
     seedRates(client, []);
     expect(await service.getRateTrend()).toEqual([]);
-  });
-});
-
-describe("ExchangeRatesServiceImpl.getMarketTicker", () => {
-  it("derives the mean buying rate + percent change per currency from real rows", async () => {
-    const { service } = makeService();
-    const ticker = await service.getMarketTicker();
-    // EUR: only 08-01 (140.0) → change 0. USD: latest 08-01 mean (121.5+119.5)/2
-    // = 120.5 vs previous 07-30 (120.0) → (0.5/120)*100 ≈ 0.42.
-    expect(ticker).toEqual([
-      { pair: "EUR/ETB", value: 140, change: 0 },
-      { pair: "USD/ETB", value: 120.5, change: 0.42 },
-    ]);
-  });
-
-  it("respects the limit", async () => {
-    const { service } = makeService();
-    const ticker = await service.getMarketTicker(1);
-    expect(ticker).toEqual([{ pair: "EUR/ETB", value: 140, change: 0 }]);
-  });
-
-  it("includes manual overrides in the newest value and its change", async () => {
-    const { service, client } = makeService();
-    // ABY/USD manual override on 08-02 (121.4) becomes the newest USD date.
-    seedManualRates(client, [manualOverride()]);
-
-    const ticker = await service.getMarketTicker();
-    const usd = ticker.find((t) => t.pair === "USD/ETB");
-    // Latest 08-02 → 121.4; previous 08-01 mean → 120.5; (0.9/120.5)*100 ≈ 0.75.
-    expect(usd).toEqual({ pair: "USD/ETB", value: 121.4, change: 0.75 });
-  });
-
-  it("returns an empty list when no rows exist", async () => {
-    const { service, client } = makeService();
-    seedRates(client, []);
-    expect(await service.getMarketTicker()).toEqual([]);
   });
 });

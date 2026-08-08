@@ -22,11 +22,6 @@ export const newsKeys = {
   categories: () => [...newsKeys.all, "categories"] as const,
 };
 
-export const marketTickerKeys = {
-  all: ["market-ticker"] as const,
-  lists: () => [...marketTickerKeys.all, "list"] as const,
-};
-
 export const adminKeys = {
   all: ["admin"] as const,
   dashboard: () => [...adminKeys.all, "dashboard"] as const,

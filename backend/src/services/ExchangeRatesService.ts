@@ -24,9 +24,12 @@ export interface RateDateRange {
 /**
  * A resolved rate row annotated with its computed staleness flag (D2).
  * Stale rows are always served — never dropped — so consumers decide how to
- * present them.
+ * present them. `change` (when present) is the percent move of the row's cash
+ * buying rate against the previous resolved `rate_date` for the same
+ * bank + currency — null when no prior business date exists, absent on
+ * endpoints that do not compute it.
  */
-export type ResolvedRateRow = StaleMarked<ExchangeRateRow>;
+export type ResolvedRateRow = StaleMarked<ExchangeRateRow> & { change?: number | null };
 
 /** One aggregated trend point as served by `GET /admin/dashboard/rate-trend`. */
 export interface RateTrendPoint {
@@ -36,16 +39,6 @@ export interface RateTrendPoint {
   cashBuying: number;
   /** Mean cash selling rate across all banks/currencies on that date. */
   cashSelling: number;
-}
-
-/** One market-ticker row as served by `GET /market-ticker`. */
-export interface MarketTickerItem {
-  /** Display pair (e.g. "USD/ETB"). */
-  pair: string;
-  /** Mean cash buying rate across banks on the newest rate date. */
-  value: number;
-  /** Percent change vs the previous rate date (0 when there is no history). */
-  change: number;
 }
 
 /** Inclusive `rate_date` bounds across all published rates, as served by `GET /rates/date-range`. */
@@ -81,12 +74,6 @@ export interface ExchangeRatesService {
    * optionally for one currency only).
    */
   getRateTrend(days?: number, currency?: string): Promise<RateTrendPoint[]>;
-  /**
-   * Market ticker: mean cash buying rate per currency on the newest rate
-   * date, with the percent change vs the previous date. Derived entirely from
-   * the persisted rows — never fabricated.
-   */
-  getMarketTicker(limit?: number): Promise<MarketTickerItem[]>;
 }
 
 /**
@@ -120,12 +107,12 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
    */
   async getLatestRates(range?: RateDateRange): Promise<ResolvedRateRow[]> {
     this.validateRange(range);
-    const rows = this.filterLatestRange(await this.combinedRows(), range);
-    return this.markAllStale(
-      sortByBankCodeAndCurrency(
-        resolveLatestWithManualOverrides(rows, (r) => `${r.bank_code}\u0000${r.currency_code}`),
-      ),
+    const all = await this.combinedRows();
+    const rows = this.filterLatestRange(all, range);
+    const resolved = sortByBankCodeAndCurrency(
+      resolveLatestWithManualOverrides(rows, (r) => `${r.bank_code}\u0000${r.currency_code}`),
     );
+    return this.withChange(this.markAllStale(resolved), all);
   }
 
   /** Resolved rates for one currency (newest per bank), manual overrides applied. */
@@ -135,25 +122,23 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
   ): Promise<ResolvedRateRow[]> {
     assertCurrencyCode(currencyCode);
     this.validateRange(range);
-    const rows = this.filterLatestRange(await this.combinedRows(), range).filter(
-      (r) => r.currency_code === currencyCode,
+    const all = await this.combinedRows();
+    const rows = this.filterLatestRange(all, range).filter((r) => r.currency_code === currencyCode);
+    const resolved = sortByBankCodeAndCurrency(
+      resolveLatestWithManualOverrides(rows, (r) => r.bank_code),
     );
-    return this.markAllStale(
-      sortByBankCodeAndCurrency(resolveLatestWithManualOverrides(rows, (r) => r.bank_code)),
-    );
+    return this.withChange(this.markAllStale(resolved), all);
   }
 
   /** Resolved rates for one bank (newest per currency), manual overrides applied. */
   async getLatestRatesByBank(bankCode: string, range?: RateDateRange): Promise<ResolvedRateRow[]> {
     await this.banksService.validateBankExists(bankCode);
     this.validateRange(range);
-    const rows = this.filterLatestRange(await this.combinedRows(), range).filter(
-      (r) => r.bank_code === bankCode,
-    );
+    const all = await this.combinedRows();
+    const rows = this.filterLatestRange(all, range).filter((r) => r.bank_code === bankCode);
     const resolved = resolveLatestWithManualOverrides(rows, (r) => r.currency_code);
-    return this.markAllStale(
-      [...resolved].sort((a, b) => a.currency_code.localeCompare(b.currency_code)),
-    );
+    const sorted = [...resolved].sort((a, b) => a.currency_code.localeCompare(b.currency_code));
+    return this.withChange(this.markAllStale(sorted), all);
   }
 
   /**
@@ -184,6 +169,63 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
   /** Annotates rows with `stale` per the configured age window (additive only). */
   private markAllStale(rows: ExchangeRateRow[]): ResolvedRateRow[] {
     return markStale(rows, this.todayProvider(), this.maxRateAgeDays);
+  }
+
+  /**
+   * Annotates every resolved row with `change`: the percent move of its cash
+   * buying rate against the previous resolved `rate_date` for the same
+   * bank + currency. The comparison is derived from the SAME rows that feed
+   * resolution (`all`), using the same manual-override-aware resolver — not a
+   * second algorithm. `change` is null when the row has no buying rate or no
+   * prior business date exists (never a fabricated 0%). The `rate_date` is
+   * the business date; `scraped_at` never participates.
+   */
+  private withChange(rows: ResolvedRateRow[], all: ExchangeRateRow[]): ResolvedRateRow[] {
+    const history = this.pairBuyingHistory(all);
+    return rows.map((row) => {
+      let change: number | null = null;
+      if (row.buying_rate !== null) {
+        const byDate = history.get(`${row.bank_code}\u0000${row.currency_code}`);
+        if (byDate) {
+          const dates = [...byDate.keys()].sort();
+          const index = dates.indexOf(row.rate_date);
+          if (index > 0) {
+            const previous = byDate.get(dates[index - 1]!);
+            if (previous !== undefined && previous > 0) {
+              change = roundToTwo(((row.buying_rate - previous) / previous) * 100);
+            }
+          }
+        }
+      }
+      return { ...row, change };
+    });
+  }
+
+  /**
+   * Per (bank, currency): the resolved cash buying rate for every `rate_date`
+   * present. Rows on the same date are reduced to one winner with the shared
+   * resolver, so manual overrides win a date tie exactly as they do for the
+   * latest snapshot — keeping `change` consistent with resolution.
+   */
+  private pairBuyingHistory(all: ExchangeRateRow[]): Map<string, Map<string, number>> {
+    const grouped = new Map<string, ExchangeRateRow[]>();
+    for (const row of all) {
+      const key = `${row.bank_code}\u0000${row.currency_code}`;
+      const list = grouped.get(key);
+      if (list) list.push(row);
+      else grouped.set(key, [row]);
+    }
+
+    const history = new Map<string, Map<string, number>>();
+    for (const [pair, rows] of grouped) {
+      const winnerByDate = resolveLatestWithManualOverrides(rows, (r) => r.rate_date);
+      const byDate = new Map<string, number>();
+      for (const winner of winnerByDate) {
+        if (winner.buying_rate !== null) byDate.set(winner.rate_date, winner.buying_rate);
+      }
+      history.set(pair, byDate);
+    }
+    return history;
   }
 
   /**
@@ -313,45 +355,6 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
   }
 
   /**
-   * Market ticker derived from real rows (manual overrides included): for
-   * each currency, the mean cash buying rate across banks on the NEWEST rate
-   * date, plus the percent change against the previous distinct rate date.
-   * Currencies with no previous date report `change: 0`. Sorted by pair,
-   * capped at `limit` (default 8). No values are invented — a currency only
-   * appears when at least one bank reports a buying rate.
-   */
-  async getMarketTicker(limit?: number): Promise<MarketTickerItem[]> {
-    const rows = await this.combinedRows();
-    const byCurrency = new Map<string, Map<string, number[]>>();
-    for (const row of rows) {
-      if (row.buying_rate === null) continue;
-      const dates = byCurrency.get(row.currency_code) ?? new Map<string, number[]>();
-      const values = dates.get(row.rate_date) ?? [];
-      values.push(row.buying_rate);
-      dates.set(row.rate_date, values);
-      byCurrency.set(row.currency_code, dates);
-    }
-
-    const items: MarketTickerItem[] = [];
-    for (const [currency, dates] of byCurrency) {
-      const sorted = [...dates.entries()].sort(([left], [right]) => left.localeCompare(right));
-      const latest = sorted[sorted.length - 1];
-      if (!latest) continue;
-      const value = mean(latest[1]);
-      let change = 0;
-      const previous = sorted[sorted.length - 2];
-      if (previous && previous[1].length > 0) {
-        const previousValue = mean(previous[1]);
-        if (previousValue > 0) change = ((value - previousValue) / previousValue) * 100;
-      }
-      items.push({ pair: `${currency}/ETB`, value: roundToTwo(value), change: roundToTwo(change) });
-    }
-
-    items.sort((left, right) => left.pair.localeCompare(right.pair));
-    return items.slice(0, limit !== undefined && limit > 0 ? limit : DEFAULT_TICKER_LIMIT);
-  }
-
-  /**
    * Filters rows for a "latest snapshot" query. A `to` date is an exact-day
    * match (`rate_date === to`): a bank that did not publish on that day is
    * excluded entirely rather than falling back to an older rate. `from`, when
@@ -382,9 +385,6 @@ export class ExchangeRatesServiceImpl implements ExchangeRatesService {
 
 /** Default trend window: the newest 30 rate dates. */
 const DEFAULT_TREND_DAYS = 30;
-
-/** Default market-ticker length: the first 8 currency pairs (alphabetical). */
-const DEFAULT_TICKER_LIMIT = 8;
 
 /**
  * Malformed `rate_date` values already warned about in this process. Guards

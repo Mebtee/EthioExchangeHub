@@ -25,6 +25,11 @@ export const exchangeRateSchema: OpenAPIV3_1.SchemaObject = {
       description:
         "Computed freshness flag (D2): true when the rate_date is older than MAX_RATE_AGE_DAYS before today. Stale rows are always served — never dropped.",
     },
+    change: {
+      type: ["number", "null"],
+      description:
+        "Percent change of the cash buying rate against the previous resolved rate_date for the same bank + currency (null when there is no prior business date). Based on rate_date, never scraped_at.",
+    },
   },
   required: ["id", "bank_code", "currency_code", "rate_date", "stale"],
 };

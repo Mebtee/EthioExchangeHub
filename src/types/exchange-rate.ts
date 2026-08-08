@@ -24,6 +24,12 @@ export interface ExchangeRate extends RateRecord {
   bankCode?: string;
   /** Bank logo URL (empty string when the bank has no logo). */
   logo: string;
+  /**
+   * Percent move of the cash buying rate vs the previous resolved rate_date
+   * for the same bank + currency (undefined when the API does not provide it,
+   * e.g. a row with no prior business date). Never fabricated on the client.
+   */
+  change?: number;
 }
 
 export interface ApiResponse<T> {

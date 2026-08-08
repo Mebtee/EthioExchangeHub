@@ -154,6 +154,8 @@ describe("Exchange-rate endpoints", () => {
       rate_date: "2026-08-02",
       source: "MANUAL",
     });
+    // 08-02 (121.4) vs the resolved 08-01 (121.5) → (-0.1/121.5)*100 ≈ -0.08.
+    expect(abyUsd.change).toBe(-0.08);
     // A pair with no scraped row appears from the manual entry alone.
     const cbeEur = res.body.data.find(
       (r: { bank_code: string; currency_code: string }) =>
@@ -214,29 +216,6 @@ describe("Exchange-rate endpoints", () => {
     expect(res.status).toBe(200);
     // Scraped rows span 2026-07-30..08-01; the manual ABY/USD override is 08-02.
     expect(res.body.data).toEqual({ min: "2026-07-30", max: "2026-08-02" });
-  });
-
-  it("GET /api/v1/market-ticker derives real mean rates + change per currency", async () => {
-    const res = await request(app).get("/api/v1/market-ticker");
-    expect(res.status).toBe(200);
-    // EUR (08-01): ABY scraped 140.0 + CBE manual 139.0 → mean 139.5, no prior
-    // date → change 0. USD: newest 08-02 manual 121.4 vs 08-01 mean
-    // (121.5+119.5)/2 = 120.5 → change ≈ 0.75.
-    expect(res.body.data).toEqual([
-      { pair: "EUR/ETB", value: 139.5, change: 0 },
-      { pair: "USD/ETB", value: 121.4, change: 0.75 },
-    ]);
-  });
-
-  it("GET /api/v1/market-ticker respects the limit query", async () => {
-    const res = await request(app).get("/api/v1/market-ticker?limit=1");
-    expect(res.status).toBe(200);
-    expect(res.body.data).toEqual([{ pair: "EUR/ETB", value: 139.5, change: 0 }]);
-  });
-
-  it("GET /api/v1/market-ticker rejects a bad limit with 422", async () => {
-    const res = await request(app).get("/api/v1/market-ticker?limit=0");
-    expect(res.status).toBe(422);
   });
 
   it("GET /api/v1/rates/history/:bankCode/:currencyCode returns oldest-first history (manual override included)", async () => {

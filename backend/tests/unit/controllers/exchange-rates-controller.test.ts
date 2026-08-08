@@ -102,34 +102,6 @@ describe("ExchangeRatesController.getLatestRateByBankAndCurrency", () => {
   });
 });
 
-describe("ExchangeRatesController.getMarketTicker", () => {
-  it("delegates without a limit and sends 200", async () => {
-    const { controller } = makeController();
-    const res = createMockResponse();
-
-    controller.getMarketTicker(createMockRequest(), res, createMockNext());
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const payload = res.json.mock.calls[0]![0] as { data: Array<{ pair: string }> };
-    expect(payload).toMatchObject({ success: true, message: "Market ticker retrieved." });
-    expect(payload.data).toEqual([
-      { pair: "EUR/ETB", value: 140, change: 0 },
-      { pair: "USD/ETB", value: 120.5, change: 0.42 },
-    ]);
-  });
-
-  it("reads the optional limit query param", async () => {
-    const { controller } = makeController();
-    const res = createMockResponse();
-
-    controller.getMarketTicker(createMockRequest({ query: { limit: "1" } }), res, createMockNext());
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const payload = res.json.mock.calls[0]![0] as { data: Array<{ pair: string }> };
-    expect(payload.data).toHaveLength(1);
-  });
-});
-
 describe("ExchangeRatesController.getDateRange", () => {
   it("delegates to the service and sends 200 with the bounds", async () => {
     const { controller } = makeController();
