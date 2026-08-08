@@ -28,6 +28,7 @@ import { ManualRatesServiceImpl } from "@/services/ManualRatesService";
 import { ScraperHealthServiceImpl } from "@/services/ScraperHealthService";
 import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { SettingsServiceImpl } from "@/services/SettingsService";
+import { ResendEmailService } from "@/services/EmailService";
 import { adminRouter } from "./admin.routes";
 import { authRouter } from "./auth.routes";
 import { banksRouter } from "./banks.routes";
@@ -75,11 +76,19 @@ const manualRatesController = new ManualRatesController(manualRatesService);
 const newsService = new NewsService();
 const newsController = new NewsController(newsService);
 
-// Public contact form — submissions are persisted for later review. No email
-// provider is wired yet, so the service only stores the message (see the
-// service docblock for the external configuration still required).
+// Public contact form — submissions are persisted to Supabase first (the
+// source of truth); the Resend-backed email service then best-effort forwards
+// each message to the support inbox (CONTACT_EMAIL_TO). Sending is enabled
+// only when RESEND_API_KEY + CONTACT_EMAIL_FROM are configured (see
+// services/EmailService.ts) — otherwise messages are still stored and the API
+// still answers 201.
 const contactRepository = new ContactRepository();
-const contactService = new ContactServiceImpl(contactRepository);
+const contactEmailService = new ResendEmailService({
+  apiKey: env.RESEND_API_KEY,
+  fromEmail: env.CONTACT_EMAIL_FROM,
+  toEmail: env.CONTACT_EMAIL_TO,
+});
+const contactService = new ContactServiceImpl(contactRepository, contactEmailService);
 const contactController = new ContactController(contactService);
 
 // Scraper health is DERIVED from scrape_logs (no scraper_health table), so

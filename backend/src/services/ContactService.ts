@@ -1,7 +1,8 @@
 import { ContactRepository } from "@/repositories/ContactRepository";
 import type { ContactMessageRow } from "@/types/database";
+import { logger } from "@/lib/logger";
 import { nowIso } from "@/utils/date";
-import { sendContactMessageNotification, type ContactMessageNotifier } from "@/lib/email";
+import type { EmailService } from "@/services/EmailService";
 
 /** Input for submitting a contact message (domain shape — no API DTO yet). */
 export interface ContactMessageInput {
@@ -20,19 +21,24 @@ export interface ContactService {
  * Contact-message business logic: normalization (trimming) and timestamp
  * management live here. The repository only persists rows.
  *
- * EMAIL DELIVERY: persisting the submission is the source of truth; the API
- * then best-effort forwards it to the support inbox (ethioexchanges@gmail.com)
- * via Resend when configured (see `lib/email.ts`). The notification is a
- * fire-and-forget side effect — a missing provider or a failed send is logged
- * and never fails the request, so the API never pretends an email was sent.
+ * RELIABILITY POLICY (documented and tested):
+ *   - Persisting the submission to Supabase is the source of truth and happens
+ *     FIRST — a notification failure can never lose the visitor's message.
+ *   - The API then attempts to forward the message to the support inbox via the
+ *     injected {@link EmailService}. A skipped/failed email is logged
+ *     server-side (with the persisted message id) and never fails the request,
+ *     so the visitor always gets a 201 for a successfully stored message and we
+ *     never pretend an email was sent.
+ *   - The email provider never throws; the try/catch below is a defensive guard
+ *     for any future provider that violates that contract.
  */
 export class ContactServiceImpl implements ContactService {
   constructor(
     private readonly contactRepository: ContactRepository,
-    private readonly notify: ContactMessageNotifier = sendContactMessageNotification,
+    private readonly emailService: EmailService,
   ) {}
 
-  /** Normalizes and persists a contact message, then best-effort notifies. */
+  /** Normalizes and persists a contact message, then notifies best-effort. */
   async submitMessage(input: ContactMessageInput): Promise<ContactMessageRow> {
     const name = input.name.trim();
     const email = input.email.trim();
@@ -47,8 +53,24 @@ export class ContactServiceImpl implements ContactService {
       created_at: nowIso(),
     });
 
-    // Best-effort email notification — never awaited, never throws.
-    void this.notify({ name, email, subject, message });
+    try {
+      await this.emailService.sendContactNotification({
+        messageId: created.id,
+        name,
+        email,
+        subject,
+        message,
+        createdAt: created.created_at ?? nowIso(),
+      });
+    } catch (err) {
+      // Defensive: the provider contract is never-throw. Log any violation with
+      // the persisted message id and still return the stored row.
+      logger.error("EMAIL_NOTIFICATION_UNHANDLED", {
+        messageId: created.id,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     return created;
   }
 }

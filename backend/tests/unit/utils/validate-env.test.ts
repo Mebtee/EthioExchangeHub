@@ -79,9 +79,14 @@ describe("validateEnv", () => {
     stderr.mockRestore();
   });
 
-  it("defaults the contact recipient to the support inbox", () => {
+  it("defaults the contact email recipient to the support inbox", () => {
     const env = validateEnv({ ...required });
-    expect(env.CONTACT_RECIPIENT_EMAIL).toBe("ethioexchanges@gmail.com");
+    expect(env.CONTACT_EMAIL_TO).toBe("ethioexchanges@gmail.com");
+  });
+
+  it("allows overriding the contact email recipient", () => {
+    const env = validateEnv({ ...required, CONTACT_EMAIL_TO: "support@example.com" });
+    expect(env.CONTACT_EMAIL_TO).toBe("support@example.com");
   });
 
   it("fails fast when RESEND_API_KEY is set without a verified sender", () => {
@@ -99,14 +104,26 @@ describe("validateEnv", () => {
     stderr.mockRestore();
   });
 
-  it("accepts a RESEND_API_KEY only together with a RESEND_FROM_EMAIL", () => {
+  it("accepts a RESEND_API_KEY only together with a CONTACT_EMAIL_FROM", () => {
     const env = validateEnv({
       ...required,
       RESEND_API_KEY: "re_test",
-      RESEND_FROM_EMAIL: "no-reply@ethioexchange.dev",
+      CONTACT_EMAIL_FROM: "no-reply@ethioexchange.dev",
     });
     expect(env.RESEND_API_KEY).toBe("re_test");
-    expect(env.RESEND_FROM_EMAIL).toBe("no-reply@ethioexchange.dev");
-    expect(env.CONTACT_RECIPIENT_EMAIL).toBe("ethioexchanges@gmail.com");
+    expect(env.CONTACT_EMAIL_FROM).toBe("no-reply@ethioexchange.dev");
+    expect(env.CONTACT_EMAIL_TO).toBe("ethioexchanges@gmail.com");
+  });
+
+  it("treats empty .env placeholders as disabled (leave empty = no email)", () => {
+    const env = validateEnv({
+      ...required,
+      RESEND_API_KEY: "",
+      CONTACT_EMAIL_FROM: "",
+      CONTACT_EMAIL_TO: "",
+    });
+    expect(env.RESEND_API_KEY).toBeUndefined();
+    expect(env.CONTACT_EMAIL_FROM).toBeUndefined();
+    expect(env.CONTACT_EMAIL_TO).toBe("ethioexchanges@gmail.com");
   });
 });

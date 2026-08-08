@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ContactController } from "@/controllers/ContactController";
 import { ContactServiceImpl } from "@/services/ContactService";
+import type { EmailService } from "@/services/EmailService";
 import type { ContactMessageRow } from "@/types/database";
 
 import {
@@ -10,6 +11,10 @@ import {
   createMockResponse,
   flushPromises,
 } from "../../helpers/http";
+
+const stubEmailService: EmailService = {
+  sendContactNotification: async () => ({ delivered: true, messageId: "contact-1" }),
+};
 
 /** Builds the real controller over a real service with a stubbed repository. */
 function makeController() {
@@ -27,7 +32,7 @@ function makeController() {
         created_at: input.created_at,
       }),
   };
-  const service = new ContactServiceImpl(repo as never);
+  const service = new ContactServiceImpl(repo as never, stubEmailService);
   const controller = new ContactController(service);
   return { controller };
 }
@@ -64,7 +69,7 @@ describe("ContactController.submitMessage", () => {
       createMessage: (): Promise<ContactMessageRow> =>
         Promise.reject(new Error("database is down")),
     };
-    const service = new ContactServiceImpl(repo as never);
+    const service = new ContactServiceImpl(repo as never, stubEmailService);
     const controller = new ContactController(service);
     const next = createMockNext();
 
