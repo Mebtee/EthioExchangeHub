@@ -20,6 +20,7 @@ import {
   resetPasswordRequestSchema,
 } from "./schemas/auth";
 import { bankSchema } from "./schemas/bank";
+import { contactMessageInputSchema, contactMessageSchema } from "./schemas/contact";
 import { exchangeRateSchema } from "./schemas/exchange-rate";
 import {
   manualRateInputSchema,
@@ -94,6 +95,8 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       ForgotPasswordRequest: forgotPasswordRequestSchema,
       ResetPasswordRequest: resetPasswordRequestSchema,
       Bank: bankSchema,
+      ContactMessage: contactMessageSchema,
+      ContactMessageInput: contactMessageInputSchema,
       ExchangeRate: exchangeRateSchema,
       ManualRate: manualRateSchema,
       ManualRateInput: manualRateInputSchema,

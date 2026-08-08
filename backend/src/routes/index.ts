@@ -3,6 +3,7 @@ import { Router } from "express";
 import { AdminController } from "@/controllers/AdminController";
 import { AuthController } from "@/controllers/AuthController";
 import { BanksController } from "@/controllers/BanksController";
+import { ContactController } from "@/controllers/ContactController";
 import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
 import { NewsController } from "@/controllers/NewsController";
@@ -11,6 +12,7 @@ import { ScrapeLogsController } from "@/controllers/ScrapeLogsController";
 import { createRequireAuth, requireRole } from "@/middleware/auth";
 import { createAuthLimiter } from "@/middleware/rate-limit";
 import { BanksRepository } from "@/repositories/BanksRepository";
+import { ContactRepository } from "@/repositories/ContactRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
 import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
 import { NewsService } from "@/services/NewsService";
@@ -20,6 +22,7 @@ import { UsersRepository } from "@/repositories/UsersRepository";
 import { env } from "@/utils/validate-env";
 import { AuthServiceImpl } from "@/services/AuthService";
 import { BanksServiceImpl } from "@/services/BanksService";
+import { ContactServiceImpl } from "@/services/ContactService";
 import { ExchangeRatesServiceImpl } from "@/services/ExchangeRatesService";
 import { ManualRatesServiceImpl } from "@/services/ManualRatesService";
 import { ScraperHealthServiceImpl } from "@/services/ScraperHealthService";
@@ -28,6 +31,7 @@ import { SettingsServiceImpl } from "@/services/SettingsService";
 import { adminRouter } from "./admin.routes";
 import { authRouter } from "./auth.routes";
 import { banksRouter } from "./banks.routes";
+import { contactRouter } from "./contact.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
 import { marketTickerRouter } from "./market-ticker.routes";
@@ -70,6 +74,13 @@ const manualRatesController = new ManualRatesController(manualRatesService);
 
 const newsService = new NewsService();
 const newsController = new NewsController(newsService);
+
+// Public contact form — submissions are persisted for later review. No email
+// provider is wired yet, so the service only stores the message (see the
+// service docblock for the external configuration still required).
+const contactRepository = new ContactRepository();
+const contactService = new ContactServiceImpl(contactRepository);
+const contactController = new ContactController(contactService);
 
 // Scraper health is DERIVED from scrape_logs (no scraper_health table), so
 // both services share the single scrape-logs repository instance.
@@ -118,5 +129,6 @@ apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));
 apiRouter.use("/market-ticker", marketTickerRouter(exchangeRatesController));
 apiRouter.use("/manual-rates", requireAuth, requireAdmin, manualRatesRouter(manualRatesController));
 apiRouter.use("/news", newsRouter(newsController));
+apiRouter.use("/contact", contactRouter(contactController));
 apiRouter.use("/scraper-health", scraperHealthRouter(scraperHealthController));
 apiRouter.use("/scrape-logs", scrapeLogsRouter(scrapeLogsController));

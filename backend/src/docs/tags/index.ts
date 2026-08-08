@@ -5,6 +5,7 @@ export const apiTags: OpenAPIV3_1.TagObject[] = [
   { name: "Admin", description: "Administrator profile, settings, and dashboard." },
   { name: "Auth", description: "Administrator authentication (login, tokens, password reset)." },
   { name: "Banks", description: "Bank directory: listing and lookup." },
+  { name: "Contact", description: "Public contact-message submissions." },
   { name: "Exchange Rates", description: "Latest and historical exchange rates." },
   { name: "Manual Rates", description: "Human-entered rate overrides." },
   { name: "News", description: "Financial news articles and categories." },

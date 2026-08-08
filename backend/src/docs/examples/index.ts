@@ -123,4 +123,18 @@ export const apiExamples = {
     cashBuying: 120.25,
     cashSelling: 121.35,
   },
+  contactMessage: {
+    id: "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    name: "Abebe Kebede",
+    email: "abebe@example.com",
+    subject: "Question about historical rates",
+    message: "Hello, could you share how far back the historical rate data goes?",
+    created_at: "2026-08-02T09:05:00.000Z",
+  },
+  contactMessageInput: {
+    name: "Abebe Kebede",
+    email: "abebe@example.com",
+    subject: "Question about historical rates",
+    message: "Hello, could you share how far back the historical rate data goes?",
+  },
 } as const;
