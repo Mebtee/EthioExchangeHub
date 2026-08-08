@@ -92,6 +92,19 @@ export type ManualRateRow = {
 };
 
 /**
+ * `contact_messages` — submissions from the public Contact page. Append-only;
+ * each row captures a validated visitor message.
+ */
+export type ContactMessageRow = {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  created_at: string | null;
+};
+
+/**
  * `scrape_logs` — append-only run history. `run_id` groups one run across
  * banks; `bank_code` identifies the scraper target.
  */
@@ -169,6 +182,12 @@ export type DatabaseTables = {
     Row: ManualRateRow;
     Insert: Partial<ManualRateRow>;
     Update: Partial<ManualRateRow>;
+    Relationships: [];
+  };
+  contact_messages: {
+    Row: ContactMessageRow;
+    Insert: Partial<ContactMessageRow>;
+    Update: Partial<ContactMessageRow>;
     Relationships: [];
   };
   scrape_logs: {

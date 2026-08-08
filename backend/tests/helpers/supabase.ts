@@ -21,6 +21,7 @@ import {
 } from "./supabase-client";
 
 import { banks } from "../fixtures/banks";
+import { contactMessages } from "../fixtures/contact-messages";
 import { exchangeRates } from "../fixtures/exchange-rates";
 import { manualRates } from "../fixtures/manual-rates";
 import { scrapeLogs } from "../fixtures/scrape-logs";
@@ -30,6 +31,7 @@ import { users } from "../fixtures/users";
 /** The standard seed — every live table populated with typed fixtures. */
 export const defaultSeed: FakeSeed = {
   banks,
+  contact_messages: contactMessages,
   exchange_rates: exchangeRates,
   manual_rates: manualRates,
   scrape_logs: scrapeLogs,

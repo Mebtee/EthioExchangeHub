@@ -255,6 +255,70 @@ describe("Exchange-rate endpoints", () => {
   });
 });
 
+describe("Contact endpoints", () => {
+  const validBody = {
+    name: "Abebe Kebede",
+    email: "abebe@example.com",
+    subject: "Question about historical rates",
+    message: "Hello, could you share how far back the historical rate data goes?",
+  };
+
+  it("POST /api/v1/contact/messages persists a message and responds 201", async () => {
+    const res = await request(app).post("/api/v1/contact/messages").send(validBody);
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toBe("Message received.");
+    expect(res.body.data.id).toBeTypeOf("string");
+    expect(res.body.data.name).toBe("Abebe Kebede");
+    expect(res.body.data.email).toBe("abebe@example.com");
+  });
+
+  it("POST trims whitespace from the submitted fields", async () => {
+    const res = await request(app).post("/api/v1/contact/messages").send({
+      name: "  Abebe Kebede  ",
+      email: "  abebe@example.com  ",
+      subject: "  Question  ",
+      message: "  Hello, this is a long enough message.  ",
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.name).toBe("Abebe Kebede");
+    expect(res.body.data.email).toBe("abebe@example.com");
+    expect(res.body.data.subject).toBe("Question");
+    expect(res.body.data.message).toBe("Hello, this is a long enough message.");
+  });
+
+  it("POST with missing fields responds 422", async () => {
+    const res = await request(app).post("/api/v1/contact/messages").send({
+      name: "Abebe Kebede",
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.success).toBe(false);
+    expect(res.body.data).toBeNull();
+  });
+
+  it("POST with an invalid email responds 422", async () => {
+    const res = await request(app)
+      .post("/api/v1/contact/messages")
+      .send({ ...validBody, email: "not-an-email" });
+    expect(res.status).toBe(422);
+    expect(res.body.message).toContain("Invalid request body");
+  });
+
+  it("POST with a too-short message responds 422", async () => {
+    const res = await request(app)
+      .post("/api/v1/contact/messages")
+      .send({ ...validBody, message: "Too short" });
+    expect(res.status).toBe(422);
+  });
+
+  it("POST with an unknown key responds 422 (strict body)", async () => {
+    const res = await request(app)
+      .post("/api/v1/contact/messages")
+      .send({ ...validBody, typo_field: true });
+    expect(res.status).toBe(422);
+  });
+});
+
 describe("Manual-rate endpoints", () => {
   it("GET /api/v1/manual-rates lists rows newest-first", async () => {
     const res = await request(app)
