@@ -313,7 +313,10 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
   return (
     <SurfaceCard className="p-6 mt-8">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
-        <h2 className="text-lg font-semibold">Financial Snapshot</h2>
+        <h2 className="text-lg font-semibold">
+          Financial Snapshot{" "}
+          <span className="text-sm font-medium text-muted-foreground">for 2025</span>
+        </h2>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           Figures in ETB
         </span>
