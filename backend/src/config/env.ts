@@ -3,6 +3,18 @@ import { z } from "zod";
 import { REQUEST_BODY_LIMIT } from "../constants";
 
 /**
+ * dotenv sets every present key in `.env` to a string — including empty ones
+ * (e.g. `RESEND_API_KEY=` → `""`). Zod treats `""` as a present value, so an
+ * empty placeholder would fail `.min(1)`/`.email()` and crash the server at
+ * boot instead of meaning "not configured". Normalize empty/whitespace-only
+ * values to `undefined` so `optional()`/`default()` behave as documented
+ * ("leave empty to disable").
+ */
+function emptyToUndefined(value: unknown): unknown {
+  return typeof value === "string" && value.trim() === "" ? undefined : value;
+}
+
+/**
  * Environment schema. `process.env` (loaded via `dotenv/config` in index.ts)
  * is validated against this at boot — see `utils/validate-env.ts`, which owns
  * the fail-fast gate and the validated `env` singleton.
@@ -118,23 +130,27 @@ export const envSchema = z
     /**
      * Resend API key. OPTIONAL — when empty, contact messages are persisted but
      * no email is forwarded (the API still answers 201). Sending is enabled only
-     * when this is set AND RESEND_FROM_EMAIL is a verified Resend sender.
+     * when this is set AND CONTACT_EMAIL_FROM is a verified Resend sender.
      */
-    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
     /**
      * Verified sender (a domain/address verified in Resend). Required only when
-     * RESEND_API_KEY is set — enforced by the refine below.
+     * RESEND_API_KEY is set — enforced by the refine below. Must NEVER be the
+     * visitor's address; the visitor's email is used as Reply-To only.
      */
-    RESEND_FROM_EMAIL: z.string().email().optional(),
+    CONTACT_EMAIL_FROM: z.preprocess(emptyToUndefined, z.string().email().optional()),
     /** Inbox that receives contact-form submissions (configurable for testing). */
-    CONTACT_RECIPIENT_EMAIL: z.string().email().default("ethioexchanges@gmail.com"),
+    CONTACT_EMAIL_TO: z.preprocess(
+      emptyToUndefined,
+      z.string().email().optional().default("ethioexchanges@gmail.com"),
+    ),
   })
   .superRefine((value, ctx) => {
-    if (value.RESEND_API_KEY && !value.RESEND_FROM_EMAIL) {
+    if (value.RESEND_API_KEY && !value.CONTACT_EMAIL_FROM) {
       ctx.addIssue({
         code: "custom",
-        path: ["RESEND_FROM_EMAIL"],
-        message: "RESEND_FROM_EMAIL is required when RESEND_API_KEY is set",
+        path: ["CONTACT_EMAIL_FROM"],
+        message: "CONTACT_EMAIL_FROM is required when RESEND_API_KEY is set",
       });
     }
   });
