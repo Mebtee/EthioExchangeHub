@@ -46,7 +46,7 @@ function HomePage() {
     <SiteShell>
       <MarketTicker />
       <PageContainer>
-        <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           {/* Hero */}
           <section>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
@@ -72,16 +72,19 @@ function HomePage() {
                 Daily News
               </Link>
             </div>
-            <p className="mt-5 text-xs text-muted-foreground flex items-center gap-2">
-              <CalendarDays className="size-3" /> Rates as of{" "}
-              <span className="font-semibold text-foreground">
-                {latestUpdate ? formatRateDate(latestUpdate) : "—"}
-              </span>
-            </p>
           </section>
 
           {/* Best rate cards */}
           <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Today's Best Rates
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
+                <CalendarDays className="size-3.5" />
+                As of {latestUpdate ? formatRateDate(latestUpdate) : "—"}
+              </span>
+            </div>
             <RateHero
               icon={<ShoppingCart className="size-5" />}
               label="Best Buy Rate"
@@ -103,7 +106,7 @@ function HomePage() {
           </section>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
           {/* Live rankings */}
           <LiveRankings
             rates={rates}

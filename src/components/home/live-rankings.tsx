@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight, Trophy } from "lucide-react";
 
 import { BankAvatar } from "@/components/shared/bank-avatar";
 import { EmptyState, ErrorState } from "@/components/shared/async-states";
@@ -7,10 +8,36 @@ import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { slugifyBankName } from "@/lib/bank";
 import { getCurrencyOptions } from "@/lib/rankings";
+import { cn } from "@/lib/utils";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
 /** Preferred tab ordering (display preference only — filtered to API currencies). */
 const PREFERRED_TAB_ORDER = ["USD", "EUR", "GBP"];
+
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span
+        aria-hidden
+        className="flex size-7 items-center justify-center rounded-full bg-[color:var(--gold)] text-[color:var(--gold-foreground)]"
+      >
+        <Trophy className="size-3.5" />
+      </span>
+    );
+  }
+  if (rank <= 3) {
+    return (
+      <span className="flex size-7 items-center justify-center rounded-full bg-surface-high text-sm font-bold text-muted-foreground">
+        {rank}
+      </span>
+    );
+  }
+  return (
+    <span className="flex size-7 items-center justify-center text-sm font-semibold text-muted-foreground">
+      {rank}
+    </span>
+  );
+}
 
 export function LiveRankings({
   rates,
@@ -48,87 +75,114 @@ export function LiveRankings({
   const reportingBanks = useMemo(() => new Set(rates.map((r) => r.bankName)).size, [rates]);
 
   return (
-    <SurfaceCard className="p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
-        <div>
-          <h2 className="text-xl font-semibold">Live Bank Rankings</h2>
-          <p className="text-sm text-muted-foreground">
-            Top 5 institutions by {currency || "market"} performance
-          </p>
-        </div>
-        {tabs.length > 0 && (
-          <div className="bg-surface-high rounded-xl p-1 flex">
-            {tabs.map((c) => (
-              <button
-                key={c}
-                onClick={() => setSelected(c)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  currency === c ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
+    <SurfaceCard className="flex flex-col p-6">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">Live Bank Rankings</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Top banks by current exchange rate performance
+        </p>
       </div>
 
+      {tabs.length > 0 && (
+        <div
+          aria-label="Currency"
+          role="group"
+          className="mt-4 grid grid-cols-6 gap-1.5 rounded-2xl bg-surface-high/70 p-2 sm:grid-cols-8 lg:grid-cols-[repeat(12,minmax(0,1fr))]"
+        >
+          {tabs.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelected(c)}
+              aria-pressed={currency === c}
+              className={cn(
+                "flex h-8 items-center justify-center rounded-full px-1.5 text-xs font-semibold transition-colors",
+                currency === c
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
-        <TableRowsSkeleton rows={5} columns={3} />
+        <div className="mt-5">
+          <TableRowsSkeleton rows={5} columns={3} />
+        </div>
       ) : isError ? (
-        <ErrorState
-          title="Unable to load exchange rates"
-          message={errorMessage ?? "Something went wrong while contacting the rates service."}
-          onRetry={onRetry}
-        />
+        <div className="mt-5">
+          <ErrorState
+            title="Unable to load exchange rates"
+            message={errorMessage ?? "Something went wrong while contacting the rates service."}
+            onRetry={onRetry}
+          />
+        </div>
       ) : top5.length === 0 ? (
-        <EmptyState
-          title="No exchange rates available"
-          message="No bank has published rate data yet. Rates will appear here as soon as they are collected."
-        />
+        <div className="mt-5">
+          <EmptyState
+            title="No exchange rates available"
+            message="No bank has published rate data yet. Rates will appear here as soon as they are collected."
+          />
+        </div>
       ) : (
         <>
-          <div className="grid grid-cols-[1fr_90px_90px_60px] gap-4 px-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-            <span>Bank Entity</span>
-            <span className="text-right">Buying</span>
-            <span className="text-right">Selling</span>
-            <span className="text-right">Trend</span>
-          </div>
-          <ul className="mt-2 divide-y divide-border/60">
+          <ul className="mt-5 divide-y divide-border/50">
             {top5.map((item, i) => (
               <li
                 key={item.id}
-                className="grid grid-cols-[1fr_90px_90px_60px] items-center gap-4 px-2 py-4 hover:bg-surface-low rounded-lg transition"
+                className="grid grid-cols-[28px_minmax(0,1fr)_64px_64px_56px] items-center gap-3 rounded-lg px-2 py-3.5 transition-colors hover:bg-surface-low/70"
               >
+                <RankBadge rank={i + 1} />
                 <Link
                   to={`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`}
-                  className="flex items-center gap-3 min-w-0"
+                  className="flex min-w-0 items-center gap-3"
                 >
                   <BankAvatar
                     name={item.bankName}
                     logo={item.logo}
                     className="size-9 rounded-full text-[11px]"
                   />
-                  <span className="block text-sm font-semibold truncate">{item.bankName}</span>
+                  <span className="block truncate text-sm font-semibold">{item.bankName}</span>
                 </Link>
-                <span
-                  className={`text-right tabular text-sm font-semibold ${i === 0 ? "text-primary" : ""}`}
-                >
-                  {item.cashBuying.toFixed(2)}
-                </span>
-                <span className="text-right tabular text-sm font-semibold">
-                  {item.cashSelling.toFixed(2)}
-                </span>
-                <span className="text-right text-sm font-semibold text-muted-foreground">—</span>
+                <div className="text-right">
+                  <p
+                    className={cn(
+                      "text-sm font-bold tabular",
+                      i === 0 ? "text-primary" : "text-foreground",
+                    )}
+                  >
+                    {item.cashBuying.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Buy
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold tabular text-foreground">
+                    {item.cashSelling.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Sell
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold tabular text-muted-foreground">—</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Trend
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
-          <div className="mt-4 text-center border-t border-border/60 pt-4">
+          <div className="mt-auto border-t border-border/60 pt-5">
             <Link
               to="/banks"
-              className="text-sm font-semibold text-primary hover:underline tracking-wider"
+              className="group flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-surface-low/40 px-4 py-2.5 text-sm font-semibold text-primary transition hover:border-primary/40 hover:bg-surface-low"
             >
-              VIEW ALL {reportingBanks}+ BANKS
+              View all {reportingBanks}+ banks
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
         </>
