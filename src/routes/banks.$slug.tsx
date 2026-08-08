@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   Clock,
   Download,
+  Globe,
   Phone,
   Mail,
   MapPin,
@@ -190,9 +191,17 @@ function BankDetails() {
                 label="Headquarters"
                 value={bank.hq ?? "—"}
               />
-              <button className="mt-5 w-full rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold">
-                Visit Official Website
-              </button>
+              {bank.website && (
+                <a
+                  href={bank.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <Globe className="size-4" />
+                  Visit Official Website
+                </a>
+              )}
             </SurfaceCard>
 
             <SurfaceCard className="p-6">

@@ -66,6 +66,11 @@ describe("mapBankRow", () => {
     expect(bank.totalAssets).toBeUndefined();
     expect(bank.branches).toBeUndefined();
   });
+
+  it("maps source_url into the website field", () => {
+    const bank = mapBankRow(bankRow({ source_url: "https://www.awashbank.com/exchange-rate" }));
+    expect(bank.website).toBe("https://www.awashbank.com/exchange-rate");
+  });
 });
 
 function rateRow(overrides: Partial<BackendExchangeRateRow> = {}): BackendExchangeRateRow {

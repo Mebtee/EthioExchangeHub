@@ -17,6 +17,8 @@ export interface Bank {
   phone?: string;
   email?: string;
   hq?: string;
+  /** Official website URL from the banks table's source_url column. */
+  website?: string;
   rating?: number;
   reviews?: number;
   branches?: number;
