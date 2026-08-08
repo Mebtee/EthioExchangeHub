@@ -130,11 +130,12 @@ function BankDetails() {
               />
             ) : (
               <>
-                <div className="grid grid-cols-[1.2fr_1fr_1fr_90px] gap-2 px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_1fr] gap-2 px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
                   <span>Currency</span>
-                  <span className="text-right">Buy (ETB)</span>
-                  <span className="text-right">Sell (ETB)</span>
-                  <span className="text-right">24h</span>
+                  <span className="text-right">Cash Buy</span>
+                  <span className="text-right">Cash Sell</span>
+                  <span className="text-right">Trans. Buy</span>
+                  <span className="text-right">Trans. Sell</span>
                 </div>
                 <ul className="mt-2 divide-y divide-border/60">
                   {bankRates.map((r) => {
@@ -142,7 +143,7 @@ function BankDetails() {
                     return (
                       <li
                         key={r.id}
-                        className="grid grid-cols-[1.2fr_1fr_1fr_90px] items-center gap-2 px-3 py-4"
+                        className="grid grid-cols-[1.2fr_1fr_1fr_1fr_1fr] items-center gap-2 px-3 py-4"
                       >
                         <div className="flex items-center gap-3">
                           <span className="size-9 rounded bg-surface-high text-[11px] font-bold flex items-center justify-center">
@@ -161,8 +162,11 @@ function BankDetails() {
                         <span className="text-right tabular font-semibold">
                           {formatRate(r.cashSelling)}
                         </span>
-                        <span className="text-right text-sm font-semibold text-muted-foreground">
-                          —
+                        <span className="text-right tabular font-semibold">
+                          {formatRate(r.transactionBuying)}
+                        </span>
+                        <span className="text-right tabular font-semibold">
+                          {formatRate(r.transactionSelling)}
                         </span>
                       </li>
                     );
