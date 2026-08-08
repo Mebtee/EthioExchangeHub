@@ -282,12 +282,8 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
     bank.totalAssets !== undefined ||
     bank.totalDeposits !== undefined ||
     bank.totalEmployees !== undefined ||
-    bank.loanToDepositRatio !== undefined ||
-    bank.returnOnAsset !== undefined ||
-    bank.returnOnEquity !== undefined ||
     bank.profitBeforeTax !== undefined ||
     bank.profitAfterTax !== undefined ||
-    bank.retainedEarnings !== undefined ||
     bank.paidUpCapital !== undefined ||
     bank.reserves !== undefined ||
     bank.totalLiabilities !== undefined;
@@ -299,23 +295,18 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
     { label: "Total Liabilities", value: formatEtbCompact(bank.totalLiabilities) },
     { label: "Total Deposits", value: formatEtbCompact(bank.totalDeposits) },
     { label: "Paid-up Capital", value: formatEtbCompact(bank.paidUpCapital) },
-    { label: "Retained Earnings", value: formatEtbCompact(bank.retainedEarnings) },
     { label: "Reserves", value: formatEtbCompact(bank.reserves) },
     { label: "Profit Before Tax", value: formatEtbCompact(bank.profitBeforeTax) },
     { label: "Profit After Tax", value: formatEtbCompact(bank.profitAfterTax) },
     { label: "Branches", value: formatEtbCompact(bank.branches) },
     { label: "Employees", value: formatEtbCompact(bank.totalEmployees) },
-    { label: "Loan / Deposit Ratio", value: formatPercent(bank.loanToDepositRatio) },
-    { label: "Return on Assets", value: formatPercent(bank.returnOnAsset) },
-    { label: "Return on Equity", value: formatPercent(bank.returnOnEquity) },
   ];
 
   return (
     <SurfaceCard className="p-6 mt-8">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
         <h2 className="text-lg font-semibold">
-          Financial Snapshot{" "}
-          <span className="text-sm font-medium text-muted-foreground">for 2025</span>
+          Financial Snapshot <span className="text-lg font-semibold">for 2025</span>
         </h2>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           Figures in ETB
