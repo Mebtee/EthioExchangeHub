@@ -62,6 +62,33 @@ export function getPrimaryCurrency(rates: ExchangeRate[]): string {
   return currencies.includes("USD") ? "USD" : (currencies[0] ?? "");
 }
 
+/**
+ * Newest `rateDate` among the currency's records — the single business day
+ * "today" surfaces must use for that currency. Undefined when the currency has
+ * no records. Per-currency by design: the latest business date is whatever the
+ * most recent published day for the selected currency is, never the global max.
+ */
+export function getLatestBusinessDate(rates: ExchangeRate[], currency: string): string | undefined {
+  return rates.reduce<string | undefined>(
+    (latest, rate) =>
+      rate.currency === currency && (!latest || rate.rateDate > latest) ? rate.rateDate : latest,
+    undefined,
+  );
+}
+
+/**
+ * Keeps only the currency's rows dated on its latest business date. Older rows
+ * for the same currency never participate in "today" rankings or best-rate
+ * computations, so banks that did not publish on the latest day are excluded
+ * instead of silently ranking on an older rate.
+ */
+export function filterToLatestBusinessDay(rates: ExchangeRate[], currency: string): ExchangeRate[] {
+  const latest = getLatestBusinessDate(rates, currency);
+  return latest
+    ? rates.filter((rate) => rate.currency === currency && rate.rateDate === latest)
+    : [];
+}
+
 /** All rate records published by the given bank (matched by name). */
 export function getRatesForBank(rates: ExchangeRate[], bankName: string): ExchangeRate[] {
   const name = bankName.trim().toLowerCase();

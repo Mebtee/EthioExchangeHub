@@ -21,9 +21,9 @@ export interface BackendBankRow {
   total_deposite: number | null;
   total_branches: number | null;
   total_employee: number | null;
-  loan_to_deposite_ratio: number | null;
-  return_on_asset: number | null;
-  return_on_equity: number | null;
+  ratio_loan_to_deposite: number | null;
+  ratio_return_on_asset: number | null;
+  ratio_return_on_equity: number | null;
   profit_before_tax: number | null;
   profit_after_tax: number | null;
   retained_earning: number | null;
@@ -182,9 +182,9 @@ export function mapBankRow(row: BackendBankRow): Bank {
     totalAssets: toOptionalNumber(row.total_assets),
     totalDeposits: toOptionalNumber(row.total_deposite),
     totalEmployees: toOptionalNumber(row.total_employee),
-    loanToDepositRatio: toOptionalNumber(row.loan_to_deposite_ratio),
-    returnOnAsset: toOptionalNumber(row.return_on_asset),
-    returnOnEquity: toOptionalNumber(row.return_on_equity),
+    loanToDepositRatio: toOptionalNumber(row.ratio_loan_to_deposite),
+    returnOnAsset: toOptionalNumber(row.ratio_return_on_asset),
+    returnOnEquity: toOptionalNumber(row.ratio_return_on_equity),
     profitBeforeTax: toOptionalNumber(row.profit_before_tax),
     profitAfterTax: toOptionalNumber(row.profit_after_tax),
     retainedEarnings: toOptionalNumber(row.retained_earning),

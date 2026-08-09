@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { ExchangeRate } from "@/types/exchange-rate";
 
-import { buildRankings, dedupeLatestRates, getBestRate, getPrimaryCurrency } from "./rankings";
+import {
+  buildRankings,
+  dedupeLatestRates,
+  filterToLatestBusinessDay,
+  getBestRate,
+  getLatestBusinessDate,
+  getPrimaryCurrency,
+} from "./rankings";
 
 function rate(overrides: Partial<ExchangeRate>): ExchangeRate {
   return {
@@ -82,6 +89,42 @@ describe("getBestRate", () => {
   it("returns undefined when no finite value exists for the field", () => {
     const rates = [rate({ currency: "USD", transactionBuying: Number.NaN })];
     expect(getBestRate(rates, "USD", "transactionBuying", "max")).toBeUndefined();
+  });
+});
+
+describe("getLatestBusinessDate", () => {
+  it("returns the newest rate_date for the selected currency only", () => {
+    const rates = [
+      rate({ bankName: "Awash Bank", currency: "USD", rateDate: "2026-08-08" }),
+      rate({ bankName: "CBE", currency: "USD", rateDate: "2026-08-09" }),
+      rate({ bankName: "CBE", currency: "EUR", rateDate: "2026-08-10" }),
+    ];
+    expect(getLatestBusinessDate(rates, "USD")).toBe("2026-08-09");
+  });
+
+  it("returns undefined when the currency has no records", () => {
+    expect(getLatestBusinessDate([rate({ currency: "USD" })], "EUR")).toBeUndefined();
+    expect(getLatestBusinessDate([], "USD")).toBeUndefined();
+  });
+});
+
+describe("filterToLatestBusinessDay", () => {
+  it("keeps only the currency's rows on its latest business date", () => {
+    const rates = [
+      rate({ bankName: "Hibret Bank", currency: "USD", rateDate: "2026-08-09" }),
+      rate({ bankName: "Zemen Bank", currency: "USD", rateDate: "2026-08-09" }),
+      rate({ bankName: "Abay Bank", currency: "USD", rateDate: "2026-08-08" }),
+      rate({ bankName: "CBE", currency: "EUR", rateDate: "2026-08-09" }),
+    ];
+    const filtered = filterToLatestBusinessDay(rates, "USD");
+    expect(filtered).toHaveLength(2);
+    expect(filtered.every((r) => r.rateDate === "2026-08-09" && r.currency === "USD")).toBe(true);
+    expect(filtered.map((r) => r.bankName).sort()).toEqual(["Hibret Bank", "Zemen Bank"]);
+  });
+
+  it("returns an empty list when the currency has no rows", () => {
+    expect(filterToLatestBusinessDay([rate({ currency: "USD" })], "EUR")).toEqual([]);
+    expect(filterToLatestBusinessDay([], "USD")).toEqual([]);
   });
 });
 

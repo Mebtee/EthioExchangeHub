@@ -8,7 +8,12 @@ import { RateHero } from "@/components/home/rate-hero";
 import { LiveRankings } from "@/components/home/live-rankings";
 import { CurrencyConverter } from "@/components/home/currency-converter";
 import { FinancialNews } from "@/components/home/financial-news";
-import { getBestRate, getLatestUpdate, getPrimaryCurrency } from "@/lib/rankings";
+import {
+  filterToLatestBusinessDay,
+  getBestRate,
+  getLatestBusinessDate,
+  getPrimaryCurrency,
+} from "@/lib/rankings";
 import { formatRateDate } from "@/lib/format";
 import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
 import { Seo } from "@/components/shared/seo";
@@ -20,26 +25,28 @@ function HomePage() {
 
   const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
-  // D2: the hero prefers fresh rates — stale rows are never silently shown as
-  // "best". When no fresh rate exists for the primary currency, it falls back
-  // to the best available (possibly stale) rate and flags it on the card.
-  const freshRates = useMemo(() => rates.filter((r) => !r.stale), [rates]);
+  // "Today" is defined as the primary currency's latest business date. Rates
+  // from older dates never compete for the hero: only rows published on that
+  // day are eligible, so a numerically better but older rate can't win.
+  const latestBusinessDate = useMemo(
+    () => getLatestBusinessDate(rates, primaryCurrency),
+    [rates, primaryCurrency],
+  );
+
+  const todayRates = useMemo(
+    () => filterToLatestBusinessDay(rates, primaryCurrency),
+    [rates, primaryCurrency],
+  );
 
   const bestBuy = useMemo(
-    () =>
-      getBestRate(freshRates, primaryCurrency, "cashBuying", "max") ??
-      getBestRate(rates, primaryCurrency, "cashBuying", "max"),
-    [freshRates, rates, primaryCurrency],
+    () => getBestRate(todayRates, primaryCurrency, "cashBuying", "max"),
+    [todayRates, primaryCurrency],
   );
 
   const bestSell = useMemo(
-    () =>
-      getBestRate(freshRates, primaryCurrency, "cashSelling", "min") ??
-      getBestRate(rates, primaryCurrency, "cashSelling", "min"),
-    [freshRates, rates, primaryCurrency],
+    () => getBestRate(todayRates, primaryCurrency, "cashSelling", "min"),
+    [todayRates, primaryCurrency],
   );
-
-  const latestUpdate = useMemo(() => getLatestUpdate(rates), [rates]);
 
   const rate = bestBuy?.cashBuying;
 
@@ -94,7 +101,7 @@ function HomePage() {
               </p>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
                 <CalendarDays className="size-3.5" />
-                As of {latestUpdate ? formatRateDate(latestUpdate) : "—"}
+                As of {latestBusinessDate ? formatRateDate(latestBusinessDate) : "—"}
               </span>
             </div>
             <RateHero
