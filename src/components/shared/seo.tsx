@@ -43,3 +43,27 @@ export function Seo({
 
   return null;
 }
+
+/**
+ * Injects JSON-LD structured data (BreadcrumbList etc.) into <head> as a
+ * single id-keyed script. The script is replaced on data change and removed
+ * when the component unmounts, so navigating between pages never leaves stale
+ * structured data behind. The static WebSite/Organization graph in index.html
+ * is untouched.
+ */
+export function JsonLd({ id, data }: { id: string; data: object }) {
+  useEffect(() => {
+    const scriptId = `jsonld-${id}`;
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.type = "application/ld+json";
+      script.id = scriptId;
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(data);
+    return () => script?.remove();
+  }, [id, data]);
+
+  return null;
+}

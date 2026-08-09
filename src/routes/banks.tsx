@@ -59,17 +59,17 @@ function BanksPage() {
   return (
     <SiteShell>
       <Seo
-        title="Bank Directory — Ethiopian Bank Exchange Rates | Ethio Exchange"
-        description="Browse live buying and selling exchange rates from Ethiopia's major commercial banks, updated in real time."
+        title="Ethiopian Banks Exchange Rates — Ethio Exchange"
+        description="Compare buying and selling exchange rates from Ethiopia's commercial banks for USD, EUR, GBP and more — updated in real time on Ethio Exchange."
       />
       <PageContainer>
         <PageHeader
-          title="Bank Directory"
+          title="Ethiopian Bank Exchange Rates"
           description={
             isLoading
               ? "Loading commercial bank rates…"
               : primaryCurrency
-                ? `${bankEntries.length} commercial banks reporting live ${primaryCurrency}/ETB rates.`
+                ? `${bankEntries.length} commercial banks reporting live ${primaryCurrency}/ETB rates. Compare buying and selling rates across Ethiopia's banks, or search for a specific bank below.`
                 : "No bank rates available yet."
           }
           action={

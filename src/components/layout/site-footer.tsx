@@ -40,7 +40,18 @@ export function SiteFooter() {
           links={[
             { to: "/", label: "Rates" },
             { to: "/banks", label: "Banks" },
+            { to: "/rankings", label: "Rankings" },
             { to: "/news", label: "News" },
+          ]}
+        />
+        <FooterCol
+          title="Currency Converter"
+          links={[
+            { to: "/usd-to-etb", label: "USD to ETB" },
+            { to: "/eur-to-etb", label: "EUR to ETB" },
+            { to: "/gbp-to-etb", label: "GBP to ETB" },
+            { to: "/sar-to-etb", label: "SAR to ETB" },
+            { to: "/aed-to-etb", label: "AED to ETB" },
           ]}
         />
         <FooterCol
