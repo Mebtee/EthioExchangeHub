@@ -206,10 +206,12 @@ function CurrencyToEtbPage({ currency }: { currency: string }) {
                     <span className="text-2xl font-bold text-primary tabular">
                       {bestBuy.cashBuying.toFixed(2)}
                     </span>{" "}
-                    ETB
+                    ETB{" "}
+                    <span className="font-semibold text-foreground">(best bank buying rate)</span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Best cash buying rate available at {bestBuy.bankName}.
+                    Available at {bestBuy.bankName} — the highest cash buying rate across Ethiopian
+                    banks.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 font-semibold">
