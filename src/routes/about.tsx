@@ -12,10 +12,15 @@ import {
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { Pill } from "@/components/shared/pill";
+import { Seo } from "@/components/shared/seo";
 
 function AboutPage() {
   return (
     <SiteShell>
+      <Seo
+        title="About Us — Ethio Exchange"
+        description="Learn how Ethio Exchange tracks and compares Ethiopian bank exchange rates in real time."
+      />
       <PageContainer>
         <div className="grid gap-10 lg:grid-cols-2 items-center">
           <div>

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { NewsCard } from "@/components/news/news-card";
 import { useNews, useNewsCategories } from "@/hooks";
+import { Seo } from "@/components/shared/seo";
 
 const ALL_CATEGORIES = "All";
 
@@ -39,6 +40,10 @@ function NewsPage() {
 
   return (
     <SiteShell>
+      <Seo
+        title="Market Insights & Banking News — Ethio Exchange"
+        description="Latest trends and official announcements from Ethiopia's financial sector."
+      />
       <PageContainer>
         <PageHeader
           title="Market Insights"

@@ -11,6 +11,7 @@ import { FinancialNews } from "@/components/home/financial-news";
 import { getBestRate, getLatestUpdate, getPrimaryCurrency } from "@/lib/rankings";
 import { formatRateDate } from "@/lib/format";
 import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
+import { Seo } from "@/components/shared/seo";
 
 function HomePage() {
   const { data: rates = [], isLoading, isError, error, refetch } = useExchangeRates();
@@ -44,6 +45,10 @@ function HomePage() {
 
   return (
     <SiteShell>
+      <Seo
+        title="Ethio Exchange — Ethiopian Bank Exchange Rates & Currency Converter"
+        description="Compare live buying and selling exchange rates for USD, EUR, GBP and more from Ethiopia's commercial banks — updated in real time. Use our free currency converter and rate rankings."
+      />
       <MarketTicker />
       <PageContainer>
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">

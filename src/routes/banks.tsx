@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { dedupeLatestRates, getPrimaryCurrency } from "@/lib/rankings";
 import { useBanks, useExchangeRates } from "@/hooks";
+import { Seo } from "@/components/shared/seo";
 
 function key(bankName: string): string {
   return bankName.trim().toLowerCase();
@@ -57,6 +58,10 @@ function BanksPage() {
 
   return (
     <SiteShell>
+      <Seo
+        title="Bank Directory — Ethiopian Bank Exchange Rates | Ethio Exchange"
+        description="Browse live buying and selling exchange rates from Ethiopia's major commercial banks, updated in real time."
+      />
       <PageContainer>
         <PageHeader
           title="Bank Directory"

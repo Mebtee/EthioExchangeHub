@@ -10,6 +10,8 @@
     />
     <meta name="theme-color" content="#16a34a" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://ethioexchange.live/" />
 
     <!-- Open Graph / social sharing -->
     <meta property="og:type" content="website" />
@@ -19,6 +21,7 @@
       property="og:description"
       content="Ethiopia's leading aggregator for real-time foreign exchange rates and banking insights."
     />
+    <meta property="og:url" content="https://ethioexchange.live/" />
 
     <!-- Twitter card -->
     <meta name="twitter:card" content="summary" />
@@ -41,10 +44,22 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Ethio Exchange",
-        "url": "https://ethioexchange.live",
-        "description": "Real-time foreign exchange rates from Ethiopian banks."
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://ethioexchange.live/#website",
+            "url": "https://ethioexchange.live/",
+            "name": "Ethio Exchange",
+            "inLanguage": "en",
+            "description": "Real-time foreign exchange rates from Ethiopian banks."
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://ethioexchange.live/#organization",
+            "name": "Ethio Exchange",
+            "url": "https://ethioexchange.live/"
+          }
+        ]
       }
     </script>
   </head>
