@@ -5,7 +5,7 @@ import { apiExamples } from "../examples";
 /** Administrator profile as served by `GET /admin/profile`. */
 export const adminProfileSchema: OpenAPIV3_1.SchemaObject = {
   type: "object",
-  description: "The configured administrator profile (single admin until auth ships).",
+  description: "The authenticated administrator's profile, sourced from their `users` row.",
   example: apiExamples.adminProfile,
   properties: {
     name: { type: "string", description: "Admin full name." },

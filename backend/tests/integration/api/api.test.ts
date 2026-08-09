@@ -525,7 +525,7 @@ describe("Scrape-log endpoints", () => {
 });
 
 describe("Admin profile endpoints", () => {
-  it("GET /api/v1/admin/profile returns the persisted profile merged with defaults", async () => {
+  it("GET /api/v1/admin/profile returns the authenticated user's real profile", async () => {
     const res = await request(app)
       .get("/api/v1/admin/profile")
       .set(await adminAuth());
@@ -533,8 +533,10 @@ describe("Admin profile endpoints", () => {
     expect(res.body.data).toMatchObject({
       name: "Root Admin",
       initials: "RA",
-      role: "Administrator",
+      role: "super_admin",
     });
+    expect(res.body.data.memberSince).toBeTypeOf("string");
+    expect(res.body.data.lastLogin).toBeTypeOf("string");
   });
 
   it("PUT /api/v1/admin/profile persists changes and the next GET reflects them", async () => {
@@ -547,9 +549,17 @@ describe("Admin profile endpoints", () => {
     expect(res.body.data.email).toBe("jane@example.com");
     expect(res.body.data.initials).toBe("JD");
 
+    // The email is the login identifier, so the follow-up signs in with the
+    // updated email — the stored profile is re-read from the users row.
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email: "jane@example.com",
+      password: process.env.ADMIN_PASSWORD,
+    });
+    expect(login.status).toBe(200);
+    const tokens = login.body.data.tokens as { accessToken: string };
     const after = await request(app)
       .get("/api/v1/admin/profile")
-      .set(await adminAuth());
+      .set({ Authorization: `Bearer ${tokens.accessToken}` });
     expect(after.body.data.name).toBe("Jane Doe");
   });
 

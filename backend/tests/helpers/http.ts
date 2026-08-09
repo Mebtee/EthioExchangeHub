@@ -22,9 +22,9 @@ export function createMockResponse(): Response & {
   };
 }
 
-/** A mock request with the given overrides (params/query/body/headers). */
+/** A mock request with the given overrides (params/query/body/headers/user). */
 export function createMockRequest(
-  overrides: Partial<Pick<Request, "params" | "query" | "body" | "headers">> = {},
+  overrides: Partial<Pick<Request, "params" | "query" | "body" | "headers" | "user">> = {},
 ): Request {
   return {
     params: {},
