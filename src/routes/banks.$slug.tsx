@@ -23,6 +23,7 @@ import { formatEtbCompact, formatPercent, formatRate, formatRateDate } from "@/l
 import type { Bank } from "@/types/bank";
 import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
+import { Seo } from "@/components/shared/seo";
 
 function BankDetails() {
   const { slug } = useParams<{ slug: string }>();
@@ -65,6 +66,10 @@ function BankDetails() {
 
   return (
     <SiteShell>
+      <Seo
+        title={`${bank.name} — Ethiopian Bank Exchange Rates | Ethio Exchange`}
+        description={`Check today's live USD, EUR, GBP and other exchange rates at ${bank.name}, updated in real time.`}
+      />
       <PageContainer>
         {/* Header card */}
         <SurfaceCard className="p-6 flex flex-col md:flex-row gap-6">

@@ -13,6 +13,7 @@ import {
   type ContactFormErrors,
   type ContactFormState,
 } from "@/lib/contact-form";
+import { Seo } from "@/components/shared/seo";
 
 const EMPTY_FORM: ContactFormState = { name: "", email: "", subject: "", message: "" };
 
@@ -53,6 +54,10 @@ function ContactPage() {
 
   return (
     <SiteShell>
+      <Seo
+        title="Contact Us — Ethio Exchange"
+        description="Questions about our data, API access, or partnerships? Send us a message and our team will get back to you."
+      />
       <PageContainer>
         <div className="max-w-2xl">
           <h1 className="text-4xl font-bold tracking-tight">Get in Touch</h1>

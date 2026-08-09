@@ -4,6 +4,7 @@ import { RankingsTable } from "@/components/rankings/rankings-table";
 import { RankingsInsights } from "@/components/rankings/rankings-insights";
 import { useRankings } from "@/hooks";
 import { rateFieldLabel } from "@/lib/rankings";
+import { Seo } from "@/components/shared/seo";
 
 function RankingsPage() {
   const {
@@ -26,6 +27,10 @@ function RankingsPage() {
 
   return (
     <SiteShell>
+      <Seo
+        title="Bank Exchange Rate Rankings — Ethio Exchange"
+        description="Real-time exchange rate rankings across major Ethiopian financial institutions — find which bank offers the best rates."
+      />
       <PageContainer>
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">
