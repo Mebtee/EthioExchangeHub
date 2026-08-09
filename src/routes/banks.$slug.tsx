@@ -1,16 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import {
-  BadgeCheck,
-  Clock,
-  Download,
-  Globe,
-  Phone,
-  Mail,
-  MapPin,
-  Star,
-  Smartphone,
-  Lightbulb,
-} from "lucide-react";
+import { ArrowLeft, Building2, Clock, Globe, Lightbulb, MapPin, Users } from "lucide-react";
 import { useMemo } from "react";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
@@ -19,7 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-
 import { InfoItem } from "@/components/shared/info-item";
 import { Pill } from "@/components/shared/pill";
 import { SurfaceCard } from "@/components/shared/surface-card";
-import { formatEtbCompact, formatPercent, formatRate, formatRateDate } from "@/lib/format";
+import { formatEtbCompact, formatRateDate, formatRateOrDash } from "@/lib/format";
 import type { Bank } from "@/types/bank";
 import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
@@ -61,7 +50,7 @@ function BankDetails() {
   const metaDescription =
     bank && availableCurrencies.length > 0
       ? `Check the latest ${bank.name} exchange rates for ${formatCurrencyList(availableCurrencies)}. Compare buying and selling rates on Ethio Exchange.`
-      : `Check the latest ${bank.name} exchange rates and compare buying and selling rates for major currencies on Ethio Exchange.`;
+      : `Check the latest ${bank?.name ?? "this bank"} exchange rates and compare buying and selling rates for major currencies on Ethio Exchange.`;
 
   const breadcrumb = useMemo(
     () => ({
@@ -94,7 +83,12 @@ function BankDetails() {
   if (bankLoading) {
     return (
       <SiteShell>
-        <PageContainer>{null}</PageContainer>
+        <PageContainer>
+          <LoadingState
+            label="Loading bank details…"
+            hint="Fetching this bank's profile and rates."
+          />
+        </PageContainer>
       </SiteShell>
     );
   }
@@ -104,8 +98,12 @@ function BankDetails() {
       <SiteShell>
         <PageContainer>
           <h1 className="text-2xl font-bold">Bank not found</h1>
-          <Link to="/banks" className="text-primary hover:underline">
-            Back to banks
+          <Link
+            to="/banks"
+            className="mt-4 inline-flex items-center gap-2 text-primary hover:underline"
+          >
+            <ArrowLeft className="size-4" />
+            Back to all banks
           </Link>
         </PageContainer>
       </SiteShell>
@@ -120,6 +118,14 @@ function BankDetails() {
       />
       <JsonLd id="bank-breadcrumbs" data={breadcrumb} />
       <PageContainer>
+        <Link
+          to="/banks"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
+        >
+          <ArrowLeft className="size-4" />
+          Back to all banks
+        </Link>
+
         {/* Breadcrumb-style contextual navigation */}
         <nav aria-label="Breadcrumb" className="mb-6">
           <ol className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -162,17 +168,13 @@ function BankDetails() {
                 {bank.name} Exchange Rates
               </h1>
               <span className="rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1">
-                Premium Member
+                {bank.type}
               </span>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground max-w-3xl">{bank.description}</p>
+            {bank.description && (
+              <p className="mt-3 text-sm text-muted-foreground max-w-3xl">{bank.description}</p>
+            )}
             <div className="mt-5 flex flex-wrap gap-3 text-sm">
-              <Pill
-                icon={<BadgeCheck className="size-4 text-primary" />}
-                className="bg-surface-low text-xs"
-              >
-                Verified NBE Rates
-              </Pill>
               <Pill
                 icon={<Clock className="size-4 text-muted-foreground" />}
                 className="bg-surface-low text-xs"
@@ -188,12 +190,7 @@ function BankDetails() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           {/* FX rates table */}
           <SurfaceCard className="p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold">Foreign Exchange Rates</h2>
-              <button className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
-                <Download className="size-4" /> CSV Export
-              </button>
-            </div>
+            <h2 className="text-lg font-semibold mb-5">Foreign Exchange Rates</h2>
 
             {bankRates.length > 0 && (
               <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
@@ -205,7 +202,7 @@ function BankDetails() {
                 bank charges to sell foreign currency to you. Rates shown are as of{" "}
                 {latestUpdate ? formatRateDate(latestUpdate) : "the latest update"} —{" "}
                 <Link to="/rankings" className="text-primary font-semibold hover:underline">
-                  compare {bank.short} with other banks
+                  compare this bank with others
                 </Link>
                 , or use the{" "}
                 <Link to="/" className="text-primary font-semibold hover:underline">
@@ -260,16 +257,16 @@ function BankDetails() {
                           </div>
                         </div>
                         <span className="text-right tabular font-semibold">
-                          {formatRate(r.cashBuying)}
+                          {formatRateOrDash(r.cashBuying)}
                         </span>
                         <span className="text-right tabular font-semibold">
-                          {formatRate(r.cashSelling)}
+                          {formatRateOrDash(r.cashSelling)}
                         </span>
                         <span className="text-right tabular font-semibold">
-                          {formatRate(r.transactionBuying)}
+                          {formatRateOrDash(r.transactionBuying)}
                         </span>
                         <span className="text-right tabular font-semibold">
-                          {formatRate(r.transactionSelling)}
+                          {formatRateOrDash(r.transactionSelling)}
                         </span>
                       </li>
                     );
@@ -279,24 +276,24 @@ function BankDetails() {
             )}
           </SurfaceCard>
 
-          {/* Contact + rating */}
+          {/* Real bank profile details */}
           <section className="space-y-6">
             <SurfaceCard className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+              <h3 className="text-lg font-semibold mb-4">Bank Details</h3>
               <InfoItem
-                icon={<Phone className="size-4 text-primary" />}
-                label="Customer Support"
-                value={bank.phone ?? "—"}
-              />
-              <InfoItem
-                icon={<Mail className="size-4 text-primary" />}
-                label="Email Address"
-                value={bank.email ?? "—"}
+                icon={<Building2 className="size-4 text-primary" />}
+                label="Bank Type"
+                value={bank.type}
               />
               <InfoItem
                 icon={<MapPin className="size-4 text-primary" />}
-                label="Headquarters"
-                value={bank.hq ?? "—"}
+                label="Total Branches"
+                value={bank.branches ? bank.branches.toLocaleString() : "—"}
+              />
+              <InfoItem
+                icon={<Users className="size-4 text-primary" />}
+                label="Total Employees"
+                value={bank.totalEmployees ? bank.totalEmployees.toLocaleString() : "—"}
               />
               {bank.website && (
                 <a
@@ -311,30 +308,7 @@ function BankDetails() {
               )}
             </SurfaceCard>
 
-            <SurfaceCard className="p-6">
-              <h3 className="text-lg font-semibold">User Rating Summary</h3>
-              <div className="flex items-end gap-3 mt-3">
-                <span className="text-4xl font-bold tabular text-[color:var(--gold-foreground)]">
-                  {bank.rating?.toFixed(1)}
-                </span>
-                <div>
-                  <div className="flex text-[color:var(--gold)]">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`size-4 ${i < Math.round(bank.rating ?? 0) ? "fill-current" : ""}`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Based on {bank.reviews?.toLocaleString()} reviews
-                  </p>
-                </div>
-              </div>
-              <button className="mt-5 w-full rounded-xl border border-primary/40 text-primary py-2.5 text-sm font-semibold hover:bg-primary/5">
-                Write a Review
-              </button>
-            </SurfaceCard>
+            <BankFinancialHealth bank={bank} />
 
             <div className="rounded-2xl bg-[color:var(--gold-soft)] border border-[color:var(--gold)]/30 p-5">
               <div className="flex items-center gap-2 text-[color:var(--gold-foreground)] font-semibold text-sm">
@@ -346,34 +320,6 @@ function BankDetails() {
               </p>
             </div>
           </section>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          <SurfaceCard className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Branch Locations</h3>
-              <Link to="/banks" className="text-sm font-semibold text-primary hover:underline">
-                View All
-              </Link>
-            </div>
-            <div className="rounded-xl h-44 bg-[linear-gradient(135deg,#e7e8e9_0%,#f3f4f5_100%)] flex items-end p-4">
-              <span className="inline-flex items-center gap-2 text-xs font-semibold bg-card rounded-full px-3 py-1.5 shadow">
-                <MapPin className="size-3.5 text-primary" />{" "}
-                {bank.branches ? `${bank.branches}+ Branches Nationwide` : "Branches Nationwide"}
-              </span>
-            </div>
-          </SurfaceCard>
-          <div className="rounded-2xl bg-primary text-primary-foreground p-6">
-            <h3 className="text-lg font-semibold mb-2">Digital Banking</h3>
-            <p className="text-sm text-primary-foreground/80">
-              Experience seamless foreign currency applications and swift transfers via our{" "}
-              {bank.short} mobile app.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <StoreBtn label="App Store" />
-              <StoreBtn label="Google Play" />
-            </div>
-          </div>
         </div>
       </PageContainer>
     </SiteShell>
@@ -412,9 +358,7 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
   return (
     <SurfaceCard className="p-6 mt-8">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
-        <h2 className="text-lg font-semibold">
-          Financial Snapshot <span className="text-lg font-semibold">for 2025</span>
-        </h2>
+        <h2 className="text-lg font-semibold">Financial Snapshot</h2>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           Figures in ETB
         </span>
@@ -433,15 +377,32 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
   );
 }
 
-function StoreBtn({ label }: { label: string }) {
+/**
+ * Financial health ratios from the bank's published financials. Renders only
+ * when at least one ratio exists; the values are already percentages, so they
+ * are displayed directly rather than scaled.
+ */
+function BankFinancialHealth({ bank }: { bank: Bank }) {
+  const ratios: { label: string; value?: number }[] = [
+    { label: "Loan to Deposit Ratio", value: bank.loanToDepositRatio },
+    { label: "Return on Assets", value: bank.returnOnAsset },
+    { label: "Return on Equity", value: bank.returnOnEquity },
+  ];
+  const present = ratios.filter((r) => typeof r.value === "number");
+  if (present.length === 0) return null;
+
   return (
-    <button className="inline-flex items-center gap-2 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 px-3 py-2.5 text-sm hover:bg-primary-foreground/15 transition">
-      <Smartphone className="size-4" />
-      <span className="text-left">
-        <span className="block text-[10px] uppercase tracking-wider opacity-80">Download on</span>
-        <span className="block font-semibold">{label}</span>
-      </span>
-    </button>
+    <SurfaceCard className="p-6">
+      <h3 className="text-lg font-semibold">Financial Health</h3>
+      <dl className="mt-3 space-y-2.5">
+        {present.map((r) => (
+          <div key={r.label} className="flex items-center justify-between gap-3 py-2">
+            <dt className="text-sm text-muted-foreground">{r.label}</dt>
+            <dd className="text-sm font-bold tabular">{r.value?.toFixed(2)}%</dd>
+          </div>
+        ))}
+      </dl>
+    </SurfaceCard>
   );
 }
 

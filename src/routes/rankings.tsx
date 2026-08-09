@@ -18,6 +18,7 @@ function RankingsPage() {
     setQuery,
     asOfDate,
     setAsOfDate,
+    latestBusinessDate,
     rankings,
     totalBanks,
     isLoading,
@@ -49,7 +50,7 @@ function RankingsPage() {
             <span className="font-semibold text-foreground">{currency || "all currencies"}</span>,
             using the rates each bank published on{" "}
             <span className="font-semibold text-foreground">
-              {asOfDate ? formatRateDate(asOfDate) : "the latest available day"}
+              {latestBusinessDate ? formatRateDate(latestBusinessDate) : "the latest available day"}
             </span>
             . {fieldMeta?.direction === "asc" ? "Selling" : "Buying"} rates are ranked{" "}
             {fieldMeta?.direction === "asc" ? "lowest first" : "highest first"} — {directionNote}.
