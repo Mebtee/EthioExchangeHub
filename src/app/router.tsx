@@ -19,6 +19,7 @@ const RankingsPage = lazy(() => import("@/routes/rankings"));
 const NewsPage = lazy(() => import("@/routes/news"));
 const AboutPage = lazy(() => import("@/routes/about"));
 const ContactPage = lazy(() => import("@/routes/contact"));
+const CurrencyToEtbPage = lazy(() => import("@/routes/currency-to-etb"));
 
 const AdminLoginPage = lazy(() => import("@/routes/admin/login"));
 const AdminForgotPasswordPage = lazy(() => import("@/routes/admin/forgot-password"));
@@ -39,6 +40,11 @@ export function AppRoutes() {
         <Route path="/banks" element={<BanksPage />} />
         <Route path="/banks/:slug" element={<BankDetailsPage />} />
         <Route path="/rankings" element={<RankingsPage />} />
+        <Route path="/usd-to-etb" element={<CurrencyToEtbPage currency="USD" />} />
+        <Route path="/eur-to-etb" element={<CurrencyToEtbPage currency="EUR" />} />
+        <Route path="/gbp-to-etb" element={<CurrencyToEtbPage currency="GBP" />} />
+        <Route path="/sar-to-etb" element={<CurrencyToEtbPage currency="SAR" />} />
+        <Route path="/aed-to-etb" element={<CurrencyToEtbPage currency="AED" />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />

@@ -23,7 +23,14 @@ import { formatEtbCompact, formatPercent, formatRate, formatRateDate } from "@/l
 import type { Bank } from "@/types/bank";
 import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
-import { Seo } from "@/components/shared/seo";
+import { JsonLd, Seo } from "@/components/shared/seo";
+
+/** Up to three currency codes in a natural list, e.g. "USD, EUR, GBP, and more". */
+function formatCurrencyList(codes: string[]): string {
+  const top = codes.slice(0, 3);
+  const list = top.length <= 2 ? top.join(" and ") : `${top[0]}, ${top[1]}, and ${top[2]}`;
+  return codes.length > top.length ? `${list}, and more` : list;
+}
 
 function BankDetails() {
   const { slug } = useParams<{ slug: string }>();
@@ -42,6 +49,47 @@ function BankDetails() {
   const latestUpdate = useMemo(() => getLatestUpdate(bankRates), [bankRates]);
 
   const currencyByCode = useMemo(() => new Map(currencies.map((c) => [c.code, c])), [currencies]);
+
+  const availableCurrencies = useMemo(() => {
+    const seen: string[] = [];
+    for (const r of bankRates) {
+      if (!seen.includes(r.currency)) seen.push(r.currency);
+    }
+    return seen;
+  }, [bankRates]);
+
+  const metaDescription =
+    bank && availableCurrencies.length > 0
+      ? `Check the latest ${bank.name} exchange rates for ${formatCurrencyList(availableCurrencies)}. Compare buying and selling rates on Ethio Exchange.`
+      : `Check the latest ${bank.name} exchange rates and compare buying and selling rates for major currencies on Ethio Exchange.`;
+
+  const breadcrumb = useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://ethioexchange.live/",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Ethiopian Banks",
+          item: "https://ethioexchange.live/banks",
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: bank?.name ?? "",
+          item: `https://ethioexchange.live/banks/${bank?.slug ?? ""}`,
+        },
+      ],
+    }),
+    [bank],
+  );
 
   if (bankLoading) {
     return (
@@ -67,10 +115,38 @@ function BankDetails() {
   return (
     <SiteShell>
       <Seo
-        title={`${bank.name} — Ethiopian Bank Exchange Rates | Ethio Exchange`}
-        description={`Check today's live USD, EUR, GBP and other exchange rates at ${bank.name}, updated in real time.`}
+        title={`${bank.name} Exchange Rate Today — Ethio Exchange`}
+        description={metaDescription}
       />
+      <JsonLd id="bank-breadcrumbs" data={breadcrumb} />
       <PageContainer>
+        {/* Breadcrumb-style contextual navigation */}
+        <nav aria-label="Breadcrumb" className="mb-6">
+          <ol className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <li>
+              <Link to="/" className="hover:text-primary transition-colors">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link to="/banks" className="hover:text-primary transition-colors">
+                All Ethiopian Banks
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link to="/rankings" className="hover:text-primary transition-colors">
+                Bank Rankings
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="font-semibold text-foreground">
+              {bank.name}
+            </li>
+          </ol>
+        </nav>
+
         {/* Header card */}
         <SurfaceCard className="p-6 flex flex-col md:flex-row gap-6">
           <BankAvatar
@@ -82,7 +158,9 @@ function BankDetails() {
           />
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{bank.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {bank.name} Exchange Rates
+              </h1>
               <span className="rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1">
                 Premium Member
               </span>
@@ -116,6 +194,26 @@ function BankDetails() {
                 <Download className="size-4" /> CSV Export
               </button>
             </div>
+
+            {bankRates.length > 0 && (
+              <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
+                The table lists {bank.name}'s exchange rates for{" "}
+                {formatCurrencyList(availableCurrencies)}. The{" "}
+                <strong className="font-semibold text-foreground">buying rate</strong> is what the
+                bank pays to purchase foreign currency from you, while the{" "}
+                <strong className="font-semibold text-foreground">selling rate</strong> is what the
+                bank charges to sell foreign currency to you. Rates shown are as of{" "}
+                {latestUpdate ? formatRateDate(latestUpdate) : "the latest update"} —{" "}
+                <Link to="/rankings" className="text-primary font-semibold hover:underline">
+                  compare {bank.short} with other banks
+                </Link>
+                , or use the{" "}
+                <Link to="/" className="text-primary font-semibold hover:underline">
+                  currency converter
+                </Link>{" "}
+                to convert at the best available rate.
+              </p>
+            )}
 
             {ratesLoading ? (
               <LoadingState
