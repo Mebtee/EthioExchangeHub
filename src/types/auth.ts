@@ -11,6 +11,10 @@ export interface AuthUser {
   role: string;
   /** Avatar URL, or null when the user has none; falls back to initials. */
   avatarUrl?: string | null;
+  /** Real account-creation timestamp, or null when unset. */
+  memberSince?: string | null;
+  /** Real last-login timestamp, or null when unset. */
+  lastLogin?: string | null;
 }
 
 export interface AuthTokens {

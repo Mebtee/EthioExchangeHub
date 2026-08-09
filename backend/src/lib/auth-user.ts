@@ -15,5 +15,7 @@ export function toAuthenticatedUser(user: UserRow): AuthenticatedUser {
     email: user.email,
     role: user.role,
     avatarUrl: user.avatar_url,
+    memberSince: user.created_at,
+    lastLogin: user.last_login_at,
   };
 }

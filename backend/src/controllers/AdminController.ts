@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 
+import { AuthenticationError } from "@/lib/errors";
 import { asyncHandler } from "@/middleware/async-handler";
 import type { ExchangeRatesService } from "@/services/ExchangeRatesService";
 import type {
@@ -24,15 +25,21 @@ export class AdminController {
     private readonly exchangeRatesService: ExchangeRatesService,
   ) {}
 
-  /** Returns the configured administrator profile. */
-  getProfile = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-    const profile = await this.settingsService.getProfile();
+  /** Returns the authenticated administrator's real profile. */
+  getProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    // `requireAuth` guarantees `req.user`; the check is a misconfiguration
+    // tripwire so an unguarded mount fails with 401 instead of a 500.
+    const user = req.user;
+    if (user === undefined) throw new AuthenticationError("Authentication required.");
+    const profile = await this.settingsService.getProfile(user);
     successResponse(res, profile, "Admin profile retrieved.");
   });
 
-  /** Updates the editable profile fields and returns the stored profile. */
+  /** Updates the authenticated admin's profile fields and returns the stored profile. */
   updateProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const profile = await this.settingsService.updateProfile(req.body as AdminProfileInput);
+    const user = req.user;
+    if (user === undefined) throw new AuthenticationError("Authentication required.");
+    const profile = await this.settingsService.updateProfile(user, req.body as AdminProfileInput);
     successResponse(res, profile, "Admin profile updated.");
   });
 

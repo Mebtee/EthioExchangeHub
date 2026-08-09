@@ -52,6 +52,8 @@ describe("createRequireAuth", () => {
       email: "admin@ethioexchange.test",
       role: "super_admin",
       avatarUrl: null,
+      memberSince: "2026-01-01T09:00:00.000Z",
+      lastLogin: null,
     });
     expect(next).toHaveBeenCalledWith();
   });

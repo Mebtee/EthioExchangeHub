@@ -101,10 +101,10 @@ export const apiExamples = {
     ran_at: "2026-08-02T08:00:00.000Z",
   },
   adminProfile: {
-    name: "Administrator",
+    name: "Root Admin",
     email: "admin@ethioexchangehub.com",
-    role: "Administrator",
-    initials: "AD",
+    role: "super_admin",
+    initials: "RA",
     memberSince: "2026-01-01",
     lastLogin: "2026-08-01T08:00:00.000Z",
   },

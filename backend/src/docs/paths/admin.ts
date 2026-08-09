@@ -6,8 +6,7 @@ export const adminPaths: Record<string, DocPathItem> = {
     get: {
       tags: ["Admin"],
       summary: "Get admin profile",
-      description:
-        "Returns the configured administrator profile (merged persisted values + defaults).",
+      description: "Returns the authenticated administrator's profile from the `users` row.",
       operationId: "getAdminProfile",
       security: [{ bearerAuth: [] }],
       responses: {

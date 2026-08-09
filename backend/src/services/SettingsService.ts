@@ -1,6 +1,11 @@
 import { adminProfileDefaults, adminSettingsDefaults } from "@/config/admin";
+import { AuthenticationError } from "@/lib/errors";
+import { toAuthenticatedUser } from "@/lib/auth-user";
 import type { SettingEntry } from "@/repositories/SettingsRepository";
 import { SettingsRepository } from "@/repositories/SettingsRepository";
+import type { UsersRepository } from "@/repositories/UsersRepository";
+import type { AuthenticatedUser } from "@/types/auth";
+import type { UserRow } from "@/types/database";
 
 /** Admin profile as served by `GET /admin/profile`. */
 export interface AdminProfileData {
@@ -47,20 +52,13 @@ export interface AdminSettingsInput {
 
 /** Public contract of the settings service. */
 export interface SettingsService {
-  getProfile(): Promise<AdminProfileData>;
-  updateProfile(input: AdminProfileInput): Promise<AdminProfileData>;
+  /** Returns the authenticated administrator's real profile from their `users` row. */
+  getProfile(user: AuthenticatedUser): Promise<AdminProfileData>;
+  /** Persists the provided profile fields to the authenticated user and re-reads the stored profile. */
+  updateProfile(user: AuthenticatedUser, input: AdminProfileInput): Promise<AdminProfileData>;
   getSettings(): Promise<AdminSettingsData>;
   updateSettings(input: AdminSettingsInput): Promise<AdminSettingsData>;
 }
-
-/** Maps profile response fields to their `settings` table keys. */
-const PROFILE_KEY_TO_FIELD: Record<string, keyof AdminProfileData> = {
-  admin_name: "name",
-  admin_email: "email",
-  admin_role: "role",
-  admin_member_since: "memberSince",
-  admin_last_login: "lastLogin",
-};
 
 /** Maps settings response fields to their `settings` table keys. */
 const SETTING_KEY_TO_FIELD: Record<string, keyof AdminSettingsData> = {
@@ -86,33 +84,39 @@ const BOOLEAN_SETTING_KEY: Record<string, string> = {
 /**
  * Admin profile/settings business logic.
  *
- * Reads merge persisted `settings` rows over the configured defaults in
- * `config/admin.ts` — a persisted value always wins, nothing is fabricated.
- * Writes persist exactly the provided fields (updates are real DB writes,
- * never simulated) and re-read so the response reflects stored state.
+ * The profile is the AUTHENTICATED administrator — name, email, role and the
+ * real member-since/last-login timestamps come from the `users` row attached
+ * by `requireAuth` (never from the settings table or hardcoded placeholders).
+ * `updateProfile` writes to the `users` row so edits persist and are reflected
+ * on the next read. Platform settings remain merged over the configured
+ * defaults in `config/admin.ts` (a persisted value always wins).
  */
 export class SettingsServiceImpl implements SettingsService {
-  constructor(private readonly settingsRepository: SettingsRepository) {}
+  constructor(
+    private readonly settingsRepository: SettingsRepository,
+    private readonly usersRepository: UsersRepository,
+  ) {}
 
-  async getProfile(): Promise<AdminProfileData> {
-    const values = await this.readFields(PROFILE_KEY_TO_FIELD);
-    const name = values.name ?? adminProfileDefaults.name;
-    const email = values.email ?? adminProfileDefaults.email;
-    const role = values.role ?? adminProfileDefaults.role;
-    return {
-      name,
-      email,
-      role,
-      initials: deriveInitials(name),
-      memberSince: values.memberSince ?? adminProfileDefaults.memberSince,
-      lastLogin: values.lastLogin ?? adminProfileDefaults.lastLogin,
-    };
+  async getProfile(user: AuthenticatedUser): Promise<AdminProfileData> {
+    return SettingsServiceImpl.buildProfile(user);
   }
 
-  async updateProfile(input: AdminProfileInput): Promise<AdminProfileData> {
-    const entries = SettingsServiceImpl.buildEntries(input);
-    if (entries.length > 0) await this.settingsRepository.upsertMany(entries);
-    return this.getProfile();
+  async updateProfile(
+    user: AuthenticatedUser,
+    input: AdminProfileInput,
+  ): Promise<AdminProfileData> {
+    const fields: Partial<Pick<UserRow, "name" | "email" | "role">> = {};
+    if (input.name !== undefined) fields.name = input.name;
+    if (input.email !== undefined) fields.email = input.email;
+    if (input.role !== undefined) fields.role = input.role;
+
+    if (Object.keys(fields).length > 0) {
+      await this.usersRepository.updateBy({ id: user.id }, fields);
+    }
+
+    const stored = await this.usersRepository.findById(user.id);
+    if (stored === null) throw new AuthenticationError("Session user no longer exists.");
+    return SettingsServiceImpl.buildProfile(toAuthenticatedUser(stored));
   }
 
   async getSettings(): Promise<AdminSettingsData> {
@@ -158,13 +162,18 @@ export class SettingsServiceImpl implements SettingsService {
     return values;
   }
 
-  /** Builds the settings entries for the editable profile fields. */
-  private static buildEntries(input: AdminProfileInput): SettingEntry[] {
-    const entries: SettingEntry[] = [];
-    if (input.name !== undefined) entries.push({ key: "admin_name", value: input.name });
-    if (input.email !== undefined) entries.push({ key: "admin_email", value: input.email });
-    if (input.role !== undefined) entries.push({ key: "admin_role", value: input.role });
-    return entries;
+  /** Builds the profile response from the authenticated user's real data. */
+  private static buildProfile(user: AuthenticatedUser): AdminProfileData {
+    return {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      initials: deriveInitials(user.name),
+      // created_at/last_login_at are always stamped on real accounts; the
+      // fallbacks only cover rows whose timestamps are still unset.
+      memberSince: user.memberSince ?? adminProfileDefaults.memberSince,
+      lastLogin: user.lastLogin ?? adminProfileDefaults.lastLogin,
+    };
   }
 }
 

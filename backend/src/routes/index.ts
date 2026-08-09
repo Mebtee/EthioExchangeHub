@@ -102,7 +102,8 @@ const scrapeLogsService = new ScrapeLogsServiceImpl(scrapeLogsRepository);
 const scrapeLogsController = new ScrapeLogsController(scrapeLogsService);
 
 const settingsRepository = new SettingsRepository();
-const settingsService = new SettingsServiceImpl(settingsRepository);
+const usersRepository = new UsersRepository();
+const settingsService = new SettingsServiceImpl(settingsRepository, usersRepository);
 const adminController = new AdminController(settingsService, exchangeRatesService);
 
 // ---- Authentication (A1/A2) ----
@@ -111,7 +112,6 @@ const adminController = new AdminController(settingsService, exchangeRatesServic
 // provisioned from server configuration on first login (never hardcoded in a
 // controller). Sensitive routers are mounted behind requireAuth + requireRole
 // so they are unreachable without a valid admin session.
-const usersRepository = new UsersRepository();
 const authService = new AuthServiceImpl(usersRepository, {
   jwtSecret: env.JWT_SECRET,
   accessTokenExpiresIn: env.JWT_EXPIRES_IN,

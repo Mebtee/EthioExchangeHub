@@ -14,8 +14,18 @@ export const authUserSchema: OpenAPIV3_1.SchemaObject = {
       format: "uri",
       description: "Optional avatar URL; the frontend falls back to initials.",
     },
+    memberSince: {
+      type: ["string", "null"],
+      format: "date-time",
+      description: "Real account-creation timestamp from the `users` row.",
+    },
+    lastLogin: {
+      type: ["string", "null"],
+      format: "date-time",
+      description: "Real last-login timestamp stamped on every successful login.",
+    },
   },
-  required: ["id", "name", "email", "role"],
+  required: ["id", "name", "email", "role", "avatarUrl", "memberSince", "lastLogin"],
 };
 
 /** Signed token pair returned by login and refresh. */

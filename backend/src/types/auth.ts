@@ -16,6 +16,10 @@ export interface AuthenticatedUser {
   role: string;
   /** Avatar URL, or null when the user has none (frontend falls back to initials). */
   avatarUrl: string | null;
+  /** Real account-creation timestamp from the `users` row, or null when unset. */
+  memberSince: string | null;
+  /** Real last-login timestamp stamped on every successful login, or null when unset. */
+  lastLogin: string | null;
 }
 
 /** Signed token pair returned by login and refresh. */

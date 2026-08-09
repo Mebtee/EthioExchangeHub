@@ -2,58 +2,65 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import { adminProfileDefaults, adminSettingsDefaults } from "@/config/admin";
+import { toAuthenticatedUser } from "@/lib/auth-user";
 import { SettingsRepository } from "@/repositories/SettingsRepository";
+import { UsersRepository } from "@/repositories/UsersRepository";
 import { SettingsServiceImpl } from "@/services/SettingsService";
-import type { Database, SettingRow } from "@/types/database";
+import type { Database, SettingRow, UserRow } from "@/types/database";
 
 import { settings } from "../../fixtures/settings";
+import { users } from "../../fixtures/users";
 import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
-/** Builds the real service over a real repository seeded with setting rows. */
-function makeService(rows: SettingRow[] = settings) {
-  const client = createFakeSupabaseClient({ settings: [...rows] });
-  const repository = new SettingsRepository(client as unknown as SupabaseClient<Database>);
-  const service = new SettingsServiceImpl(repository);
+/** Builds the real service over real repositories seeded with settings + users rows. */
+function makeService(rows: SettingRow[] = settings, userRows: UserRow[] = users) {
+  const client = createFakeSupabaseClient({ settings: [...rows], users: [...userRows] });
+  const settingsRepository = new SettingsRepository(client as unknown as SupabaseClient<Database>);
+  const usersRepository = new UsersRepository(client as unknown as SupabaseClient<Database>);
+  const service = new SettingsServiceImpl(settingsRepository, usersRepository);
   return { service, client };
 }
 
 describe("SettingsServiceImpl.getProfile", () => {
-  it("returns the configured defaults when nothing is persisted", async () => {
-    const { service } = makeService([]);
-    const profile = await service.getProfile();
-    expect(profile.name).toBe(adminProfileDefaults.name);
-    expect(profile.email).toBe(adminProfileDefaults.email);
-    expect(profile.role).toBe(adminProfileDefaults.role);
-    expect(profile.initials).toBe("AD");
+  it("returns the authenticated user's real data with derived initials", async () => {
+    const { service } = makeService();
+    const profile = await service.getProfile(toAuthenticatedUser(users[0]));
+    expect(profile.name).toBe("Operator");
+    expect(profile.email).toBe("operator@ethioexchange.test");
+    expect(profile.role).toBe("admin");
+    expect(profile.initials).toBe("OP");
   });
 
-  it("prefers persisted values and derives initials from the stored name", async () => {
+  it("uses the user's created_at as member since and falls back to defaults when timestamps are null", async () => {
     const { service } = makeService();
-    const profile = await service.getProfile();
-    expect(profile.name).toBe("Root Admin");
-    expect(profile.initials).toBe("RA");
-    expect(profile.email).toBe(adminProfileDefaults.email);
-    expect(profile.role).toBe(adminProfileDefaults.role);
+    const profile = await service.getProfile(toAuthenticatedUser(users[0]));
+    expect(profile.memberSince).toBe("2026-01-01T09:00:00.000Z");
+    expect(profile.lastLogin).toBe(adminProfileDefaults.lastLogin);
   });
 });
 
 describe("SettingsServiceImpl.updateProfile", () => {
-  it("persists only the provided fields and re-reads the merged profile", async () => {
+  it("persists the provided fields to the users table and re-reads the merged profile", async () => {
     const { service, client } = makeService();
-    const profile = await service.updateProfile({ name: "Jane Doe", email: "jane@example.com" });
+    const user = toAuthenticatedUser(users[0]);
+    const profile = await service.updateProfile(user, {
+      name: "Jane Doe",
+      email: "jane@example.com",
+    });
     expect(profile.name).toBe("Jane Doe");
+    expect(profile.email).toBe("jane@example.com");
     expect(profile.initials).toBe("JD");
-    // The rows are really persisted in the in-memory table.
-    const stored = new Map(client.tables.get("settings")!.map((r) => [r.key, r.value]));
-    expect(stored.get("admin_name")).toBe("Jane Doe");
-    expect(stored.get("admin_email")).toBe("jane@example.com");
+    // The row is really persisted in the in-memory table.
+    const stored = client.tables.get("users")![0] as UserRow;
+    expect(stored.name).toBe("Jane Doe");
+    expect(stored.email).toBe("jane@example.com");
   });
 
   it("skips the write when nothing is provided", async () => {
-    const { service, client } = makeService([]);
-    const profile = await service.updateProfile({});
-    expect(profile.name).toBe(adminProfileDefaults.name);
-    expect(client.tables.get("settings") ?? []).toHaveLength(0);
+    const { service, client } = makeService();
+    const profile = await service.updateProfile(toAuthenticatedUser(users[0]), {});
+    expect(profile.name).toBe("Operator");
+    expect(client.tables.get("users")).toHaveLength(1);
   });
 });
 
