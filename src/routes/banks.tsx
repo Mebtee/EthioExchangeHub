@@ -6,7 +6,7 @@ import { EmptyState, ErrorState } from "@/components/shared/async-states";
 import { CardGridSkeleton } from "@/components/shared/skeletons";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
-import { dedupeLatestRates, getPrimaryCurrency } from "@/lib/rankings";
+import { filterToLatestBusinessDay, getPrimaryCurrency } from "@/lib/rankings";
 import { useBanks, useExchangeRates } from "@/hooks";
 import { Seo } from "@/components/shared/seo";
 
@@ -31,11 +31,14 @@ function BanksPage() {
 
   const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
-  /** Banks that have published a rate for the primary currency, with their newest record. */
+  /**
+   * Banks that have published a rate for the primary currency on that
+   * currency's latest business date. A bank that only published on an older
+   * date is excluded entirely — its old rate is never shown as a current rate.
+   */
   const bankEntries = useMemo(() => {
-    // Reuses the shared newest-per-bank+currency dedupe from lib/rankings.
-    const latestByBank = dedupeLatestRates(rates.filter((r) => r.currency === primaryCurrency));
-    const rateByBank = new Map(latestByBank.map((r) => [key(r.bankName), r]));
+    const currentRates = filterToLatestBusinessDay(rates, primaryCurrency);
+    const rateByBank = new Map(currentRates.map((r) => [key(r.bankName), r]));
     return banks
       .filter((b) => rateByBank.has(key(b.name)))
       .map((bank) => ({ bank, rate: rateByBank.get(key(bank.name))! }));

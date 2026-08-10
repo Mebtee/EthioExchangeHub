@@ -1,3 +1,4 @@
+import { filterToLatestBusinessDay, getLatestBusinessDate } from "@/lib/rankings";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
 /**
@@ -40,11 +41,11 @@ export function buildMarketTicker(rates: ExchangeRate[]): MarketTickerItem[] {
 
   const items: MarketTickerItem[] = [];
   for (const [currency, rows] of byCurrency) {
-    const newestDate = rows.reduce(
-      (latest, row) => (row.rateDate > latest ? row.rateDate : latest),
-      rows[0]!.rateDate,
-    );
-    const onDate = rows.filter((row) => row.rateDate === newestDate);
+    // Reuses the shared "latest business day" rule: only rows published on the
+    // currency's newest rate_date participate in the average.
+    const onDate = filterToLatestBusinessDay(rows, currency);
+    const newestDate = getLatestBusinessDate(rows, currency);
+    if (onDate.length === 0 || newestDate === undefined) continue;
 
     const buy = finiteMean(onDate.map((row) => row.cashBuying));
     const sell = finiteMean(onDate.map((row) => row.cashSelling));

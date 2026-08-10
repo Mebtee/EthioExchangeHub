@@ -10,7 +10,7 @@ import { Pill } from "@/components/shared/pill";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { formatEtbCompact, formatRateDate, formatRateOrDash } from "@/lib/format";
 import type { Bank } from "@/types/bank";
-import { getLatestUpdate, getRatesForBank } from "@/lib/rankings";
+import { getLatestBusinessDate, getLatestUpdate, getRatesForBank } from "@/lib/rankings";
 import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
 import { JsonLd, Seo } from "@/components/shared/seo";
 
@@ -33,7 +33,18 @@ function BankDetails() {
   } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
 
-  const bankRates = useMemo(() => (bank ? getRatesForBank(rates, bank.name) : []), [rates, bank]);
+  /**
+   * The bank's CURRENT rates: only rows this bank published on their own
+   * currency's latest business date. An older row for a currency is never
+   * shown as the current rate — if this bank did not publish on that
+   * currency's latest day, that currency row is omitted.
+   */
+  const bankRates = useMemo(() => {
+    if (!bank) return [];
+    return getRatesForBank(rates, bank.name).filter(
+      (r) => r.rateDate === getLatestBusinessDate(rates, r.currency),
+    );
+  }, [rates, bank]);
 
   const latestUpdate = useMemo(() => getLatestUpdate(bankRates), [bankRates]);
 

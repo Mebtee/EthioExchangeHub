@@ -89,6 +89,22 @@ export function filterToLatestBusinessDay(rates: ExchangeRate[], currency: strin
     : [];
 }
 
+/**
+ * Rows that sit on their OWN currency's latest business date — a cross-currency
+ * "current" view (e.g. reporting-bank counts). Each kept row's `rateDate`
+ * equals the newest rate_date that exists for that row's currency.
+ */
+export function filterToCurrentBusinessDay(rates: ExchangeRate[]): ExchangeRate[] {
+  const latestByCurrency = new Map<string, string>();
+  for (const rate of rates) {
+    const current = latestByCurrency.get(rate.currency);
+    if (current === undefined || rate.rateDate > current) {
+      latestByCurrency.set(rate.currency, rate.rateDate);
+    }
+  }
+  return rates.filter((rate) => rate.rateDate === latestByCurrency.get(rate.currency));
+}
+
 /** All rate records published by the given bank (matched by name). */
 export function getRatesForBank(rates: ExchangeRate[], bankName: string): ExchangeRate[] {
   const name = bankName.trim().toLowerCase();

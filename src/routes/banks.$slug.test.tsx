@@ -7,7 +7,26 @@ import BankDetailsPage from "./banks.$slug";
 import type { Bank } from "@/types/bank";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
-const { bank, rates, currencies } = vi.hoisted(() => ({
+function abayRate(overrides: Partial<ExchangeRate> = {}): ExchangeRate {
+  return {
+    id: 1,
+    bankId: 1,
+    bankCode: "ABY",
+    bankName: "Abay Bank",
+    currency: "USD",
+    cashBuying: 161.5,
+    cashSelling: 162.5,
+    transactionBuying: Number.NaN,
+    transactionSelling: Number.NaN,
+    rateDate: "2026-08-10",
+    source: "scraper",
+    stale: false,
+    logo: "",
+    ...overrides,
+  };
+}
+
+const { bank, currencies, rateState } = vi.hoisted(() => ({
   bank: {
     slug: "ABY",
     name: "Abay Bank",
@@ -28,30 +47,18 @@ const { bank, rates, currencies } = vi.hoisted(() => ({
     reserves: 2_400_000_000,
     totalLiabilities: 79_100_000_000,
   } satisfies Bank,
-  rates: [
-    {
-      id: 1,
-      bankId: 1,
-      bankCode: "ABY",
-      bankName: "Abay Bank",
-      currency: "USD",
-      cashBuying: 161.5,
-      cashSelling: 162.5,
-      transactionBuying: Number.NaN,
-      transactionSelling: Number.NaN,
-      rateDate: "2026-08-09",
-      source: "scraper",
-      stale: false,
-      logo: "",
-    },
-  ] satisfies ExchangeRate[],
   currencies: [{ code: "USD", label: "US Dollar", category: "Major" }],
+  rateState: {
+    // Default: Abay published on the currency's latest business date, so its
+    // rate is current and rendered.
+    rates: [abayRate()] satisfies ExchangeRate[],
+  },
 }));
 
 vi.mock("@/hooks", () => ({
   useBankBySlug: () => ({ data: bank, isLoading: false }),
   useExchangeRates: () => ({
-    data: rates,
+    data: rateState.rates,
     isLoading: false,
     isError: false,
     error: null,
@@ -116,5 +123,28 @@ describe("BankDetailsPage", () => {
     expect(screen.getByText("68.43%")).toBeInTheDocument();
     expect(screen.getByText("3.28%")).toBeInTheDocument();
     expect(screen.getByText("24.58%")).toBeInTheDocument();
+  });
+
+  it("does not display an older bank rate as the current rate (Test 8)", async () => {
+    // Abay only published USD on 2026-08-09, but the USD market moved to
+    // 2026-08-10 (CBE published then). Abay's Aug 9 row must NOT be shown as
+    // a current rate.
+    rateState.rates = [
+      abayRate({ rateDate: "2026-08-09", cashBuying: 160.5, cashSelling: 161.5 }),
+      {
+        ...abayRate({ bankCode: "CBE", bankName: "CBE", cashBuying: 159.5, cashSelling: 160.5 }),
+        rateDate: "2026-08-10",
+        id: 2,
+      },
+    ];
+    renderPage();
+
+    await screen.findByRole("heading", { name: /Abay Bank Exchange Rates/i });
+    // Bank information is still shown…
+    expect(screen.getByRole("link", { name: /Visit Official Website/i })).toBeInTheDocument();
+    // …but the current-rate table is empty — the old Aug 9 rate is not shown.
+    expect(screen.queryByText("160.5000")).not.toBeInTheDocument();
+    expect(screen.queryByText("161.5000")).not.toBeInTheDocument();
+    expect(await screen.findByText("No exchange rates available")).toBeInTheDocument();
   });
 });
