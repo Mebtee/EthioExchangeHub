@@ -5,6 +5,7 @@ import type { ExchangeRate } from "@/types/exchange-rate";
 import {
   buildRankings,
   dedupeLatestRates,
+  filterToCurrentBusinessDay,
   filterToLatestBusinessDay,
   getBestRate,
   getLatestBusinessDate,
@@ -128,6 +129,77 @@ describe("filterToLatestBusinessDay", () => {
   });
 });
 
+describe("latest business date rule", () => {
+  it("selects the latest business date and keeps only that day's banks (Test 1)", () => {
+    const rates = [
+      rate({ bankName: "Bank A", rateDate: "2026-08-10", cashBuying: 121.5 }),
+      rate({ bankName: "Bank B", rateDate: "2026-08-10", cashBuying: 122.5 }),
+      rate({ bankName: "Bank C", rateDate: "2026-08-09", cashBuying: 130 }),
+    ];
+
+    expect(getLatestBusinessDate(rates, "USD")).toBe("2026-08-10");
+    const current = filterToLatestBusinessDay(rates, "USD");
+    expect(current.map((r) => r.bankName).sort()).toEqual(["Bank A", "Bank B"]);
+    expect(current.every((r) => r.rateDate === "2026-08-10")).toBe(true);
+  });
+
+  it("is dynamic — a newer rate_date becomes the latest date with no code change (Test 2)", () => {
+    const rates = [
+      rate({ bankName: "Bank A", rateDate: "2026-08-11", cashBuying: 122 }),
+      rate({ bankName: "Bank B", rateDate: "2026-08-11", cashBuying: 121 }),
+      rate({ bankName: "Bank C", rateDate: "2026-08-10", cashBuying: 130 }),
+    ];
+
+    expect(getLatestBusinessDate(rates, "USD")).toBe("2026-08-11");
+    const current = filterToLatestBusinessDay(rates, "USD");
+    expect(current.map((r) => r.bankName).sort()).toEqual(["Bank A", "Bank B"]);
+  });
+
+  it("determines the latest date per currency (Test 3)", () => {
+    const rates = [
+      rate({ currency: "USD", rateDate: "2026-08-10" }),
+      rate({ currency: "EUR", rateDate: "2026-08-09" }),
+    ];
+
+    expect(getLatestBusinessDate(rates, "USD")).toBe("2026-08-10");
+    expect(getLatestBusinessDate(rates, "EUR")).toBe("2026-08-09");
+    expect(filterToLatestBusinessDay(rates, "USD").map((r) => r.rateDate)).toEqual(["2026-08-10"]);
+    expect(filterToLatestBusinessDay(rates, "EUR").map((r) => r.rateDate)).toEqual(["2026-08-09"]);
+  });
+
+  it("does not fall back to a previous date even when it has more banks (Test 4)", () => {
+    const rates = [
+      rate({ bankName: "Bank A", rateDate: "2026-08-10", cashBuying: 121 }),
+      rate({ bankName: "Bank A", rateDate: "2026-08-09", cashBuying: 119 }),
+      rate({ bankName: "Bank B", rateDate: "2026-08-09", cashBuying: 120 }),
+      rate({ bankName: "Bank C", rateDate: "2026-08-09", cashBuying: 118 }),
+    ];
+
+    const current = filterToLatestBusinessDay(rates, "USD");
+    expect(current.map((r) => r.bankName)).toEqual(["Bank A"]);
+    expect(current.every((r) => r.rateDate === "2026-08-10")).toBe(true);
+  });
+
+  it("returns a clean empty state when the currency has no rates (Test 5)", () => {
+    expect(getLatestBusinessDate([], "USD")).toBeUndefined();
+    expect(filterToLatestBusinessDay([], "USD")).toEqual([]);
+    expect(filterToLatestBusinessDay([rate({ currency: "EUR" })], "USD")).toEqual([]);
+  });
+});
+
+describe("filterToCurrentBusinessDay", () => {
+  it("keeps rows on each currency's own latest business date", () => {
+    const rates = [
+      rate({ bankName: "Bank A", currency: "USD", rateDate: "2026-08-10" }),
+      rate({ bankName: "Bank B", currency: "USD", rateDate: "2026-08-09" }),
+      rate({ bankName: "Bank C", currency: "EUR", rateDate: "2026-08-09" }),
+    ];
+
+    const current = filterToCurrentBusinessDay(rates);
+    expect(current.map((r) => r.bankName).sort()).toEqual(["Bank A", "Bank C"]);
+  });
+});
+
 describe("buildRankings", () => {
   it("sorts buying desc and selling asc, skipping non-finite values", () => {
     const rates = [
@@ -154,5 +226,21 @@ describe("buildRankings", () => {
 
     const search = buildRankings(rates, { field: "cashBuying", query: "awash" });
     expect(search.every((r) => r.bankName === "Awash Bank")).toBe(true);
+  });
+
+  it("ranks only banks on the latest business date; older rows never participate (Test 7)", () => {
+    const rates = [
+      rate({ bankName: "Bank A", rateDate: "2026-08-10", cashBuying: 121.5 }),
+      rate({ bankName: "Bank B", rateDate: "2026-08-10", cashBuying: 122.5 }),
+      // Numerically best but published a day earlier — must be excluded.
+      rate({ bankName: "Bank C", rateDate: "2026-08-09", cashBuying: 130 }),
+    ];
+
+    const current = filterToLatestBusinessDay(rates, "USD");
+    const rankings = buildRankings(current, { field: "cashBuying", currency: "USD" });
+
+    expect(rankings.map((r) => r.bankName)).toEqual(["Bank B", "Bank A"]);
+    expect(rankings.map((r) => r.rank)).toEqual([1, 2]);
+    expect(rankings.some((r) => r.bankName === "Bank C")).toBe(false);
   });
 });

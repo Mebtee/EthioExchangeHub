@@ -7,7 +7,7 @@ import { EmptyState, ErrorState } from "@/components/shared/async-states";
 import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { slugifyBankName } from "@/lib/bank";
-import { getCurrencyOptions } from "@/lib/rankings";
+import { filterToCurrentBusinessDay, filterToLatestBusinessDay, getCurrencyOptions } from "@/lib/rankings";
 import { cn } from "@/lib/utils";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
@@ -67,17 +67,23 @@ export function LiveRankings({
   const [selected, setSelected] = useState<string>("");
   const currency = tabs.includes(selected) ? selected : (tabs[0] ?? "");
 
-  const top5 = useMemo(
-    () =>
-      rates
-        .filter((r) => r.currency === currency)
-        .filter((r) => Number.isFinite(r.cashBuying))
-        .sort((a, b) => b.cashBuying - a.cashBuying)
-        .slice(0, 5),
-    [rates, currency],
-  );
+  /**
+   * Ranks only rows published on the selected currency's latest business date —
+   * a bank with an older rate is excluded rather than ranked as if current.
+   */
+  const top5 = useMemo(() => {
+    const current = filterToLatestBusinessDay(rates, currency);
+    return current
+      .filter((r) => Number.isFinite(r.cashBuying))
+      .sort((a, b) => b.cashBuying - a.cashBuying)
+      .slice(0, 5);
+  }, [rates, currency]);
 
-  const reportingBanks = useMemo(() => new Set(rates.map((r) => r.bankName)).size, [rates]);
+  /** Banks with a rate on their own currency's latest business date. */
+  const reportingBanks = useMemo(
+    () => new Set(filterToCurrentBusinessDay(rates).map((r) => r.bankName)).size,
+    [rates],
+  );
 
   return (
     <SurfaceCard className="flex flex-col p-6">
