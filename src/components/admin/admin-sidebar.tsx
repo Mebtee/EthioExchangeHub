@@ -3,6 +3,7 @@ import {
   Activity,
   ExternalLink,
   LayoutDashboard,
+  Megaphone,
   PencilLine,
   ScrollText,
   Settings,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/manual-rates", label: "Manual Exchange Rates", icon: PencilLine },
+  { to: "/admin/featured", label: "Featured Content", icon: Megaphone },
   { to: "/admin/scraper-health", label: "Scraper Health", icon: Activity },
   { to: "/admin/scrape-logs", label: "Scrape Logs", icon: ScrollText },
   { to: "/admin/profile", label: "Profile", icon: User },

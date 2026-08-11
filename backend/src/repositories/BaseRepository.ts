@@ -57,7 +57,7 @@ export type InsertOf<T extends TableName> = DatabaseTables[T]["Insert"];
 export type UpdateOf<T extends TableName> = DatabaseTables[T]["Update"];
 
 /** A query result before unwrapping: typed rows plus the raw PostgREST error. */
-type QueryResult<T> = { data: T | null; error: PostgrestError | null };
+export type QueryResult<T> = { data: T | null; error: PostgrestError | null };
 
 export interface FindAllOptions<T extends TableName> {
   /** Maximum number of rows to return. */
