@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ShoppingCart, Tag, TrendingUp, CalendarDays } from "lucide-react";
+import { ShoppingCart, Tag, TrendingUp, Newspaper, CalendarDays } from "lucide-react";
 import { useMemo } from "react";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
@@ -7,6 +7,7 @@ import { MarketTicker } from "@/components/home/market-ticker";
 import { RateHero } from "@/components/home/rate-hero";
 import { LiveRankings } from "@/components/home/live-rankings";
 import { CurrencyConverter } from "@/components/home/currency-converter";
+import { FeaturedCard } from "@/components/home/featured-card";
 import { FinancialNews } from "@/components/home/financial-news";
 import {
   filterToLatestBusinessDay,
@@ -15,13 +16,14 @@ import {
   getPrimaryCurrency,
 } from "@/lib/rankings";
 import { formatRateDate } from "@/lib/format";
-import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
+import { useCurrencies, useExchangeRates, useFeatured, useNews } from "@/hooks";
 import { Seo } from "@/components/shared/seo";
 
 function HomePage() {
   const { data: rates = [], isLoading, isError, error, refetch } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
   const { data: news = [] } = useNews();
+  const { data: featured = null } = useFeatured();
 
   const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
@@ -58,8 +60,12 @@ function HomePage() {
       />
       <MarketTicker />
       <PageContainer>
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-          {/* Hero */}
+        {/* Hero — content on the left, featured campaign on the right */}
+        <div
+          className={`grid items-start gap-10 ${
+            featured ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]" : ""
+          }`}
+        >
           <section>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
               Ethiopian Bank Exchange Rates &amp;{" "}
@@ -79,31 +85,38 @@ function HomePage() {
                 Compare Banks <TrendingUp className="size-4" />
               </Link>
               <Link
-                to="/rankings"
-                className="inline-flex items-center gap-2 rounded-2xl border border-primary/40 text-primary px-6 py-3 text-sm font-semibold hover:bg-primary/5 transition"
-              >
-                Bank Rankings <TrendingUp className="size-4" />
-              </Link>
-              <a
-                href="#currency-converter"
+                to="/news"
                 className="inline-flex items-center gap-2 rounded-2xl border border-border/70 text-muted-foreground px-6 py-3 text-sm font-semibold hover:bg-surface-low transition"
               >
-                Currency Converter <ShoppingCart className="size-4" />
-              </a>
+                Daily News <Newspaper className="size-4" />
+              </Link>
             </div>
+            <p className="mt-6 inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <CalendarDays className="size-4" />
+              Last updated: {latestBusinessDate ? formatRateDate(latestBusinessDate) : "—"}
+            </p>
           </section>
 
-          {/* Best rate cards */}
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Today's Best Rates
-              </p>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
-                <CalendarDays className="size-3.5" />
-                As of {latestBusinessDate ? formatRateDate(latestBusinessDate) : "—"}
-              </span>
-            </div>
+          {/* Admin-controlled featured campaign — hidden entirely when none qualifies */}
+          {featured && (
+            <section>
+              <FeaturedCard item={featured} />
+            </section>
+          )}
+        </div>
+
+        {/* Today's best rates */}
+        <section className="mt-12">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Today's Best Rates
+            </p>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
+              <CalendarDays className="size-3.5" />
+              As of {latestBusinessDate ? formatRateDate(latestBusinessDate) : "—"}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
             <RateHero
               icon={<ShoppingCart className="size-5" />}
               label="Best Buy Rate"
@@ -122,8 +135,8 @@ function HomePage() {
               accent="gold"
               stale={bestSell?.stale}
             />
-          </section>
-        </div>
+          </div>
+        </section>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
           {/* Live rankings */}

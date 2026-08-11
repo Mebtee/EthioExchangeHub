@@ -136,6 +136,59 @@ export type SettingRow = {
 };
 
 /**
+ * `featured_content` — admin-controlled campaigns shown on the homepage hero.
+ * The service layer decides which row is currently eligible (is_active +
+ * schedule window); this table only stores data.
+ */
+export type FeaturedContentRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string;
+  advertiser_name: string | null;
+  /** Badge label rendered on the card (default "FEATURED"). */
+  badge_text: string;
+  /** CTA button label (default "Learn More"). */
+  cta_text: string;
+  destination_url: string;
+  /** "internal" (client-side route) or "external" (http/https website). */
+  destination_type: string;
+  image_alt: string | null;
+  is_active: boolean;
+  display_order: number;
+  /** Scheduled start; null = immediately eligible (when active). */
+  start_at: string | null;
+  /** Scheduled end; null = never expires. */
+  end_at: string | null;
+  /** FK → auth user id that created the campaign. */
+  created_by: string | null;
+  feature_1_icon: string | null;
+  feature_1_title: string | null;
+  feature_1_description: string | null;
+  feature_2_icon: string | null;
+  feature_2_title: string | null;
+  feature_2_description: string | null;
+  feature_3_icon: string | null;
+  feature_3_title: string | null;
+  feature_3_description: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `featured_content_clicks` — append-only click analytics for featured
+ * campaigns. Stores only the campaign id, the destination type, and a
+ * timestamp; no personal information.
+ */
+export type FeaturedContentClickRow = {
+  id: string;
+  featured_content_id: string;
+  /** "internal" or "external" (null when unknown). */
+  destination_type: string | null;
+  created_at: string;
+};
+
+/**
  * `users` — administrator accounts backing JWT authentication (A1). The
  * configured admin is provisioned from server config (`ADMIN_EMAIL` +
  * `ADMIN_PASSWORD`) on first login; `password_hash` is a scrypt-derived
@@ -194,6 +247,18 @@ export type DatabaseTables = {
     Row: ScrapeLogRow;
     Insert: Partial<ScrapeLogRow>;
     Update: Partial<ScrapeLogRow>;
+    Relationships: [];
+  };
+  featured_content: {
+    Row: FeaturedContentRow;
+    Insert: Partial<FeaturedContentRow>;
+    Update: Partial<FeaturedContentRow>;
+    Relationships: [];
+  };
+  featured_content_clicks: {
+    Row: FeaturedContentClickRow;
+    Insert: Partial<FeaturedContentClickRow>;
+    Update: Partial<FeaturedContentClickRow>;
     Relationships: [];
   };
   settings: {

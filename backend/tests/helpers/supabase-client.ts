@@ -33,6 +33,9 @@ interface OpState {
   /** Inclusive window `[from, to]` — mirrors PostgREST's `Range` header. */
   range?: [number, number];
   single?: boolean;
+  selectColumns?: string;
+  head?: boolean;
+  count?: "exact";
   insertPayload?: Record<string, unknown>;
   updatePayload?: Record<string, unknown>;
   deleteFlag?: boolean;
@@ -45,7 +48,11 @@ class FakeBuilder {
     private readonly state: OpState,
   ) {}
 
-  select(): this {
+  select(columns?: string, options?: { count?: "exact"; head?: boolean }): this {
+    this.state.selectColumns = columns;
+    this.state.head = options?.head ?? false;
+    this.state.count = options?.count;
+    this.client.lastSelect = columns ?? null;
     return this;
   }
 
@@ -129,6 +136,11 @@ class FakeBuilder {
 
     const matched = rows.filter(matches);
 
+    // Head + exact count (PostgREST: `select(columns, { count: "exact", head: true })`).
+    if (state.head) {
+      return { data: null, count: matched.length, error: null };
+    }
+
     if (state.updatePayload) {
       for (const row of matched) {
         Object.assign(row, state.updatePayload);
@@ -172,6 +184,9 @@ export class FakeSupabaseClient {
 
   /** When set, the next executed query fails with this error (one-shot). */
   nextError: FakePostgrestError | null = null;
+
+  /** Columns from the most recent `select(...)` call (for regression pins). */
+  lastSelect: string | null = null;
 
   constructor(seed: FakeSeed = {}) {
     this.tables = new Map(

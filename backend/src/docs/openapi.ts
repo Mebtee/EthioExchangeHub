@@ -23,6 +23,14 @@ import { bankSchema } from "./schemas/bank";
 import { contactMessageInputSchema, contactMessageSchema } from "./schemas/contact";
 import { exchangeRateSchema } from "./schemas/exchange-rate";
 import {
+  activeFeaturedContentSchema,
+  featuredContentAdminItemSchema,
+  featuredContentInputSchema,
+  featuredContentSchema,
+  featuredContentUpdateInputSchema,
+  recordFeaturedClickInputSchema,
+} from "./schemas/featured";
+import {
   manualRateInputSchema,
   manualRateSchema,
   manualRateUpdateInputSchema,
@@ -56,7 +64,7 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       "",
       "**Operations (Phase 2K)**: unversioned infrastructure endpoints — `GET /live` (liveness, no DB call), `GET /ready` (readiness), and `GET /metrics` (Prometheus) — are also outside `/api/v1` and not listed above.",
       "",
-      "**Authentication**: the admin surface (`/admin`, `/manual-rates`, `/auth/me`) requires a `bearerAuth` (JWT) access token obtained from `POST /auth/login`. All public endpoints (`/banks`, `/rates`, `/news`, `/scraper-health`, `/scrape-logs`) remain open. Protected operations declare `security: [{ bearerAuth: [] }]`.",
+      "**Authentication**: the admin surface (`/admin`, `/manual-rates`, `/auth/me`) requires a `bearerAuth` (JWT) access token obtained from `POST /auth/login`. All public endpoints (`/banks`, `/rates`, `/news`, `/featured`, `/scraper-health`, `/scrape-logs`) remain open. Protected operations declare `security: [{ bearerAuth: [] }]`.",
     ].join("\n"),
   },
   servers: [
@@ -97,6 +105,12 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       ContactMessage: contactMessageSchema,
       ContactMessageInput: contactMessageInputSchema,
       ExchangeRate: exchangeRateSchema,
+      FeaturedContent: featuredContentSchema,
+      FeaturedContentAdminItem: featuredContentAdminItemSchema,
+      ActiveFeaturedContent: activeFeaturedContentSchema,
+      FeaturedContentInput: featuredContentInputSchema,
+      FeaturedContentUpdateInput: featuredContentUpdateInputSchema,
+      RecordFeaturedClickInput: recordFeaturedClickInputSchema,
       ManualRate: manualRateSchema,
       ManualRateInput: manualRateInputSchema,
       ManualRateUpdateInput: manualRateUpdateInputSchema,

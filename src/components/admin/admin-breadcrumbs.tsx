@@ -11,6 +11,7 @@ import {
 const CRUMB_LABELS: Record<string, string> = {
   "/admin": "Dashboard",
   "/admin/manual-rates": "Manual Exchange Rates",
+  "/admin/featured": "Featured Content",
   "/admin/scraper-health": "Scraper Health",
   "/admin/scrape-logs": "Scrape Logs",
   "/admin/profile": "Profile",

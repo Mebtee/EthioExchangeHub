@@ -4,13 +4,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import HomePage from "./index";
 
+import type { ActiveFeatured } from "@/types/featured";
 import type { Currency } from "@/types/currency";
 import type { ExchangeRate } from "@/types/exchange-rate";
 import type { NewsItem } from "@/types/news";
 
-const { rateState } = vi.hoisted(() => ({
+const { rateState, featuredState } = vi.hoisted(() => ({
   rateState: {
     rates: [] as ExchangeRate[],
+  },
+  featuredState: {
+    data: null as ActiveFeatured | null,
   },
 }));
 
@@ -39,6 +43,7 @@ vi.mock("@/hooks", () => ({
     data: [{ code: "USD", label: "US Dollar", category: "Major" }] satisfies Currency[],
   }),
   useNews: () => ({ data: [] satisfies NewsItem[] }),
+  useFeatured: () => ({ data: featuredState.data }),
 }));
 
 function renderPage() {
@@ -48,6 +53,46 @@ function renderPage() {
     </MemoryRouter>,
   );
 }
+
+describe("HomePage layout", () => {
+  it("renders hero actions, last-updated line, best-rate cards, and the featured campaign", () => {
+    featuredState.data = {
+      id: "campaign-1",
+      title: "Awash Bank — Back-to-School Offer",
+      description: "Student account promotions for the new term.",
+      image_url: "https://cdn.example.com/awash-school.jpg",
+      image_alt: "Awash Bank back-to-school promotion",
+      advertiser_name: "Awash Bank",
+      badge_text: "FEATURED",
+      cta_text: "View Offer",
+      destination_url: "/offers/awash-school",
+      destination_type: "internal",
+      features: [],
+    };
+    rateState.rates = [
+      rate({
+        id: 1,
+        bankCode: "A",
+        bankName: "Bank A",
+        rateDate: "2026-08-10",
+        cashBuying: 121.5,
+        cashSelling: 122.5,
+      }),
+    ];
+    renderPage();
+
+    expect(screen.getByRole("link", { name: /Compare Banks/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Daily News/ })).toBeInTheDocument();
+    expect(screen.getByText(/Last updated: Aug 10, 2026/)).toBeInTheDocument();
+
+    expect(screen.getByText("Today's Best Rates")).toBeInTheDocument();
+    expect(screen.getByText("Best Buy Rate")).toBeInTheDocument();
+    expect(screen.getByText("Best Sell Rate")).toBeInTheDocument();
+
+    expect(screen.getByText("Awash Bank — Back-to-School Offer")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Offer" })).toBeInTheDocument();
+  });
+});
 
 describe("HomePage best rate", () => {
   it("lets a current-date rate win and never an older numerically better rate (Test 6)", async () => {
@@ -75,10 +120,8 @@ describe("HomePage best rate", () => {
 
     // The hero's winning bank is the current-date bank on both sides.
     // (The bank name is rendered inside a nested span, so match on textContent.)
-    const heroBank =
-      (name: string) =>
-      (_content: string, el: Element | null) =>
-        el?.textContent === `Available at ${name}`;
+    const heroBank = (name: string) => (_content: string, el: Element | null) =>
+      el?.textContent === `Available at ${name}`;
     // Both the Best Buy and Best Sell cards show the current-date bank.
     expect(screen.getAllByText(heroBank("Bank A"))).toHaveLength(2);
     expect(screen.queryAllByText(heroBank("Bank B"))).toHaveLength(0);

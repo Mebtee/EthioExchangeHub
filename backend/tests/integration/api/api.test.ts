@@ -24,6 +24,7 @@ import { createApp } from "@/app";
 
 import {
   defaultSeed,
+  featuredContentId,
   getFakeClient,
   seedFakeClient,
   setDatabaseConnected,
@@ -429,6 +430,109 @@ describe("Manual-rate endpoints", () => {
       .set(await adminAuth())
       .send({ note: "x" });
     expect(res.status).toBe(422);
+  });
+});
+
+describe("Featured-content endpoints", () => {
+  it("GET /api/v1/featured returns the single eligible campaign (homepage hero)", async () => {
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(featuredContentId);
+    expect(res.body.data.title).toBe("Awash Bank — Back-to-School Offer");
+    expect(res.body.data.features).toHaveLength(2);
+  });
+
+  it("GET /api/v1/featured returns data null when nothing is eligible", async () => {
+    seedFakeClient({ ...defaultSeed, featured_content: [] });
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+  });
+
+  it("POST /api/v1/featured/:id/click records a click and stays public (no auth)", async () => {
+    const res = await request(app)
+      .post(`/api/v1/featured/${featuredContentId}/click`)
+      .send({ destination_type: "internal" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+    expect(getFakeClient().tables.get("featured_content_clicks")).toHaveLength(1);
+  });
+
+  it("POST click rejects a non-UUID id with 422", async () => {
+    const res = await request(app).post("/api/v1/featured/not-a-uuid/click").send({});
+    expect(res.status).toBe(422);
+  });
+
+  it("admin featured endpoints require auth (401 without a token)", async () => {
+    const list = await request(app).get("/api/v1/admin/featured");
+    expect(list.status).toBe(401);
+    const create = await request(app).post("/api/v1/admin/featured").send({
+      title: "X",
+      image_url: "https://cdn.example.com/x.jpg",
+      destination_url: "/x",
+      destination_type: "internal",
+    });
+    expect(create.status).toBe(401);
+  });
+
+  it("admin CRUD flow: create, list, get, update, delete", async () => {
+    const auth = await adminAuth();
+
+    const created = await request(app).post("/api/v1/admin/featured").set(auth).send({
+      title: "Dashen Bank — New Year Savings",
+      image_url: "https://cdn.example.com/dashen.jpg",
+      destination_url: "/offers/dashen-savings",
+      destination_type: "internal",
+      badge_text: "LIMITED",
+    });
+    expect(created.status).toBe(201);
+    const id = created.body.data.id as string;
+    expect(created.body.data.created_by).toBeTypeOf("string");
+    expect(created.body.data.badge_text).toBe("LIMITED");
+
+    const list = await request(app).get("/api/v1/admin/featured").set(auth);
+    expect(list.status).toBe(200);
+    expect(list.body.data.map((r: { id: string }) => r.id)).toEqual(
+      expect.arrayContaining([id, featuredContentId]),
+    );
+    const withCount = list.body.data.find((r: { id: string }) => r.id === id) as {
+      click_count: number;
+    };
+    expect(withCount.click_count).toBe(0);
+
+    const one = await request(app).get(`/api/v1/admin/featured/${id}`).set(auth);
+    expect(one.status).toBe(200);
+    expect(one.body.data.title).toBe("Dashen Bank — New Year Savings");
+
+    const updated = await request(app)
+      .patch(`/api/v1/admin/featured/${id}`)
+      .set(auth)
+      .send({ title: "Renamed", is_active: false });
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.title).toBe("Renamed");
+    expect(updated.body.data.is_active).toBe(false);
+
+    const deleted = await request(app).delete(`/api/v1/admin/featured/${id}`).set(auth);
+    expect(deleted.status).toBe(200);
+    expect(deleted.body.data).toBeNull();
+
+    const gone = await request(app).get(`/api/v1/admin/featured/${id}`).set(auth);
+    expect(gone.status).toBe(404);
+  });
+
+  it("admin create rejects an invalid destination URL with 422", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/featured")
+      .set(await adminAuth())
+      .send({
+        title: "Bad campaign",
+        image_url: "javascript:alert(1)",
+        destination_url: "offers/x",
+        destination_type: "internal",
+      });
+    expect(res.status).toBe(422);
+    expect(res.body.data).toBeNull();
   });
 });
 
