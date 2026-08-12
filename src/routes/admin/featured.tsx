@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
-import { ExternalLink, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ExternalLink, Loader2, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 
 import { DataTable } from "@/components/admin/data-table";
+import { FeaturedCard } from "@/components/home/featured-card";
 import { SearchInput } from "@/components/shared/search-input";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdminFeatured, useCreateFeatured, useDeleteFeatured, useUpdateFeatured } from "@/hooks";
-import type { AdminFeaturedItem, FeaturedDestinationType, FeaturedPayload } from "@/types/featured";
+import type {
+  ActiveFeatured,
+  AdminFeaturedItem,
+  FeaturedDestinationType,
+  FeaturedPayload,
+} from "@/types/featured";
 import { toast } from "sonner";
 
 /** Icon names the homepage card understands (see FEATURE_ICONS in featured-card). */
@@ -173,6 +179,99 @@ function validateDestination(url: string, type: FeaturedDestinationType): string
   return null;
 }
 
+/** True when the value is an absolute http(s) URL. */
+function isHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** True for Google Drive share/view URLs that do not return raw image bytes. */
+function isGoogleDriveShareUrl(value: string): boolean {
+  const lower = value.toLowerCase();
+  return (
+    lower.includes("drive.google.com") ||
+    lower.includes("docs.google.com") ||
+    lower.includes("/file/d/")
+  );
+}
+
+const IMAGE_URL_HELP =
+  "Use a direct image URL that returns an image file. Google Drive sharing/view links will not work.";
+
+function validateImageUrl(url: string): string | null {
+  if (!url) return "Image URL is required.";
+  if (!isHttpUrl(url)) return "Image URL must be a direct http:// or https:// URL.";
+  if (isGoogleDriveShareUrl(url)) return IMAGE_URL_HELP;
+  return null;
+}
+
+function ImageUrlWarning({ message }: { message: string }) {
+  return (
+    <p className="flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+      {message}
+    </p>
+  );
+}
+
+/** Live image preview that degrades gracefully and never crashes the form. */
+function ImageUrlPreview({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  const trimmed = url.trim();
+
+  useEffect(() => setFailed(false), [trimmed]);
+
+  if (!isHttpUrl(trimmed)) return null;
+  if (isGoogleDriveShareUrl(trimmed)) return <ImageUrlWarning message={IMAGE_URL_HELP} />;
+  if (failed) return <ImageUrlWarning message={IMAGE_URL_HELP} />;
+
+  return (
+    <div className="mt-1.5">
+      <p className="text-xs font-semibold text-muted-foreground">Preview</p>
+      <div className="mt-1.5 overflow-hidden rounded-lg border border-border/60 bg-surface-low">
+        <img
+          src={trimmed}
+          alt="Campaign image preview"
+          loading="lazy"
+          className="max-h-40 w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Builds a live preview card from the current form state. */
+function buildPreviewItem(
+  form: FeaturedFormState,
+  editing: AdminFeaturedItem | null,
+): ActiveFeatured {
+  const features = ([form.feature_1, form.feature_2, form.feature_3] as const)
+    .map((f) =>
+      f.title.trim()
+        ? { icon: f.icon, title: f.title.trim(), description: f.description.trim() }
+        : null,
+    )
+    .filter((f): f is { icon: string; title: string; description: string } => f !== null);
+  return {
+    id: editing?.id ?? "preview",
+    title: form.title.trim() || "Campaign title",
+    description: normalize(form.description),
+    image_url: form.image_url.trim(),
+    image_alt: normalize(form.image_alt),
+    advertiser_name: normalize(form.advertiser_name),
+    badge_text: form.badge_text.trim() || "FEATURED",
+    cta_text: form.cta_text.trim() || "Learn More",
+    destination_url: form.destination_url.trim() || "/",
+    destination_type: form.destination_type,
+    features,
+  };
+}
+
 function buildPayload(form: FeaturedFormState): FeaturedPayload {
   return {
     title: form.title.trim(),
@@ -208,7 +307,7 @@ function formatSchedule(item: AdminFeaturedItem): string {
 }
 
 export default function AdminFeaturedPage() {
-  const { data, isLoading, isError, error, refetch } = useAdminFeatured();
+  const { data, isLoading, isError, refetch } = useAdminFeatured();
   const createCampaign = useCreateFeatured();
   const updateCampaign = useUpdateFeatured();
   const deleteCampaign = useDeleteFeatured();
@@ -253,7 +352,8 @@ export default function AdminFeaturedPage() {
 
   function validateForm(): string | null {
     if (!form.title.trim()) return "Title is required.";
-    if (!form.image_url.trim()) return "Image URL is required.";
+    const imageProblem = validateImageUrl(form.image_url.trim());
+    if (imageProblem) return imageProblem;
     const destinationProblem = validateDestination(
       form.destination_url.trim(),
       form.destination_type,
@@ -298,6 +398,18 @@ export default function AdminFeaturedPage() {
       setDeleting(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to delete the campaign.");
+    }
+  }
+
+  async function handleToggleActive(item: AdminFeaturedItem) {
+    try {
+      await updateCampaign.mutateAsync({
+        id: item.id,
+        payload: { is_active: !item.is_active },
+      });
+      toast.success(item.is_active ? "Campaign deactivated" : "Campaign activated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to change campaign status.");
     }
   }
 
@@ -389,9 +501,13 @@ export default function AdminFeaturedPage() {
           rowKey={(r) => r.id}
           isLoading={isLoading}
           isError={isError}
-          errorMessage={error instanceof Error ? error.message : undefined}
+          errorMessage={
+            isError
+              ? "Unable to load featured content. Check your connection and try again."
+              : undefined
+          }
           onRetry={() => void refetch()}
-          emptyTitle="No campaigns yet"
+          emptyTitle="No featured campaigns yet."
           emptyMessage="Create a campaign to feature an offer on the homepage."
           footer={`Showing ${filtered.length} of ${items.length} campaigns`}
           columns={[
@@ -428,8 +544,17 @@ export default function AdminFeaturedPage() {
             {
               key: "status",
               header: "Status",
-              cell: (r) =>
-                r.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>,
+              cell: (r) => (
+                <div className="flex items-center gap-2">
+                  {r.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+                  <Switch
+                    checked={r.is_active}
+                    disabled={updateCampaign.isPending}
+                    onCheckedChange={() => void handleToggleActive(r)}
+                    aria-label={`Toggle active for ${r.title}`}
+                  />
+                </div>
+              ),
             },
             {
               key: "schedule",
@@ -491,6 +616,11 @@ export default function AdminFeaturedPage() {
           </DialogHeader>
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto py-2 pr-1">
+            <div className="pointer-events-none select-none" inert aria-label="Live card preview">
+              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Card preview</p>
+              <FeaturedCard item={buildPreviewItem(form, editing)} />
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="title">Title</Label>
               <Input
@@ -520,6 +650,7 @@ export default function AdminFeaturedPage() {
                 onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
                 placeholder="https://cdn.example.com/campaign.jpg"
               />
+              <ImageUrlPreview url={form.image_url} />
             </div>
 
             <div className="grid gap-2">
@@ -656,7 +787,16 @@ export default function AdminFeaturedPage() {
               Cancel
             </Button>
             <Button onClick={() => void handleSave()} disabled={busy}>
-              {editing ? "Save changes" : "Add campaign"}
+              {busy ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Saving…
+                </>
+              ) : editing ? (
+                "Save changes"
+              ) : (
+                "Add campaign"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

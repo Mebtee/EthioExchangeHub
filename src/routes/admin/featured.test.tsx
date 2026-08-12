@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminFeaturedPage from "./featured";
@@ -72,8 +73,20 @@ const items: AdminFeaturedItem[] = [
   },
 ];
 
+const adminFeaturedState: {
+  data: AdminFeaturedItem[];
+  isLoading: boolean;
+  isError: boolean;
+  error: null;
+} = {
+  data: items,
+  isLoading: false,
+  isError: false,
+  error: null,
+};
+
 vi.mock("@/hooks", () => ({
-  useAdminFeatured: () => ({ data: items, isLoading: false, isError: false, error: null }),
+  useAdminFeatured: () => adminFeaturedState,
   useCreateFeatured: () => ({
     isPending: false,
     mutateAsync: createFeatured,
@@ -105,15 +118,27 @@ function fillRequiredFields(dialog: HTMLElement, overrides: Record<string, strin
   });
 }
 
+const GOOGLE_DRIVE_WARNING =
+  "Use a direct image URL that returns an image file. Google Drive sharing/view links will not work.";
+
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <AdminFeaturedPage />
+    </MemoryRouter>,
+  );
+}
+
 describe("AdminFeaturedPage", () => {
   beforeEach(() => {
     createFeatured.mockClear();
     updateFeatured.mockClear();
     deleteFeatured.mockClear();
+    adminFeaturedState.data = items;
   });
 
   it("renders every campaign with its status and click count", () => {
-    render(<AdminFeaturedPage />);
+    renderPage();
 
     const table = screen.getByRole("table");
     const headers = within(table)
@@ -141,7 +166,7 @@ describe("AdminFeaturedPage", () => {
   });
 
   it("rejects an internal destination that is not a route path", () => {
-    render(<AdminFeaturedPage />);
+    renderPage();
     const dialog = openAddDialog();
     fillRequiredFields(dialog, { destinationUrl: "https://evil.com" });
 
@@ -154,7 +179,7 @@ describe("AdminFeaturedPage", () => {
   });
 
   it("rejects an external destination that is not an absolute http(s) URL", () => {
-    render(<AdminFeaturedPage />);
+    renderPage();
     const dialog = openAddDialog();
     fillRequiredFields(dialog, { destinationUrl: "javascript:alert(1)" });
     fireEvent.change(within(dialog).getByLabelText("Type"), {
@@ -170,7 +195,7 @@ describe("AdminFeaturedPage", () => {
   });
 
   it("submits a valid campaign with the schedule converted to an ISO timestamp", () => {
-    render(<AdminFeaturedPage />);
+    renderPage();
     const dialog = openAddDialog();
     fillRequiredFields(dialog, {});
     fireEvent.change(within(dialog).getByLabelText("Advertiser (optional)"), {
@@ -203,7 +228,7 @@ describe("AdminFeaturedPage", () => {
   });
 
   it("pre-fills the form when editing a campaign", () => {
-    render(<AdminFeaturedPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Awash Bank — Back-to-School Offer" }));
 
@@ -215,7 +240,7 @@ describe("AdminFeaturedPage", () => {
   });
 
   it("deletes a campaign after confirmation", () => {
-    render(<AdminFeaturedPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Limited-time offer" }));
 
@@ -223,5 +248,79 @@ describe("AdminFeaturedPage", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
 
     expect(deleteFeatured).toHaveBeenCalledWith("campaign-2");
+  });
+
+  it("shows a live image preview for a direct image URL", () => {
+    renderPage();
+    const dialog = openAddDialog();
+    fillRequiredFields(dialog, { imageUrl: "https://cdn.example.com/hero.jpg" });
+
+    const preview = within(dialog).getByAltText("Campaign image preview");
+    expect(preview).toHaveAttribute("src", "https://cdn.example.com/hero.jpg");
+  });
+
+  it("warns instead of previewing when the image URL is a Google Drive share link", () => {
+    renderPage();
+    const dialog = openAddDialog();
+    fillRequiredFields(dialog, { imageUrl: "https://drive.google.com/file/d/abc123/view" });
+
+    expect(within(dialog).getByText(GOOGLE_DRIVE_WARNING)).toBeInTheDocument();
+    expect(within(dialog).queryByAltText("Campaign image preview")).not.toBeInTheDocument();
+  });
+
+  it("rejects a Google Drive image URL on submit", () => {
+    renderPage();
+    const dialog = openAddDialog();
+    fillRequiredFields(dialog, { imageUrl: "https://drive.google.com/open?id=abc123" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add campaign" }));
+
+    expect(screen.getAllByText(GOOGLE_DRIVE_WARNING).length).toBeGreaterThan(0);
+    expect(createFeatured).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-http image URL on submit", () => {
+    renderPage();
+    const dialog = openAddDialog();
+    fillRequiredFields(dialog, { imageUrl: "javascript:alert(1)" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add campaign" }));
+
+    expect(
+      screen.getByText("Image URL must be a direct http:// or https:// URL."),
+    ).toBeInTheDocument();
+    expect(createFeatured).not.toHaveBeenCalled();
+  });
+
+  it("renders a live card preview inside the dialog", () => {
+    renderPage();
+    const dialog = openAddDialog();
+    fillRequiredFields(dialog, {});
+
+    expect(within(dialog).getByText("New offer")).toBeInTheDocument();
+    expect(within(dialog).getByText("Card preview")).toBeInTheDocument();
+  });
+
+  it("toggles a campaign's active state directly from the list", () => {
+    renderPage();
+    const table = screen.getByRole("table");
+
+    fireEvent.click(
+      within(table).getByRole("switch", {
+        name: "Toggle active for Awash Bank — Back-to-School Offer",
+      }),
+    );
+
+    expect(updateFeatured).toHaveBeenCalledWith({
+      id: "campaign-1",
+      payload: { is_active: false },
+    });
+  });
+
+  it("renders the empty state when there are no campaigns", () => {
+    adminFeaturedState.data = [];
+    renderPage();
+
+    expect(screen.getByText("No featured campaigns yet.")).toBeInTheDocument();
   });
 });

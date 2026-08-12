@@ -29,6 +29,7 @@ import {
   seedFakeClient,
   setDatabaseConnected,
 } from "../../helpers/supabase";
+import { featuredContentFixture, futureIso, pastIso } from "../../fixtures/featured-content";
 
 const app = createApp();
 
@@ -448,6 +449,69 @@ describe("Featured-content endpoints", () => {
     const res = await request(app).get("/api/v1/featured");
     expect(res.status).toBe(200);
     expect(res.body.data).toBeNull();
+  });
+
+  it("GET /api/v1/featured hides an active campaign scheduled for the future", async () => {
+    seedFakeClient({
+      ...defaultSeed,
+      featured_content: [featuredContentFixture({ start_at: futureIso() })],
+    });
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+  });
+
+  it("GET /api/v1/featured hides an active campaign whose window has expired", async () => {
+    seedFakeClient({
+      ...defaultSeed,
+      featured_content: [featuredContentFixture({ end_at: pastIso() })],
+    });
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+  });
+
+  it("GET /api/v1/featured serves a campaign whose window is currently open", async () => {
+    seedFakeClient({
+      ...defaultSeed,
+      featured_content: [
+        featuredContentFixture({
+          id: featuredContentId,
+          start_at: pastIso(),
+          end_at: futureIso(),
+        }),
+      ],
+    });
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(featuredContentId);
+  });
+
+  it("GET /api/v1/featured picks the lowest display_order among eligible campaigns", async () => {
+    seedFakeClient({
+      ...defaultSeed,
+      featured_content: [
+        featuredContentFixture({ id: "high-order", display_order: 5 }),
+        featuredContentFixture({ id: "low-order", display_order: 1 }),
+        featuredContentFixture({ id: "inactive-zero", display_order: 0, is_active: false }),
+      ],
+    });
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe("low-order");
+  });
+
+  it("GET /api/v1/featured breaks display_order ties by newest created_at", async () => {
+    seedFakeClient({
+      ...defaultSeed,
+      featured_content: [
+        featuredContentFixture({ id: "older", created_at: "2026-07-01T09:00:00.000Z" }),
+        featuredContentFixture({ id: "newer", created_at: "2026-08-01T09:00:00.000Z" }),
+      ],
+    });
+    const res = await request(app).get("/api/v1/featured");
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe("newer");
   });
 
   it("POST /api/v1/featured/:id/click records a click and stays public (no auth)", async () => {
