@@ -14,9 +14,9 @@ const INNER_CLIP =
   "polygon(0% 0%, calc(85% - 3px) 0%, calc(100% - 3px) 50%, calc(85% - 3px) 100%, 0% 100%)";
 
 const CTA_CLASSES =
-  "inline-flex w-fit items-center gap-1.5 rounded-lg bg-[#0c4429] px-[18px] py-[9px] text-xs font-semibold " +
-  "text-white transition hover:bg-[#0a3a23] focus-visible:outline-none focus-visible:ring-2 " +
-  "focus-visible:ring-[#0c4429] focus-visible:ring-offset-2";
+  "inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary px-[18px] py-[9px] text-xs font-semibold " +
+  "text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 " +
+  "focus-visible:ring-primary focus-visible:ring-offset-2";
 
 export function FeaturedCard({ item }: { item: ActiveFeatured }) {
   const external = item.destination_type === "external";
@@ -55,7 +55,7 @@ export function FeaturedCard({ item }: { item: ActiveFeatured }) {
         )}
 
         {badge && (
-          <span className="absolute bottom-4 left-4 z-[2] rounded-[6px] bg-[#0c4429] px-3 py-1.5 text-[11px] font-semibold text-white">
+          <span className="absolute bottom-4 left-4 z-[2] text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]">
             {badge}
           </span>
         )}
@@ -63,7 +63,7 @@ export function FeaturedCard({ item }: { item: ActiveFeatured }) {
 
       {/* Right content section */}
       <div className="flex flex-col justify-center p-6 md:py-6 md:pl-2.5 md:pr-7">
-        <span className="mb-2.5 inline-flex w-fit items-center gap-1 rounded-[12px] bg-[#d8ebd9] px-2.5 py-1 text-[10px] font-bold text-[#0c4429]">
+        <span className="mb-2.5 inline-flex w-fit items-center gap-1 text-[10px] font-bold text-[#0c4429]">
           <Star className="size-3 fill-[#c89d2d] text-[#c89d2d]" aria-hidden />
           {badge}
         </span>

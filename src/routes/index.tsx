@@ -63,19 +63,17 @@ function HomePage() {
         {/* Hero — content on the left, featured campaign on the right */}
         <div
           className={`grid items-center gap-10 ${
-            featured ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]" : ""
+            featured ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]" : ""
           }`}
         >
           <section>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
-              Ethiopian Bank Exchange Rates &amp;{" "}
+            <h1 className="text-4xl font-bold tracking-tight leading-[1.05] md:text-5xl">
+              Bank Exchange Rates &amp;{" "}
               <span className="text-primary">Currency Converter</span>
             </h1>
             <p className="mt-5 max-w-lg text-muted-foreground">
-              Ethio Exchange compares live buying and selling exchange rates from Ethiopia's
-              commercial banks for major foreign currencies including USD, EUR and GBP. Convert
-              foreign currency to Ethiopian birr (ETB) and see which bank offers the most
-              competitive rate — all updated in real time.
+              Compare live buying and selling rates from Ethiopia's commercial banks for USD, EUR
+              and GBP. Convert to Ethiopian birr (ETB) and find the most competitive rate.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
