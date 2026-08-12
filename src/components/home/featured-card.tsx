@@ -1,52 +1,26 @@
 import { Link } from "react-router-dom";
-import {
-  ArrowRight,
-  ExternalLink,
-  Gift,
-  GraduationCap,
-  Heart,
-  Megaphone,
-  Percent,
-  Rocket,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Users,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, ExternalLink, Landmark, Star } from "lucide-react";
 
-import { SurfaceCard } from "@/components/shared/surface-card";
 import { recordFeaturedClick } from "@/lib/api/featured";
-import type { ActiveFeatured, FeaturedFeature } from "@/types/featured";
+import type { ActiveFeatured } from "@/types/featured";
 
 /**
- * Icons referenced by name from the admin form (e.g. `graduation-cap`) map to
- * lucide components. Unknown names fall back to Sparkles so an admin typo
- * never breaks the card.
+ * Angled "chevron" right edge. The outer wrapper is clipped to this polygon,
+ * while the image itself uses a slightly inset version so ~3px of the gold
+ * wrapper background stays visible as a border around the angled edge.
  */
-const FEATURE_ICONS: Record<string, LucideIcon> = {
-  "graduation-cap": GraduationCap,
-  gift: Gift,
-  percent: Percent,
-  "shield-check": ShieldCheck,
-  rocket: Rocket,
-  "trending-up": TrendingUp,
-  users: Users,
-  zap: Zap,
-  star: Star,
-  heart: Heart,
-  megaphone: Megaphone,
-};
+const OUTER_CLIP = "polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)";
+const INNER_CLIP =
+  "polygon(0% 0%, calc(85% - 3px) 0%, calc(100% - 3px) 50%, calc(85% - 3px) 100%, 0% 100%)";
 
-function FeatureIcon({ name }: { name: string }) {
-  const Icon = FEATURE_ICONS[name.trim().toLowerCase()] ?? Sparkles;
-  return <Icon className="size-4" />;
-}
+const CTA_CLASSES =
+  "inline-flex w-fit items-center gap-1.5 rounded-lg bg-[#0c4429] px-[18px] py-[9px] text-xs font-semibold " +
+  "text-white transition hover:bg-[#0a3a23] focus-visible:outline-none focus-visible:ring-2 " +
+  "focus-visible:ring-[#0c4429] focus-visible:ring-offset-2";
 
 export function FeaturedCard({ item }: { item: ActiveFeatured }) {
   const external = item.destination_type === "external";
+  const badge = item.badge_text || "Featured";
 
   function trackClick() {
     // Fire-and-forget analytics — a failed click request must never block
@@ -54,88 +28,76 @@ export function FeaturedCard({ item }: { item: ActiveFeatured }) {
     void recordFeaturedClick(item.id, item.destination_type).catch(() => undefined);
   }
 
-  const content = (
-    <>
-      <div className="relative aspect-[16/9] overflow-hidden">
-        <img
-          src={item.image_url}
-          alt={item.image_alt ?? item.title}
-          loading="lazy"
-          decoding="async"
-          className="size-full object-cover"
-        />
-      </div>
-
-      <div className="flex flex-1 flex-col p-6 md:p-7">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-            <Megaphone className="size-3" />
-            {item.badge_text || "Featured"}
-          </span>
-          {item.advertiser_name && (
-            <span className="text-xs font-semibold text-muted-foreground">
-              {item.advertiser_name}
-            </span>
-          )}
-        </div>
-
-        <h2 className="mt-4 text-xl font-bold tracking-tight md:text-2xl">{item.title}</h2>
-
-        {item.description && (
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
-        )}
-
-        {item.features.length > 0 && (
-          <div className="mt-5 space-y-2.5">
-            {item.features.map((feature: FeaturedFeature) => (
-              <div
-                key={feature.title}
-                className="flex items-start gap-3 rounded-xl border border-border/60 bg-surface-low/60 p-3"
-              >
-                {feature.icon && (
-                  <span className="mt-0.5 text-primary">
-                    <FeatureIcon name={feature.icon} />
-                  </span>
-                )}
-                <div>
-                  <p className="text-xs font-bold">{feature.title}</p>
-                  {feature.description && (
-                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-                      {feature.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+  return (
+    <div className="relative flex w-full flex-col overflow-hidden rounded-[20px] bg-[#f4f8f4] shadow-[0_10px_30px_rgba(0,0,0,0.05)] md:h-[250px] md:flex-row">
+      {/* Left image section — gold wrapper behind an angled image */}
+      <div
+        className="relative h-56 w-full shrink-0 bg-[#c89d2d] md:h-full md:w-[48%]"
+        style={{ clipPath: OUTER_CLIP }}
+      >
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt={item.image_alt ?? item.title}
+            loading="lazy"
+            decoding="async"
+            className="block h-full w-full object-cover"
+            style={{ clipPath: INNER_CLIP }}
+          />
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0A4A30] to-[#075B3B]"
+            style={{ clipPath: INNER_CLIP }}
+            aria-hidden
+          >
+            <Landmark className="size-16 text-[#f4f8f4]/90" />
           </div>
         )}
 
-        <div className="mt-6">
+        {badge && (
+          <span className="absolute bottom-4 left-4 z-[2] rounded-[6px] bg-[#0c4429] px-3 py-1.5 text-[11px] font-semibold text-white">
+            {badge}
+          </span>
+        )}
+      </div>
+
+      {/* Right content section */}
+      <div className="flex flex-col justify-center p-6 md:py-6 md:pl-2.5 md:pr-7">
+        <span className="mb-2.5 inline-flex w-fit items-center gap-1 rounded-[12px] bg-[#d8ebd9] px-2.5 py-1 text-[10px] font-bold text-[#0c4429]">
+          <Star className="size-3 fill-[#c89d2d] text-[#c89d2d]" aria-hidden />
+          {badge}
+        </span>
+
+        {item.advertiser_name && (
+          <p className="m-0 text-[13px] font-semibold text-[#2c3e50]">{item.advertiser_name}</p>
+        )}
+
+        <h2 className="mb-2 mt-1 text-xl font-bold text-[#0c4429]">{item.title}</h2>
+
+        {item.description && (
+          <p className="mb-[18px] mt-0 text-xs leading-[1.4] text-[#666]">{item.description}</p>
+        )}
+
+        <div>
           {external ? (
             <a
               href={item.destination_url}
               target="_blank"
               rel="noopener noreferrer"
               onClick={trackClick}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              className={CTA_CLASSES}
             >
               {item.cta_text || "Learn More"}
-              <ExternalLink className="size-4" />
+              <ExternalLink className="size-4" aria-hidden />
             </a>
           ) : (
-            <Link
-              to={item.destination_url}
-              onClick={trackClick}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-            >
+            <Link to={item.destination_url} onClick={trackClick} className={CTA_CLASSES}>
               {item.cta_text || "Learn More"}
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-4" aria-hidden />
             </Link>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
-
-  return <SurfaceCard className="flex flex-col overflow-hidden">{content}</SurfaceCard>;
 }

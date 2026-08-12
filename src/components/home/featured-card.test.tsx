@@ -50,15 +50,22 @@ describe("FeaturedCard", () => {
     recordFeaturedClick.mockClear();
   });
 
-  it("renders the campaign content and features", () => {
+  it("renders the campaign content with the badge on the pill and image", () => {
     renderCard(item());
 
     expect(screen.getByText("Awash Bank — Back-to-School Offer")).toBeInTheDocument();
-    expect(screen.getByText("SPONSORED")).toBeInTheDocument();
+    expect(screen.getAllByText("SPONSORED")).toHaveLength(2);
     expect(screen.getByText("Awash Bank")).toBeInTheDocument();
     expect(screen.getByText("Student account promotions for the new term.")).toBeInTheDocument();
-    expect(screen.getByText("Zero balance")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Offer" })).toBeInTheDocument();
+  });
+
+  it("passes the backend-provided image_url straight through to the <img> src", () => {
+    const backendImageUrl = "https://cdn.example.com/campaigns/awash-school-hero.jpg";
+    renderCard(item({ image_url: backendImageUrl }));
+
+    const image = screen.getByRole("img", { name: "Awash Bank back-to-school promotion" });
+    expect(image).toHaveAttribute("src", backendImageUrl);
   });
 
   it("renders an internal destination as a client-side route link and records the click", () => {
