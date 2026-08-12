@@ -62,7 +62,7 @@ function HomePage() {
       <PageContainer>
         {/* Hero — content on the left, featured campaign on the right */}
         <div
-          className={`grid items-start gap-10 ${
+          className={`grid items-center gap-10 ${
             featured ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]" : ""
           }`}
         >
