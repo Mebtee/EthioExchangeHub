@@ -403,6 +403,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "manualRates": "Manual Exchange Rates",
+      "featured": "Featured Content",
       "scraperHealth": "Scraper Health",
       "scrapeLogs": "Scrape Logs",
       "profile": "Profile",

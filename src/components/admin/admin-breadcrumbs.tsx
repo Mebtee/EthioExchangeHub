@@ -14,6 +14,7 @@ import { useLocale } from "@/hooks";
 type CrumbKey =
   | "admin.nav.dashboard"
   | "admin.nav.manualRates"
+  | "admin.nav.featured"
   | "admin.nav.scraperHealth"
   | "admin.nav.scrapeLogs"
   | "admin.nav.profile"
@@ -22,6 +23,7 @@ type CrumbKey =
 const CRUMB_LABELS: Record<string, CrumbKey> = {
   "/admin": "admin.nav.dashboard",
   "/admin/manual-rates": "admin.nav.manualRates",
+  "/admin/featured": "admin.nav.featured",
   "/admin/scraper-health": "admin.nav.scraperHealth",
   "/admin/scrape-logs": "admin.nav.scrapeLogs",
   "/admin/profile": "admin.nav.profile",

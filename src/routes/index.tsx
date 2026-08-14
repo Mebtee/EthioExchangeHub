@@ -8,6 +8,7 @@ import { MarketTicker } from "@/components/home/market-ticker";
 import { RateHero } from "@/components/home/rate-hero";
 import { LiveRankings } from "@/components/home/live-rankings";
 import { CurrencyConverter } from "@/components/home/currency-converter";
+import { FeaturedCard } from "@/components/home/featured-card";
 import { FinancialNews } from "@/components/home/financial-news";
 import {
   filterToLatestBusinessDay,
@@ -16,7 +17,7 @@ import {
   getPrimaryCurrency,
 } from "@/lib/rankings";
 import { formatRateDate } from "@/lib/format";
-import { useCurrencies, useExchangeRates, useNews, useLocale } from "@/hooks";
+import { useCurrencies, useExchangeRates, useFeatured, useNews, useLocale } from "@/hooks";
 import { Seo } from "@/components/shared/seo";
 
 function HomePage() {
@@ -25,6 +26,7 @@ function HomePage() {
   const { data: rates = [], isLoading, isError, error, refetch } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
   const { data: news = [] } = useNews();
+  const { data: featured = null } = useFeatured();
 
   const primaryCurrency = useMemo(() => getPrimaryCurrency(rates), [rates]);
 
@@ -58,8 +60,12 @@ function HomePage() {
       <Seo title={t("seo.home.title")} description={t("seo.home.description")} />
       <MarketTicker />
       <PageContainer>
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-          {/* Hero */}
+        {/* Hero — content on the left, featured campaign on the right */}
+        <div
+          className={`grid items-center gap-10 ${
+            featured ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]" : ""
+          }`}
+        >
           <section>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
               <Trans
@@ -88,21 +94,34 @@ function HomePage() {
                 {t("common.currencyConverter")} <ShoppingCart className="size-4" />
               </a>
             </div>
+            <p className="mt-6 inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <CalendarDays className="size-4" />
+              Last updated: {latestBusinessDate ? formatRateDate(latestBusinessDate) : "—"}
+            </p>
           </section>
 
-          {/* Best rate cards */}
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("home.todaysBestRates")}
-              </p>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
-                <CalendarDays className="size-3.5" />
-                {t("common.ratesAsOf", {
-                  date: latestBusinessDate ? formatRateDate(latestBusinessDate) : "—",
-                })}
-              </span>
-            </div>
+          {/* Admin-controlled featured campaign — hidden entirely when none qualifies */}
+          {featured && (
+            <section>
+              <FeaturedCard item={featured} />
+            </section>
+          )}
+        </div>
+
+        {/* Today's best rates */}
+        <section className="mt-12">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              {t("home.todaysBestRates")}
+            </p>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
+              <CalendarDays className="size-3.5" />
+              {t("common.ratesAsOf", {
+                date: latestBusinessDate ? formatRateDate(latestBusinessDate) : "—",
+              })}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
             <RateHero
               icon={<ShoppingCart className="size-5" />}
               label={t("home.bestBuyRate")}
@@ -121,8 +140,8 @@ function HomePage() {
               accent="gold"
               stale={bestSell?.stale}
             />
-          </section>
-        </div>
+          </div>
+        </section>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
           {/* Live rankings */}

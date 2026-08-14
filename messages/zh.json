@@ -403,6 +403,7 @@
     "nav": {
       "dashboard": "仪表盘",
       "manualRates": "手动汇率",
+      "featured": "精选内容",
       "scraperHealth": "爬虫运行状况",
       "scrapeLogs": "抓取日志",
       "profile": "个人资料",

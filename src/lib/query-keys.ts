@@ -22,6 +22,14 @@ export const newsKeys = {
   categories: () => [...newsKeys.all, "categories"] as const,
 };
 
+export const featuredKeys = {
+  all: ["featured"] as const,
+  /** The homepage's single eligible campaign (null when none). */
+  active: () => [...featuredKeys.all, "active"] as const,
+  /** Admin: every campaign with aggregate click counts. */
+  adminList: () => [...featuredKeys.all, "admin", "list"] as const,
+};
+
 export const adminKeys = {
   all: ["admin"] as const,
   dashboard: () => [...adminKeys.all, "dashboard"] as const,

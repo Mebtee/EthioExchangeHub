@@ -4,13 +4,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import HomePage from "./index";
 
+import type { ActiveFeatured } from "@/types/featured";
 import type { Currency } from "@/types/currency";
 import type { ExchangeRate } from "@/types/exchange-rate";
 import type { NewsItem } from "@/types/news";
 
-const { rateState } = vi.hoisted(() => ({
+const { rateState, featuredState } = vi.hoisted(() => ({
   rateState: {
     rates: [] as ExchangeRate[],
+  },
+  featuredState: {
+    data: null as ActiveFeatured | null,
   },
 }));
 
@@ -40,6 +44,7 @@ vi.mock("@/hooks", () => ({
   }),
   useNews: () => ({ data: [] satisfies NewsItem[] }),
   useLocale: () => ({ locale: "en", localize: (path: string) => path }),
+  useFeatured: () => ({ data: featuredState.data }),
 }));
 
 function renderPage() {
@@ -49,6 +54,46 @@ function renderPage() {
     </MemoryRouter>,
   );
 }
+
+describe("HomePage layout", () => {
+  it("renders hero actions, last-updated line, best-rate cards, and the featured campaign", () => {
+    featuredState.data = {
+      id: "campaign-1",
+      title: "Awash Bank — Back-to-School Offer",
+      description: "Student account promotions for the new term.",
+      image_url: "https://cdn.example.com/awash-school.jpg",
+      image_alt: "Awash Bank back-to-school promotion",
+      advertiser_name: "Awash Bank",
+      badge_text: "FEATURED",
+      cta_text: "View Offer",
+      destination_url: "/offers/awash-school",
+      destination_type: "internal",
+      features: [],
+    };
+    rateState.rates = [
+      rate({
+        id: 1,
+        bankCode: "A",
+        bankName: "Bank A",
+        rateDate: "2026-08-10",
+        cashBuying: 121.5,
+        cashSelling: 122.5,
+      }),
+    ];
+    renderPage();
+
+    expect(screen.getByRole("link", { name: /Compare Banks/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Bank Rankings/ })).toBeInTheDocument();
+    expect(screen.getByText(/Last updated: Aug 10, 2026/)).toBeInTheDocument();
+
+    expect(screen.getByText("Today's Best Rates")).toBeInTheDocument();
+    expect(screen.getByText("Best Buy Rate")).toBeInTheDocument();
+    expect(screen.getByText("Best Sell Rate")).toBeInTheDocument();
+
+    expect(screen.getByText("Awash Bank — Back-to-School Offer")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Offer" })).toBeInTheDocument();
+  });
+});
 
 describe("HomePage best rate", () => {
   it("lets a current-date rate win and never an older numerically better rate (Test 6)", async () => {

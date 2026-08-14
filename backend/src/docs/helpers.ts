@@ -29,6 +29,7 @@ export interface DocPathItem {
   get?: DocOperation;
   post?: DocOperation;
   put?: DocOperation;
+  patch?: DocOperation;
   delete?: DocOperation;
 }
 

@@ -23,16 +23,22 @@ import {
 import { banks } from "../fixtures/banks";
 import { contactMessages } from "../fixtures/contact-messages";
 import { exchangeRates } from "../fixtures/exchange-rates";
+import { featuredContentFixture } from "../fixtures/featured-content";
 import { manualRates } from "../fixtures/manual-rates";
 import { scrapeLogs } from "../fixtures/scrape-logs";
 import { settings } from "../fixtures/settings";
 import { users } from "../fixtures/users";
+
+/** A valid UUID so `:id` route-param validation passes in integration tests. */
+export const featuredContentId = "22222222-2222-4222-8222-222222222222";
 
 /** The standard seed — every live table populated with typed fixtures. */
 export const defaultSeed: FakeSeed = {
   banks,
   contact_messages: contactMessages,
   exchange_rates: exchangeRates,
+  featured_content: [featuredContentFixture({ id: featuredContentId })],
+  featured_content_clicks: [],
   manual_rates: manualRates,
   scrape_logs: scrapeLogs,
   settings,

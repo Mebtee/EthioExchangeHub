@@ -403,6 +403,7 @@
     "nav": {
       "dashboard": "ዳሽቦርድ",
       "manualRates": "የእጅ የምንዛሪ ተመኖች",
+      "featured": "የተለጠፈ ይዘት",
       "scraperHealth": "የስክራፐር ጤና",
       "scrapeLogs": "የስክራፕ ምዝግቦች",
       "profile": "መገለጫ",

@@ -29,6 +29,7 @@ const AdminForgotPasswordPage = lazy(() => import("@/routes/admin/forgot-passwor
 const AdminResetPasswordPage = lazy(() => import("@/routes/admin/reset-password"));
 const AdminDashboardPage = lazy(() => import("@/routes/admin/dashboard"));
 const AdminManualRatesPage = lazy(() => import("@/routes/admin/manual-rates"));
+const AdminFeaturedPage = lazy(() => import("@/routes/admin/featured"));
 const AdminScraperHealthPage = lazy(() => import("@/routes/admin/scraper-health"));
 const AdminScrapeLogsPage = lazy(() => import("@/routes/admin/scrape-logs"));
 const AdminProfilePage = lazy(() => import("@/routes/admin/profile"));
@@ -151,6 +152,7 @@ export function AppRoutes() {
               <Route path="admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="manual-rates" element={<AdminManualRatesPage />} />
+                <Route path="featured" element={<AdminFeaturedPage />} />
                 <Route path="scraper-health" element={<AdminScraperHealthPage />} />
                 <Route path="scrape-logs" element={<AdminScrapeLogsPage />} />
                 <Route path="profile" element={<AdminProfilePage />} />
