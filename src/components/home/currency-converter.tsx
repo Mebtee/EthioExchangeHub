@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowRightLeft, ArrowUpDown, Sparkles } from "lucide-react";
 
 import { SurfaceCard } from "@/components/shared/surface-card";
@@ -12,6 +13,7 @@ export function CurrencyConverter({
   currencies: Currency[];
   bestBuyRate?: number;
 }) {
+  const { t } = useTranslation();
   const [from, setFrom] = useState("USD");
   const [to, setTo] = useState("ETB");
   const [amount, setAmount] = useState(1000);
@@ -26,8 +28,8 @@ export function CurrencyConverter({
           <ArrowRightLeft className="size-5" />
         </div>
         <div>
-          <h3 className="text-lg font-bold tracking-tight">Currency Converter</h3>
-          <p className="text-xs text-muted-foreground">Convert at the best available bank rate</p>
+          <h3 className="text-lg font-bold tracking-tight">{t("converter.title")}</h3>
+          <p className="text-xs text-muted-foreground">{t("converter.subtitle")}</p>
         </div>
       </div>
 
@@ -35,7 +37,7 @@ export function CurrencyConverter({
         htmlFor="converter-from"
         className="mb-1 block text-xs font-semibold text-muted-foreground"
       >
-        From
+        {t("converter.from")}
       </label>
       <div className="mb-2 flex items-stretch gap-2">
         <select
@@ -51,7 +53,7 @@ export function CurrencyConverter({
         <input
           type="number"
           id="converter-amount"
-          aria-label="Amount to convert"
+          aria-label={t("converter.amountToConvert")}
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
           className="min-w-0 flex-1 rounded-xl border border-border bg-surface-low px-3 py-2.5 text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary"
@@ -65,7 +67,7 @@ export function CurrencyConverter({
             setTo(t);
           }}
           className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          aria-label="Swap"
+          aria-label={t("converter.swap")}
         >
           <ArrowUpDown className="size-4" />
         </button>
@@ -74,7 +76,7 @@ export function CurrencyConverter({
         htmlFor="converter-to"
         className="mb-1 block text-xs font-semibold text-muted-foreground"
       >
-        To
+        {t("converter.to")}
       </label>
       <div className="mb-4 flex items-stretch gap-2">
         <select
@@ -95,13 +97,13 @@ export function CurrencyConverter({
 
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <Sparkles className="size-3.5 text-primary" />
-        Using best available rate:{" "}
+        {t("converter.usingBest")}{" "}
         <span className="font-semibold text-foreground">
           {hasRate ? bestBuyRate.toFixed(2) : "—"}
         </span>
       </p>
       <button className="mt-4 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-        Calculate Best Value
+        {t("converter.calculateBest")}
       </button>
     </SurfaceCard>
   );

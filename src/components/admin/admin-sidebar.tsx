@@ -9,19 +9,35 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
+import { useLocale } from "@/hooks";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/admin/manual-rates", label: "Manual Exchange Rates", icon: PencilLine },
-  { to: "/admin/scraper-health", label: "Scraper Health", icon: Activity },
-  { to: "/admin/scrape-logs", label: "Scrape Logs", icon: ScrollText },
-  { to: "/admin/profile", label: "Profile", icon: User },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
+const NAV_ITEMS: Array<{
+  to: string;
+  labelKey:
+    | "admin.nav.dashboard"
+    | "admin.nav.manualRates"
+    | "admin.nav.scraperHealth"
+    | "admin.nav.scrapeLogs"
+    | "admin.nav.profile"
+    | "admin.nav.settings";
+  icon: LucideIcon;
+  end?: boolean;
+}> = [
+  { to: "/admin", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
+  { to: "/admin/manual-rates", labelKey: "admin.nav.manualRates", icon: PencilLine },
+  { to: "/admin/scraper-health", labelKey: "admin.nav.scraperHealth", icon: Activity },
+  { to: "/admin/scrape-logs", labelKey: "admin.nav.scrapeLogs", icon: ScrollText },
+  { to: "/admin/profile", labelKey: "admin.nav.profile", icon: User },
+  { to: "/admin/settings", labelKey: "admin.nav.settings", icon: Settings },
 ];
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center gap-3 border-b border-border/60 px-5">
@@ -31,7 +47,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div>
           <p className="text-sm font-bold leading-tight">Ethio Exchange</p>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Admin Console
+            {t("admin.console")}
           </p>
         </div>
       </div>
@@ -40,7 +56,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
-            to={item.to}
+            to={localize(item.to)}
             end={item.end}
             onClick={onNavigate}
             className={({ isActive }) =>
@@ -53,18 +69,18 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
             }
           >
             <item.icon className="size-4" />
-            {item.label}
+            {t(item.labelKey)}
           </NavLink>
         ))}
       </nav>
 
       <div className="border-t border-border/60 p-3">
         <Link
-          to="/"
+          to={localize("/")}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-low hover:text-foreground"
         >
           <ExternalLink className="size-4" />
-          View public site
+          {t("admin.viewPublicSite")}
         </Link>
       </div>
     </div>

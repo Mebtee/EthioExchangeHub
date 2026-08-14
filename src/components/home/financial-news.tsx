@@ -1,10 +1,14 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Newspaper } from "lucide-react";
 
 import { SurfaceCard } from "@/components/shared/surface-card";
+import { useLocale } from "@/hooks";
 import type { NewsItem } from "@/types/news";
 
 export function FinancialNews({ items }: { items: NewsItem[] }) {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   return (
     <SurfaceCard className="p-6">
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -13,23 +17,24 @@ export function FinancialNews({ items }: { items: NewsItem[] }) {
             <Newspaper className="size-4" />
           </div>
           <div>
-            <h3 className="text-base font-bold tracking-tight">Financial News</h3>
-            <p className="text-xs text-muted-foreground">Latest market updates</p>
+            <h3 className="text-base font-bold tracking-tight">{t("financialNews.title")}</h3>
+            <p className="text-xs text-muted-foreground">{t("financialNews.subtitle")}</p>
           </div>
         </div>
         {items.length > 0 && (
-          <Link to="/news" className="text-xs font-semibold text-primary hover:underline">
-            See all
+          <Link
+            to={localize("/news")}
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            {t("financialNews.seeAll")}
           </Link>
         )}
       </div>
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center">
-          <p className="text-sm font-medium text-muted-foreground">No news published yet.</p>
-          <p className="mt-1 text-xs text-muted-foreground/70">
-            Market updates will appear here as soon as they are available.
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">{t("financialNews.none")}</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">{t("financialNews.noneHint")}</p>
         </div>
       ) : (
         <ul className="space-y-4">
@@ -45,7 +50,7 @@ export function FinancialNews({ items }: { items: NewsItem[] }) {
               <div className="min-w-0">
                 <p className="text-sm font-semibold leading-snug line-clamp-2">{n.title}</p>
                 <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {n.date} • {n.readMinutes} min read
+                  {n.date} • {t("common.minRead", { count: n.readMinutes })}
                 </p>
               </div>
             </li>

@@ -166,6 +166,25 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Locale-specific typefaces. The <html lang> attribute is managed by
+     LocaleLayout, so these selectors only apply while the matching locale is
+     active. The font link itself is injected by LocaleLayout. */
+  html:lang(am) body,
+  html:lang(am) button,
+  html:lang(am) input,
+  html:lang(am) select,
+  html:lang(am) textarea {
+    font-family: "Noto Sans Ethiopic", "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  html:lang(zh) body,
+  html:lang(zh) button,
+  html:lang(zh) input,
+  html:lang(zh) select,
+  html:lang(zh) textarea {
+    font-family: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
 }
 
 /* Market ticker marquee — the loop repeats the track three times, so the

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Bell, Globe, Save } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { useAdminSettings, useUpdateAdminSettings } from "@/hooks/use-admin";
 import { useCurrencies } from "@/hooks";
 import { useHydrateOnce } from "@/hooks/use-hydrate-once";
-import { toast } from "sonner";
 
 export default function AdminSettingsPage() {
+  const { t } = useTranslation();
   const { data, isError, error } = useAdminSettings();
   // Separate mutation instances so each Save button shows its own pending state.
   const updateGeneral = useUpdateAdminSettings();
@@ -44,10 +46,10 @@ export default function AdminSettingsPage() {
         onSuccess: (updated) => {
           setSiteName(updated.siteName);
           setDefaultCurrency(updated.defaultCurrency);
-          toast.success("Settings saved.");
+          toast.success(t("admin.settings.toastSettingsSaved"));
         },
         onError: (err) => {
-          toast.error(err instanceof Error ? err.message : "Failed to save settings.");
+          toast.error(err instanceof Error ? err.message : t("admin.settings.toastSettingsError"));
         },
       },
     );
@@ -62,10 +64,10 @@ export default function AdminSettingsPage() {
           setFailureAlerts(updated.failureAlerts);
           setDailyDigest(updated.dailyDigest);
           setWeeklyReport(updated.weeklyReport);
-          toast.success("Preferences saved.");
+          toast.success(t("admin.settings.toastPrefsSaved"));
         },
         onError: (err) => {
-          toast.error(err instanceof Error ? err.message : "Failed to save preferences.");
+          toast.error(err instanceof Error ? err.message : t("admin.settings.toastPrefsError"));
         },
       },
     );
@@ -74,16 +76,15 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-1 text-muted-foreground">
-          Platform preferences, notifications, and maintenance actions.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("admin.settings.title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("admin.settings.subtitle")}</p>
       </div>
 
       {isError && (
         <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-          Unable to load settings:{" "}
-          {error instanceof Error ? error.message : "please try again later."}
+          {t("admin.settings.loadError", {
+            detail: error instanceof Error ? error.message : t("admin.settings.loadErrorFallback"),
+          })}
         </div>
       )}
 
@@ -94,15 +95,15 @@ export default function AdminSettingsPage() {
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Globe className="size-4" />
             </div>
-            <h2 className="font-semibold">General</h2>
+            <h2 className="font-semibold">{t("admin.settings.general")}</h2>
           </div>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="siteName">Site name</Label>
+              <Label htmlFor="siteName">{t("admin.settings.siteName")}</Label>
               <Input id="siteName" value={siteName} onChange={(e) => setSiteName(e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="currency">Default currency</Label>
+              <Label htmlFor="currency">{t("admin.settings.defaultCurrency")}</Label>
               <select
                 id="currency"
                 value={defaultCurrency}
@@ -119,7 +120,9 @@ export default function AdminSettingsPage() {
             <div className="flex justify-end">
               <Button onClick={handleSaveGeneral} disabled={updateGeneral.isPending}>
                 <Save className="size-4" />
-                {updateGeneral.isPending ? "Saving…" : "Save changes"}
+                {updateGeneral.isPending
+                  ? t("admin.settings.saving")
+                  : t("admin.settings.saveChanges")}
               </Button>
             </div>
           </div>
@@ -131,30 +134,30 @@ export default function AdminSettingsPage() {
             <div className="flex size-9 items-center justify-center rounded-xl bg-gold-soft text-gold-foreground">
               <Bell className="size-4" />
             </div>
-            <h2 className="font-semibold">Notifications</h2>
+            <h2 className="font-semibold">{t("admin.settings.notifications")}</h2>
           </div>
           <div className="space-y-4">
             <ToggleRow
-              label="Email alerts"
-              description="Receive an email when a rate changes significantly."
+              label={t("admin.settings.emailAlerts")}
+              description={t("admin.settings.emailAlertsDesc")}
               checked={emailAlerts}
               onChange={setEmailAlerts}
             />
             <ToggleRow
-              label="Scraper failure alerts"
-              description="Notify me immediately when a scraper fails or times out."
+              label={t("admin.settings.failureAlerts")}
+              description={t("admin.settings.failureAlertsDesc")}
               checked={failureAlerts}
               onChange={setFailureAlerts}
             />
             <ToggleRow
-              label="Daily digest"
-              description="A summary of the day's scrape activity each evening."
+              label={t("admin.settings.dailyDigest")}
+              description={t("admin.settings.dailyDigestDesc")}
               checked={dailyDigest}
               onChange={setDailyDigest}
             />
             <ToggleRow
-              label="Weekly report"
-              description="Performance and coverage report delivered every Monday."
+              label={t("admin.settings.weeklyReport")}
+              description={t("admin.settings.weeklyReportDesc")}
               checked={weeklyReport}
               onChange={setWeeklyReport}
             />
@@ -164,7 +167,9 @@ export default function AdminSettingsPage() {
                 onClick={handleSaveNotifications}
                 disabled={updateNotifications.isPending}
               >
-                {updateNotifications.isPending ? "Saving…" : "Save preferences"}
+                {updateNotifications.isPending
+                  ? t("admin.settings.saving")
+                  : t("admin.settings.savePreferences")}
               </Button>
             </div>
           </div>

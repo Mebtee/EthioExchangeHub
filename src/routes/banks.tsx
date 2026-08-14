@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { BankCard } from "@/components/banks/bank-card";
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
@@ -15,6 +16,7 @@ function key(bankName: string): string {
 }
 
 function BanksPage() {
+  const { t } = useTranslation();
   const {
     data: banks = [],
     isLoading: banksLoading,
@@ -61,25 +63,22 @@ function BanksPage() {
 
   return (
     <SiteShell>
-      <Seo
-        title="Ethiopian Banks Exchange Rates — Ethio Exchange"
-        description="Compare buying and selling exchange rates from Ethiopia's commercial banks for USD, EUR, GBP and more — updated in real time on Ethio Exchange."
-      />
+      <Seo title={t("seo.banks.title")} description={t("seo.banks.description")} />
       <PageContainer>
         <PageHeader
-          title="Ethiopian Bank Exchange Rates"
+          title={t("banks.title")}
           description={
             isLoading
-              ? "Loading commercial bank rates…"
+              ? t("banks.loading")
               : primaryCurrency
-                ? `${bankEntries.length} commercial banks reporting live ${primaryCurrency}/ETB rates. Compare buying and selling rates across Ethiopia's banks, or search for a specific bank below.`
-                : "No bank rates available yet."
+                ? t("banks.reportingLive", { count: bankEntries.length, currency: primaryCurrency })
+                : t("banks.noRatesYet")
           }
           action={
             <SearchInput
               value={query}
               onChange={setQuery}
-              placeholder="Search bank name..."
+              placeholder={t("banks.searchPlaceholder")}
               wrapperClassName="w-full sm:w-72"
             />
           }
@@ -89,22 +88,14 @@ function BanksPage() {
           <CardGridSkeleton count={6} />
         ) : isError ? (
           <ErrorState
-            title="Unable to load bank directory"
-            message={
-              error instanceof Error ? error.message : "Something went wrong while loading banks."
-            }
+            title={t("banks.unableToLoad")}
+            message={error instanceof Error ? error.message : t("banks.loadError")}
             onRetry={onRetry}
           />
         ) : bankEntries.length === 0 ? (
-          <EmptyState
-            title="No bank rates available"
-            message="No bank has published rate data yet. Banks will appear here as soon as rates are collected."
-          />
+          <EmptyState title={t("banks.noRates")} message={t("banks.noRatesMessage")} />
         ) : filteredEntries.length === 0 ? (
-          <EmptyState
-            title="No banks match your search"
-            message="Try a different bank name or clear the search."
-          />
+          <EmptyState title={t("banks.noMatch")} message={t("banks.noMatchMessage")} />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredEntries.map(({ bank, rate }) => (

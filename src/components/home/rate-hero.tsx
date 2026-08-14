@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation, Trans } from "react-i18next";
 
 export function RateHero({
   icon,
@@ -18,6 +19,7 @@ export function RateHero({
   /** When true, the shown rate is older than the backend staleness window (D2). */
   stale?: boolean;
 }) {
+  const { t } = useTranslation();
   const border = accent === "primary" ? "border-l-primary" : "border-l-[color:var(--gold)]";
   const labelColor = accent === "primary" ? "text-primary" : "text-[color:var(--gold-foreground)]";
   return (
@@ -41,11 +43,15 @@ export function RateHero({
           )}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          Available at <span className={`font-semibold ${labelColor}`}>{bank}</span>
+          <Trans
+            i18nKey="rateHero.availableAt"
+            values={{ bank }}
+            components={{ bank: <span className={`font-semibold ${labelColor}`} /> }}
+          />
         </p>
         {stale && (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[color:var(--gold-soft)] px-2 py-1 text-[11px] font-semibold text-[color:var(--gold-foreground)]">
-            Stale rate — no newer bank data yet
+            {t("rateHero.staleMessage")}
           </p>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { DataTable } from "@/components/admin/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -13,6 +14,7 @@ import { logStatusTone } from "@/lib/status";
 const STATUS_FILTERS: Array<"ALL" | LogStatus> = ["ALL", "success", "failed"];
 
 export default function AdminScrapeLogsPage() {
+  const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useScrapeLogs();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | LogStatus>("ALL");
@@ -34,8 +36,8 @@ export default function AdminScrapeLogsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Scrape Logs</h1>
-        <p className="mt-1 text-muted-foreground">Execution history for every bank scraper run.</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("admin.scrapeLogs.title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("admin.scrapeLogs.subtitle")}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -43,7 +45,7 @@ export default function AdminScrapeLogsPage() {
           type="text"
           value={query}
           onChange={setQuery}
-          placeholder="Search run id or bank..."
+          placeholder={t("admin.scrapeLogs.searchPlaceholder")}
           wrapperClassName="w-64"
         />
         <div className="inline-flex items-center gap-1 rounded-xl bg-surface-low p-1">
@@ -57,7 +59,7 @@ export default function AdminScrapeLogsPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {s === "ALL" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === "ALL" ? t("admin.scrapeLogs.all") : t(`admin.scrapeLogs.${s}`)}
             </button>
           ))}
         </div>
@@ -71,13 +73,13 @@ export default function AdminScrapeLogsPage() {
           isError={isError}
           errorMessage={error instanceof Error ? error.message : undefined}
           onRetry={() => void refetch()}
-          emptyTitle="No logs match your filters"
-          emptyMessage="Try clearing the search or switching the status filter."
-          footer={`Showing ${filtered.length} of ${logs.length} log entries`}
+          emptyTitle={t("admin.scrapeLogs.noMatchTitle")}
+          emptyMessage={t("admin.scrapeLogs.noMatchMessage")}
+          footer={t("admin.scrapeLogs.showing", { count: filtered.length, total: logs.length })}
           columns={[
             {
               key: "ranAt",
-              header: "Time",
+              header: t("admin.scrapeLogs.time"),
               cell: (log) => (
                 <span className="whitespace-nowrap tabular">
                   {formatRelativeTime(log.ranAt ?? "")}
@@ -86,34 +88,36 @@ export default function AdminScrapeLogsPage() {
             },
             {
               key: "runId",
-              header: "Run",
+              header: t("admin.scrapeLogs.run"),
               cell: (log) => <span className="font-medium">{log.runId.slice(0, 8)}…</span>,
             },
             {
               key: "bank",
-              header: "Bank",
+              header: t("admin.scrapeLogs.bank"),
               cell: (log) => <span className="text-muted-foreground">{log.bankName}</span>,
             },
             {
               key: "status",
-              header: "Status",
+              header: t("admin.scrapeLogs.status"),
               cell: (log) => (
-                <StatusBadge tone={logStatusTone(log.status)}>{log.status}</StatusBadge>
+                <StatusBadge tone={logStatusTone(log.status)}>
+                  {t(`admin.scrapeLogs.${log.status}`)}
+                </StatusBadge>
               ),
             },
             {
               key: "records",
-              header: "Records",
+              header: t("admin.scrapeLogs.records"),
               cell: (log) => <span className="tabular">{formatCountOrDash(log.records)}</span>,
             },
             {
               key: "duration",
-              header: "Duration",
+              header: t("admin.scrapeLogs.duration"),
               cell: (log) => <span className="tabular">{formatDurationMs(log.durationMs)}</span>,
             },
             {
               key: "message",
-              header: "Message",
+              header: t("admin.scrapeLogs.message"),
               cell: (log) => (
                 <span
                   className="block max-w-[260px] truncate text-muted-foreground"

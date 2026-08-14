@@ -10,42 +10,45 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import { useTranslation, Trans } from "react-i18next";
+
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
+import { useLocale } from "@/hooks";
 import { Pill } from "@/components/shared/pill";
 import { Seo } from "@/components/shared/seo";
 
 function AboutPage() {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   return (
     <SiteShell>
-      <Seo
-        title="About Us — Ethio Exchange"
-        description="Learn how Ethio Exchange tracks and compares Ethiopian bank exchange rates in real time."
-      />
+      <Seo title={t("seo.about.title")} description={t("seo.about.description")} />
       <PageContainer>
         <div className="grid gap-10 lg:grid-cols-2 items-center">
           <div>
             <span className="inline-block rounded-full bg-[color:var(--gold-soft)] text-[color:var(--gold-foreground)] text-[10px] font-bold uppercase tracking-wider px-3 py-1.5">
-              Our Mission
+              {t("about.ourMission")}
             </span>
             <h1 className="mt-4 text-4xl md:text-5xl font-bold leading-[1.05]">
-              Democratizing Financial <span className="text-primary">Transparency</span> in
-              Ethiopia.
+              <Trans
+                i18nKey="about.heroTitle"
+                components={{ highlight: <span className="text-primary" /> }}
+              />
             </h1>
-            <p className="mt-5 text-muted-foreground max-w-lg">
-              Ethio Exchange was founded with a singular purpose: to bridge the gap between
-              financial institutions and the public. We provide real-time, accurate exchange rate
-              data to help individuals and businesses make informed financial decisions in a rapidly
-              evolving market.
-            </p>
+            <p className="mt-5 text-muted-foreground max-w-lg">{t("about.heroText")}</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Pill icon={<BadgeCheck className="size-4 text-primary" />}>Certified Data</Pill>
-              <Pill icon={<Zap className="size-4 text-primary" />}>Millisecond Latency</Pill>
+              <Pill icon={<BadgeCheck className="size-4 text-primary" />}>
+                {t("about.certifiedData")}
+              </Pill>
+              <Pill icon={<Zap className="size-4 text-primary" />}>
+                {t("about.millisecondLatency")}
+              </Pill>
             </div>
           </div>
           <div className="relative">
             <img
               src="https://images.unsplash.com/photo-1640340434855-6084b1f4901c?auto=format&fit=crop&w=1000&q=80"
-              alt="Live financial dashboard"
+              alt={t("about.liveDashboardAlt")}
               loading="lazy"
               decoding="async"
               width="1000"
@@ -54,87 +57,85 @@ function AboutPage() {
             />
             <div className="absolute -bottom-6 left-6 rounded-2xl bg-card border border-border/60 p-4 shadow-xl w-52">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Live Updates
+                {t("about.liveUpdates")}
               </p>
-              <p className="text-xs text-muted-foreground">Sync with Central Bank</p>
+              <p className="text-xs text-muted-foreground">{t("about.syncCentralBank")}</p>
             </div>
           </div>
         </div>
 
         <div className="mt-16 grid gap-4 md:grid-cols-3">
           <Stat
-            label="Partner Banks"
+            label={t("about.statPartnerBanks")}
             value="30+"
             tone="white"
-            detail="Our system aggregates data from every major commercial bank and the National Bank of Ethiopia."
+            detail={t("about.statPartnerBanksDetail")}
           />
-          <Stat label="Daily Data Points" value="2,800+" tone="primary" />
-          <Stat label="Historical Depth" value="5 Years" tone="gold" />
+          <Stat label={t("about.statDailyPoints")} value="2,800+" tone="primary" />
+          <Stat
+            label={t("about.statHistoricalDepth")}
+            value={t("about.statHistoricalDepthValue")}
+            tone="gold"
+          />
         </div>
 
         {/* Engineering */}
         <section className="mt-14 rounded-3xl bg-surface-low p-8 md:p-12">
           <div className="text-center">
             <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary">
-              Our Engineering
+              {t("about.engineeringLabel")}
             </p>
-            <h2 className="text-3xl font-bold mt-2">Precision Engineering &amp; Automation</h2>
+            <h2 className="text-3xl font-bold mt-2">{t("about.engineeringTitle")}</h2>
           </div>
           <div className="mt-10 grid gap-8 md:grid-cols-3">
-            <Pipeline icon={<Cable />} title="Direct API Hooks">
-              We maintain secure, direct API connections with leading financial institutions to pull
-              raw exchange data the moment it changes at the source.
+            <Pipeline icon={<Cable />} title={t("about.pipelineApiHooks")}>
+              {t("about.pipelineApiHooksText")}
             </Pipeline>
-            <Pipeline icon={<ScanSearch />} title="Advanced Web Scraping">
-              For institutions without open APIs, our proprietary scrapers monitor public rate
-              sheets 24/7, using OCR to ensure 99.9% accuracy in data translation.
+            <Pipeline icon={<ScanSearch />} title={t("about.pipelineScraping")}>
+              {t("about.pipelineScrapingText")}
             </Pipeline>
-            <Pipeline icon={<BarChart3 />} title="Validation &amp; Display">
-              Data is cross-referenced against historical trends and central bank benchmarks before
-              appearing on your dashboard to eliminate anomalies.
+            <Pipeline icon={<BarChart3 />} title={t("about.pipelineValidation")}>
+              {t("about.pipelineValidationText")}
             </Pipeline>
           </div>
         </section>
 
         <section className="mt-14">
-          <h2 className="text-2xl font-bold">Built for Modern Finance</h2>
+          <h2 className="text-2xl font-bold">{t("about.builtForFinance")}</h2>
           <div className="mt-6 grid gap-5 md:grid-cols-3">
-            <Feature icon={<Zap className="text-primary" />} title="Real-Time Sync">
-              Experience zero-lag rate updates. As soon as a bank updates its lobby board, our
-              platform reflects the change globally.
+            <Feature icon={<Zap className="text-primary" />} title={t("about.featureRealtime")}>
+              {t("about.featureRealtimeText")}
             </Feature>
-            <Feature icon={<TrendingUp className="text-primary" />} title="Historical Trends">
-              Access years of archival data to perform technical analysis and understand long-term
-              currency fluctuations in the Ethiopian Birr.
+            <Feature
+              icon={<TrendingUp className="text-primary" />}
+              title={t("about.featureTrends")}
+            >
+              {t("about.featureTrendsText")}
             </Feature>
             <Feature
               icon={<ShieldCheck className="text-destructive" />}
-              title="Guaranteed Accuracy"
+              title={t("about.featureAccuracy")}
             >
-              Our dual-verification algorithm compares multiple sources to ensure that the data you
-              see is the absolute truth in the market.
+              {t("about.featureAccuracyText")}
             </Feature>
           </div>
         </section>
 
         <section className="mt-14 rounded-3xl bg-primary text-primary-foreground p-10 text-center">
-          <h2 className="text-3xl font-bold">Ready to start trading smarter?</h2>
-          <p className="mt-2 max-w-xl mx-auto text-primary-foreground/80">
-            Join thousands of businesses and individuals who rely on Ethio Exchange for their daily
-            financial intelligence.
-          </p>
+          <h2 className="text-3xl font-bold">{t("about.ctaTitle")}</h2>
+          <p className="mt-2 max-w-xl mx-auto text-primary-foreground/80">{t("about.ctaText")}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <a
-              href="/banks"
+              href={localize("/banks")}
               className="rounded-xl bg-[color:var(--gold)] text-[color:var(--gold-foreground)] px-6 py-3 text-sm font-semibold"
             >
-              Explore Banks
+              {t("about.exploreBanks")}
             </a>
             <a
               href="#"
               className="rounded-xl border border-primary-foreground/40 px-6 py-3 text-sm font-semibold hover:bg-primary-foreground/10 inline-flex items-center gap-2"
             >
-              View API Docs <ArrowRight className="size-4" />
+              {t("about.viewApiDocs")} <ArrowRight className="size-4" />
             </a>
           </div>
         </section>

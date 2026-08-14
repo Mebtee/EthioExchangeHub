@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ShoppingCart, Tag, TrendingUp, CalendarDays } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { MarketTicker } from "@/components/home/market-ticker";
@@ -15,10 +16,12 @@ import {
   getPrimaryCurrency,
 } from "@/lib/rankings";
 import { formatRateDate } from "@/lib/format";
-import { useCurrencies, useExchangeRates, useNews } from "@/hooks";
+import { useCurrencies, useExchangeRates, useNews, useLocale } from "@/hooks";
 import { Seo } from "@/components/shared/seo";
 
 function HomePage() {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   const { data: rates = [], isLoading, isError, error, refetch } = useExchangeRates();
   const { data: currencies = [] } = useCurrencies();
   const { data: news = [] } = useNews();
@@ -52,43 +55,37 @@ function HomePage() {
 
   return (
     <SiteShell>
-      <Seo
-        title="Ethio Exchange — Ethiopian Bank Exchange Rates & Currency Converter"
-        description="Compare live buying and selling exchange rates for USD, EUR, GBP and more from Ethiopia's commercial banks — updated in real time. Use our free currency converter and rate rankings."
-      />
+      <Seo title={t("seo.home.title")} description={t("seo.home.description")} />
       <MarketTicker />
       <PageContainer>
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           {/* Hero */}
           <section>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
-              Ethiopian Bank Exchange Rates &amp;{" "}
-              <span className="text-primary">Currency Converter</span>
+              <Trans
+                i18nKey="home.heroTitle"
+                components={{ highlight: <span className="text-primary" /> }}
+              />
             </h1>
-            <p className="mt-5 max-w-lg text-muted-foreground">
-              Ethio Exchange compares live buying and selling exchange rates from Ethiopia's
-              commercial banks for major foreign currencies including USD, EUR and GBP. Convert
-              foreign currency to Ethiopian birr (ETB) and see which bank offers the most
-              competitive rate — all updated in real time.
-            </p>
+            <p className="mt-5 max-w-lg text-muted-foreground">{t("home.heroDescription")}</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
-                to="/banks"
+                to={localize("/banks")}
                 className="inline-flex items-center gap-2 rounded-2xl bg-primary text-primary-foreground px-6 py-3 text-sm font-semibold hover:opacity-90 transition"
               >
-                Compare Banks <TrendingUp className="size-4" />
+                {t("home.compareBanks")} <TrendingUp className="size-4" />
               </Link>
               <Link
-                to="/rankings"
+                to={localize("/rankings")}
                 className="inline-flex items-center gap-2 rounded-2xl border border-primary/40 text-primary px-6 py-3 text-sm font-semibold hover:bg-primary/5 transition"
               >
-                Bank Rankings <TrendingUp className="size-4" />
+                {t("common.bankRankings")} <TrendingUp className="size-4" />
               </Link>
               <a
                 href="#currency-converter"
                 className="inline-flex items-center gap-2 rounded-2xl border border-border/70 text-muted-foreground px-6 py-3 text-sm font-semibold hover:bg-surface-low transition"
               >
-                Currency Converter <ShoppingCart className="size-4" />
+                {t("common.currencyConverter")} <ShoppingCart className="size-4" />
               </a>
             </div>
           </section>
@@ -97,16 +94,18 @@ function HomePage() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Today's Best Rates
+                {t("home.todaysBestRates")}
               </p>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-1 text-xs font-semibold text-muted-foreground">
                 <CalendarDays className="size-3.5" />
-                As of {latestBusinessDate ? formatRateDate(latestBusinessDate) : "—"}
+                {t("common.ratesAsOf", {
+                  date: latestBusinessDate ? formatRateDate(latestBusinessDate) : "—",
+                })}
               </span>
             </div>
             <RateHero
               icon={<ShoppingCart className="size-5" />}
-              label="Best Buy Rate"
+              label={t("home.bestBuyRate")}
               rate={bestBuy?.cashBuying}
               currency={`ETB/${primaryCurrency || "—"}`}
               bank={bestBuy?.bankName ?? "—"}
@@ -115,7 +114,7 @@ function HomePage() {
             />
             <RateHero
               icon={<Tag className="size-5" />}
-              label="Best Sell Rate"
+              label={t("home.bestSellRate")}
               rate={bestSell?.cashSelling}
               currency={`ETB/${primaryCurrency || "—"}`}
               bank={bestSell?.bankName ?? "—"}
@@ -143,21 +142,25 @@ function HomePage() {
         </div>
 
         <section className="mt-12 rounded-2xl bg-surface-low border border-border/60 p-6 md:p-8">
-          <h2 className="text-xl font-bold tracking-tight">What is Ethio Exchange?</h2>
+          <h2 className="text-xl font-bold tracking-tight">{t("home.whatIsTitle")}</h2>
           <p className="mt-3 max-w-3xl text-sm text-muted-foreground leading-relaxed">
-            Ethio Exchange tracks the foreign exchange rates published by Ethiopia's commercial
-            banks. You can{" "}
-            <Link to="/banks" className="text-primary font-semibold hover:underline">
-              compare bank exchange rates
-            </Link>{" "}
-            side by side,{" "}
-            <Link to="/rankings" className="text-primary font-semibold hover:underline">
-              rank banks by their buying or selling rate
-            </Link>{" "}
-            for a given currency and day, and convert between major foreign currencies and the
-            Ethiopian birr (ETB) using the latest available bank data. Whether you are sending money
-            home, travelling, or planning a transfer, you can quickly see which bank offers the most
-            competitive rate for the US dollar, euro, British pound and other major currencies.
+            <Trans
+              i18nKey="home.whatIsIntro"
+              components={{
+                compareLink: (
+                  <Link
+                    to={localize("/banks")}
+                    className="text-primary font-semibold hover:underline"
+                  />
+                ),
+                rankLink: (
+                  <Link
+                    to={localize("/rankings")}
+                    className="text-primary font-semibold hover:underline"
+                  />
+                ),
+              }}
+            />
           </p>
         </section>
       </PageContainer>

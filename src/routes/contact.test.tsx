@@ -25,6 +25,10 @@ vi.mock("@/lib/api/contact", () => ({
   submitContactMessage: mocks.submit,
 }));
 
+vi.mock("@/hooks", () => ({
+  useLocale: () => ({ locale: "en", localize: (path: string) => path }),
+}));
+
 function renderPage() {
   return render(
     <MemoryRouter>

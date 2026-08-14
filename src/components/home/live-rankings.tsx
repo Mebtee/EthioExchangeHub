@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, Trophy } from "lucide-react";
 
 import { BankAvatar } from "@/components/shared/bank-avatar";
@@ -7,8 +8,13 @@ import { EmptyState, ErrorState } from "@/components/shared/async-states";
 import { TableRowsSkeleton } from "@/components/shared/skeletons";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { slugifyBankName } from "@/lib/bank";
-import { filterToCurrentBusinessDay, filterToLatestBusinessDay, getCurrencyOptions } from "@/lib/rankings";
+import {
+  filterToCurrentBusinessDay,
+  filterToLatestBusinessDay,
+  getCurrencyOptions,
+} from "@/lib/rankings";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/hooks";
 import type { ExchangeRate } from "@/types/exchange-rate";
 
 /** Preferred tab ordering (display preference only — filtered to API currencies). */
@@ -57,6 +63,8 @@ export function LiveRankings({
   errorMessage?: string;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   const available = useMemo(() => getCurrencyOptions(rates), [rates]);
   const tabs = useMemo(() => {
     const preferred = PREFERRED_TAB_ORDER.filter((c) => available.includes(c));
@@ -88,15 +96,13 @@ export function LiveRankings({
   return (
     <SurfaceCard className="flex flex-col p-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight">Live Bank Rankings</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Top banks by current exchange rate performance
-        </p>
+        <h2 className="text-xl font-bold tracking-tight">{t("liveRankings.title")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("liveRankings.subtitle")}</p>
       </div>
 
       {tabs.length > 0 && (
         <div
-          aria-label="Currency"
+          aria-label={t("rankings.currency")}
           role="group"
           className="mt-4 grid grid-cols-6 gap-1.5 rounded-2xl bg-surface-high/70 p-2 sm:grid-cols-8 lg:grid-cols-[repeat(12,minmax(0,1fr))]"
         >
@@ -125,16 +131,16 @@ export function LiveRankings({
       ) : isError ? (
         <div className="mt-5">
           <ErrorState
-            title="Unable to load exchange rates"
-            message={errorMessage ?? "Something went wrong while contacting the rates service."}
+            title={t("liveRankings.unableToLoad")}
+            message={errorMessage ?? t("liveRankings.errorMessage")}
             onRetry={onRetry}
           />
         </div>
       ) : top5.length === 0 ? (
         <div className="mt-5">
           <EmptyState
-            title="No exchange rates available"
-            message="No bank has published rate data yet. Rates will appear here as soon as they are collected."
+            title={t("liveRankings.noRates")}
+            message={t("liveRankings.noRatesMessage")}
           />
         </div>
       ) : (
@@ -147,7 +153,7 @@ export function LiveRankings({
               >
                 <RankBadge rank={i + 1} />
                 <Link
-                  to={`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`}
+                  to={localize(`/banks/${item.bankCode ?? slugifyBankName(item.bankName)}`)}
                   className="flex min-w-0 items-center gap-3"
                 >
                   <BankAvatar
@@ -167,7 +173,7 @@ export function LiveRankings({
                     {formatRateCell(item.cashBuying)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Cash Buy
+                    {t("liveRankings.cashBuy")}
                   </p>
                 </div>
                 <div className="text-right">
@@ -175,7 +181,7 @@ export function LiveRankings({
                     {formatRateCell(item.cashSelling)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Cash Sell
+                    {t("liveRankings.cashSell")}
                   </p>
                 </div>
                 <div className="text-right">
@@ -183,7 +189,7 @@ export function LiveRankings({
                     {formatRateCell(item.transactionBuying)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Trans. Buy
+                    {t("liveRankings.transBuy")}
                   </p>
                 </div>
                 <div className="text-right">
@@ -191,7 +197,7 @@ export function LiveRankings({
                     {formatRateCell(item.transactionSelling)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Trans. Sell
+                    {t("liveRankings.transSell")}
                   </p>
                 </div>
               </li>
@@ -199,10 +205,10 @@ export function LiveRankings({
           </ul>
           <div className="mt-auto border-t border-border/60 pt-5">
             <Link
-              to="/banks"
+              to={localize("/banks")}
               className="group flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-surface-low/40 px-4 py-2.5 text-sm font-semibold text-primary transition hover:border-primary/40 hover:bg-surface-low"
             >
-              View all {reportingBanks}+ banks
+              {t("liveRankings.viewAll", { count: reportingBanks })}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>

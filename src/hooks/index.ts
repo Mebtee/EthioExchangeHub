@@ -4,6 +4,7 @@ export { useRateDateRange } from "./use-rate-date-range";
 export { useNews, useNewsCategories } from "./use-news";
 export { useRankings } from "./use-rankings";
 export { useHydrateOnce } from "./use-hydrate-once";
+export { useLocale, localizePath } from "./use-locale";
 export {
   useAdminProfile,
   useAdminSettings,

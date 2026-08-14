@@ -46,6 +46,7 @@ vi.mock("@/hooks", () => ({
     isError: false,
     refetch: vi.fn(),
   }),
+  useLocale: () => ({ locale: "en", localize: (path: string) => path }),
 }));
 
 function renderPage() {
@@ -76,7 +77,9 @@ describe("BanksPage current-rate listing", () => {
     expect(screen.getByText("Bank B")).toBeInTheDocument();
     expect(screen.queryByText("Bank C")).not.toBeInTheDocument();
     expect(screen.queryByText("Bank D")).not.toBeInTheDocument();
-    expect(screen.getByText(/2 commercial banks reporting live USD\/ETB rates/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 commercial banks reporting live USD\/ETB rates/),
+    ).toBeInTheDocument();
   });
 
   it("moves automatically to tomorrow's date when the API supplies newer rates", () => {

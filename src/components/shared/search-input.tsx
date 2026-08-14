@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes } from "react";
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 type InputType = Extract<InputHTMLAttributes<HTMLInputElement>["type"], string>;
@@ -17,19 +18,20 @@ interface SearchInputProps {
 }
 
 export function SearchInput({
-  placeholder = "Search...",
+  placeholder,
   value,
   onChange,
   type = "search",
   wrapperClassName,
   className,
 }: SearchInputProps) {
+  const { t } = useTranslation();
   return (
     <div className={cn("relative", wrapperClassName)}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
       <input
         type={type}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("common.search")}
         value={value}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         className={cn(

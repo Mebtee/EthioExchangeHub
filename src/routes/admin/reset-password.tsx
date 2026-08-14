@@ -2,14 +2,18 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/hooks";
 import { resetPassword } from "@/lib/api/auth";
 
 export default function AdminResetPasswordPage() {
+  const { localize } = useLocale();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
@@ -24,11 +28,11 @@ export default function AdminResetPasswordPage() {
     setError(null);
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("auth.resetPassword.errorTooShort"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("auth.resetPassword.errorMismatch"));
       return;
     }
 
@@ -37,9 +41,7 @@ export default function AdminResetPasswordPage() {
       await resetPassword({ token, password });
       setDone(true);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to reset your password. Please try again.",
-      );
+      setError(err instanceof Error ? err.message : t("auth.resetPassword.errorFallback"));
     } finally {
       setIsSubmitting(false);
     }
@@ -48,13 +50,17 @@ export default function AdminResetPasswordPage() {
   if (!token) {
     return (
       <AuthShell
-        title="Invalid reset link"
-        subtitle="This password-reset link is missing its token."
+        title={t("auth.resetPassword.invalidTitle")}
+        subtitle={t("auth.resetPassword.invalidSubtitle")}
       >
-        <p className="text-sm text-muted-foreground">Request a new link and try again.</p>
+        <p className="text-sm text-muted-foreground">
+          {t("auth.resetPassword.requestNewLinkText")}
+        </p>
         <div className="mt-6">
           <Button asChild size="lg" className="w-full">
-            <Link to="/admin/forgot-password">Request a new link</Link>
+            <Link to={localize("/admin/forgot-password")}>
+              {t("auth.resetPassword.requestNewLink")}
+            </Link>
           </Button>
         </div>
       </AuthShell>
@@ -63,16 +69,17 @@ export default function AdminResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthShell title="Password updated" subtitle="Your password has been reset.">
+      <AuthShell
+        title={t("auth.resetPassword.doneTitle")}
+        subtitle={t("auth.resetPassword.doneSubtitle")}
+      >
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
             <CheckCircle2 className="size-6" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            You can now sign in with your new password.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("auth.resetPassword.doneText")}</p>
           <Button asChild size="lg" className="w-full">
-            <Link to="/admin/login">Sign in</Link>
+            <Link to={localize("/admin/login")}>{t("auth.resetPassword.signIn")}</Link>
           </Button>
         </div>
       </AuthShell>
@@ -80,7 +87,7 @@ export default function AdminResetPasswordPage() {
   }
 
   return (
-    <AuthShell title="Reset password" subtitle="Choose a new password for your account.">
+    <AuthShell title={t("auth.resetPassword.title")} subtitle={t("auth.resetPassword.subtitle")}>
       <form onSubmit={handleSubmit} className="grid gap-5" noValidate>
         {error && (
           <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
@@ -89,12 +96,12 @@ export default function AdminResetPasswordPage() {
         )}
 
         <div className="grid gap-2">
-          <Label htmlFor="password">New password</Label>
+          <Label htmlFor="password">{t("auth.resetPassword.newPassword")}</Label>
           <Input
             id="password"
             type="password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder={t("auth.resetPassword.passwordPlaceholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -102,12 +109,12 @@ export default function AdminResetPasswordPage() {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="confirm">Confirm new password</Label>
+          <Label htmlFor="confirm">{t("auth.resetPassword.confirmPassword")}</Label>
           <Input
             id="confirm"
             type="password"
             autoComplete="new-password"
-            placeholder="Re-enter your password"
+            placeholder={t("auth.resetPassword.confirmPlaceholder")}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
@@ -116,7 +123,7 @@ export default function AdminResetPasswordPage() {
 
         <Button type="submit" size="lg" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-          {isSubmitting ? "Resetting…" : "Reset password"}
+          {isSubmitting ? t("auth.resetPassword.resetting") : t("auth.resetPassword.resetPassword")}
         </Button>
       </form>
     </AuthShell>

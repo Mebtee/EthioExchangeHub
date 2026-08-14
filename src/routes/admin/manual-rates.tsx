@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Plus, TriangleAlert, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { DataTable } from "@/components/admin/data-table";
 import { SearchInput } from "@/components/shared/search-input";
@@ -36,7 +38,6 @@ import {
 } from "@/hooks";
 import { formatRateOrDash } from "@/lib/format";
 import type { ManualRate, ManualRatePayload } from "@/types/admin";
-import { toast } from "sonner";
 
 interface RateFormState {
   bankCode: string;
@@ -68,6 +69,7 @@ const EMPTY_FORM: RateFormState = {
 };
 
 export default function AdminManualRatesPage() {
+  const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useManualRates();
   const { data: banks = [], isLoading: banksLoading } = useBanks();
   const { data: currencies = [] } = useCurrencies();
@@ -131,7 +133,7 @@ export default function AdminManualRatesPage() {
     const transactionSelling =
       form.transactionSelling.trim() === "" ? null : Number(form.transactionSelling);
     if (!form.bankCode || !form.currency) {
-      setFormError("Select a bank and a currency.");
+      setFormError(t("admin.manualRates.errorSelect"));
       return null;
     }
     if (
@@ -140,7 +142,7 @@ export default function AdminManualRatesPage() {
       !Number.isFinite(cashSelling) ||
       cashSelling <= 0
     ) {
-      setFormError("Cash buying and selling rates must be positive numbers.");
+      setFormError(t("admin.manualRates.errorCash"));
       return null;
     }
     if (
@@ -149,11 +151,11 @@ export default function AdminManualRatesPage() {
       (transactionSelling !== null &&
         (!Number.isFinite(transactionSelling) || transactionSelling <= 0))
     ) {
-      setFormError("Transactional rates must be positive numbers when provided.");
+      setFormError(t("admin.manualRates.errorTrans"));
       return null;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.rateDate)) {
-      setFormError("Rate date must be an ISO date (YYYY-MM-DD).");
+      setFormError(t("admin.manualRates.errorDate"));
       return null;
     }
     return {
@@ -175,14 +177,14 @@ export default function AdminManualRatesPage() {
     try {
       if (editing) {
         await updateRate.mutateAsync({ id: editing.id, payload });
-        toast.success("Rate updated");
+        toast.success(t("admin.manualRates.toastUpdated"));
       } else {
         await createRate.mutateAsync(payload);
-        toast.success("Rate added");
+        toast.success(t("admin.manualRates.toastAdded"));
       }
       setDialogOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to save the rate.");
+      toast.error(err instanceof Error ? err.message : t("admin.manualRates.toastSaveError"));
     }
   }
 
@@ -190,10 +192,10 @@ export default function AdminManualRatesPage() {
     if (!deleting) return;
     try {
       await deleteRate.mutateAsync(deleting.id);
-      toast.success("Rate deleted");
+      toast.success(t("admin.manualRates.toastDeleted"));
       setDeleting(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to delete the rate.");
+      toast.error(err instanceof Error ? err.message : t("admin.manualRates.toastDeleteError"));
     }
   }
 
@@ -203,14 +205,12 @@ export default function AdminManualRatesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manual Exchange Rates</h1>
-          <p className="mt-1 text-muted-foreground">
-            Add, edit, or remove manually published bank rates.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("admin.manualRates.title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("admin.manualRates.subtitle")}</p>
         </div>
         <Button onClick={openAdd}>
           <Plus className="size-4" />
-          Add rate
+          {t("admin.manualRates.addRate")}
         </Button>
       </div>
 
@@ -220,7 +220,7 @@ export default function AdminManualRatesPage() {
           type="text"
           value={query}
           onChange={setQuery}
-          placeholder="Search bank name..."
+          placeholder={t("admin.manualRates.searchPlaceholder")}
           wrapperClassName="w-64"
         />
         <select
@@ -228,7 +228,7 @@ export default function AdminManualRatesPage() {
           onChange={(e) => setCurrency(e.target.value)}
           className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
         >
-          <option value="ALL">All currencies</option>
+          <option value="ALL">{t("admin.manualRates.allCurrencies")}</option>
           {currencies.map((c) => (
             <option key={c.code} value={c.code}>
               {c.code}
@@ -245,13 +245,16 @@ export default function AdminManualRatesPage() {
           isError={isError}
           errorMessage={error instanceof Error ? error.message : undefined}
           onRetry={() => void refetch()}
-          emptyTitle="No rates match your filters"
-          emptyMessage="Try adjusting the search or currency filter, or add a new rate."
-          footer={`Showing ${filtered.length} of ${rates.length} manual rates`}
+          emptyTitle={t("admin.manualRates.noMatchTitle")}
+          emptyMessage={t("admin.manualRates.noMatchMessage")}
+          footer={t("admin.manualRates.showing", {
+            count: filtered.length,
+            total: rates.length,
+          })}
           columns={[
             {
               key: "bank",
-              header: "Bank",
+              header: t("admin.manualRates.bank"),
               cell: (r) => (
                 <span className="font-medium">
                   {r.bankName}
@@ -261,34 +264,34 @@ export default function AdminManualRatesPage() {
             },
             {
               key: "currency",
-              header: "Currency",
+              header: t("admin.manualRates.currency"),
               cell: (r) => <span className="font-semibold">{r.currency}</span>,
             },
             {
               key: "cashBuying",
-              header: "Cash Buy",
+              header: t("admin.manualRates.cashBuy"),
               cell: (r) => <span className="tabular">{formatRateOrDash(r.cashBuying)}</span>,
             },
             {
               key: "cashSelling",
-              header: "Cash Sell",
+              header: t("admin.manualRates.cashSell"),
               cell: (r) => <span className="tabular">{formatRateOrDash(r.cashSelling)}</span>,
             },
             {
               key: "transactionBuying",
-              header: "Trans. Buy",
+              header: t("admin.manualRates.transBuy"),
               cell: (r) => <span className="tabular">{formatRateOrDash(r.transactionBuying)}</span>,
             },
             {
               key: "transactionSelling",
-              header: "Trans. Sell",
+              header: t("admin.manualRates.transSell"),
               cell: (r) => (
                 <span className="tabular">{formatRateOrDash(r.transactionSelling)}</span>
               ),
             },
             {
               key: "rateDate",
-              header: "Rate date",
+              header: t("admin.manualRates.rateDate"),
               cell: (r) => <span className="whitespace-nowrap tabular">{r.rateDate}</span>,
             },
             {
@@ -302,7 +305,7 @@ export default function AdminManualRatesPage() {
                     variant="ghost"
                     size="icon"
                     className="size-8"
-                    aria-label={`Edit ${r.bankName} rate`}
+                    aria-label={t("admin.manualRates.editAria", { bank: r.bankName })}
                     onClick={() => openEdit(r)}
                   >
                     <Pencil className="size-4" />
@@ -311,7 +314,7 @@ export default function AdminManualRatesPage() {
                     variant="ghost"
                     size="icon"
                     className="size-8 text-destructive hover:text-destructive"
-                    aria-label={`Delete ${r.bankName} rate`}
+                    aria-label={t("admin.manualRates.deleteAria", { bank: r.bankName })}
                     onClick={() => setDeleting(r)}
                   >
                     <Trash2 className="size-4" />
@@ -327,31 +330,36 @@ export default function AdminManualRatesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="flex max-h-[85vh] max-w-xl flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit rate" : "Add rate"}</DialogTitle>
+            <DialogTitle>
+              {editing ? t("admin.manualRates.editTitle") : t("admin.manualRates.addTitle")}
+            </DialogTitle>
             <DialogDescription>
               {editing
-                ? `Update the published rates for ${editing.bankName} (${editing.currency}).`
-                : "Publish a manually collected exchange rate."}
+                ? t("admin.manualRates.editDescription", {
+                    bank: editing.bankName,
+                    currency: editing.currency,
+                  })
+                : t("admin.manualRates.addDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto py-2 pr-1">
             <div className="grid gap-2">
-              <Label htmlFor="bank">Bank</Label>
+              <Label htmlFor="bank">{t("admin.manualRates.formBank")}</Label>
               <select
                 id="bank"
                 value={form.bankCode}
                 onChange={(e) => setForm((f) => ({ ...f, bankCode: e.target.value }))}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                <option value="">Select a bank…</option>
+                <option value="">{t("admin.manualRates.selectBank")}</option>
                 {banksLoading ? (
                   <option value="" disabled>
-                    Loading banks…
+                    {t("admin.manualRates.loadingBanks")}
                   </option>
                 ) : banks.length === 0 ? (
                   <option value="" disabled>
-                    No banks available
+                    {t("admin.manualRates.noBanks")}
                   </option>
                 ) : (
                   banks.map((b) => (
@@ -364,14 +372,14 @@ export default function AdminManualRatesPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="currency">Currency</Label>
+              <Label htmlFor="currency">{t("admin.manualRates.formCurrency")}</Label>
               <select
                 id="currency"
                 value={form.currency}
                 onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                <option value="">Select a currency…</option>
+                <option value="">{t("admin.manualRates.selectCurrency")}</option>
                 {currencies.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.code}
@@ -381,7 +389,7 @@ export default function AdminManualRatesPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="rateDate">Rate date</Label>
+              <Label htmlFor="rateDate">{t("admin.manualRates.rateDate")}</Label>
               <Input
                 id="rateDate"
                 type="date"
@@ -391,10 +399,12 @@ export default function AdminManualRatesPage() {
             </div>
 
             <div className="grid gap-3 rounded-xl border border-border/60 p-3">
-              <p className="text-sm font-semibold text-foreground">Cash Rates</p>
+              <p className="text-sm font-semibold text-foreground">
+                {t("admin.manualRates.cashRates")}
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="cashBuying">Cash buy</Label>
+                  <Label htmlFor="cashBuying">{t("admin.manualRates.formCashBuy")}</Label>
                   <Input
                     id="cashBuying"
                     type="number"
@@ -406,7 +416,7 @@ export default function AdminManualRatesPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="cashSelling">Cash sell</Label>
+                  <Label htmlFor="cashSelling">{t("admin.manualRates.formCashSell")}</Label>
                   <Input
                     id="cashSelling"
                     type="number"
@@ -421,13 +431,13 @@ export default function AdminManualRatesPage() {
             </div>
 
             <div className="grid gap-3 rounded-xl border border-border/60 p-3">
-              <p className="text-sm font-semibold text-foreground">Transactional Rates</p>
-              <p className="text-xs text-muted-foreground">
-                Leave blank when the bank does not publish transactional rates.
+              <p className="text-sm font-semibold text-foreground">
+                {t("admin.manualRates.transactionalRates")}
               </p>
+              <p className="text-xs text-muted-foreground">{t("admin.manualRates.transHint")}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="transactionBuying">Trans. buy</Label>
+                  <Label htmlFor="transactionBuying">{t("admin.manualRates.formTransBuy")}</Label>
                   <Input
                     id="transactionBuying"
                     type="number"
@@ -439,7 +449,7 @@ export default function AdminManualRatesPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="transactionSelling">Trans. sell</Label>
+                  <Label htmlFor="transactionSelling">{t("admin.manualRates.formTransSell")}</Label>
                   <Input
                     id="transactionSelling"
                     type="number"
@@ -454,11 +464,11 @@ export default function AdminManualRatesPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="note">Note (optional)</Label>
+              <Label htmlFor="note">{t("admin.manualRates.noteLabel")}</Label>
               <Textarea
                 id="note"
                 rows={2}
-                placeholder="Optional context for this rate"
+                placeholder={t("admin.manualRates.notePlaceholder")}
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               />
@@ -474,10 +484,10 @@ export default function AdminManualRatesPage() {
 
           <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("admin.manualRates.cancel")}
             </Button>
             <Button onClick={() => void handleSave()} disabled={busy}>
-              {editing ? "Save changes" : "Add rate"}
+              {editing ? t("admin.manualRates.saveChanges") : t("admin.manualRates.addRate")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -487,17 +497,20 @@ export default function AdminManualRatesPage() {
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this rate?</AlertDialogTitle>
+            <AlertDialogTitle>{t("admin.manualRates.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {deleting
-                ? `The ${deleting.currency} rate for ${deleting.bankName} will be permanently removed.`
+                ? t("admin.manualRates.deleteDescription", {
+                    bank: deleting.bankName,
+                    currency: deleting.currency,
+                  })
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("admin.manualRates.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => void handleDelete()} disabled={busy}>
-              Delete
+              {t("admin.manualRates.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

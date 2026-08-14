@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { RATE_FIELDS } from "@/lib/rankings";
 import { SearchInput } from "@/components/shared/search-input";
 import { RankingsDatePicker } from "@/components/rankings/rankings-date-picker";
@@ -26,12 +28,14 @@ export function RankingsFilters({
   asOfDate,
   onAsOfDateChange,
 }: RankingsFiltersProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
       <div className="flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-            Rank By
+            {t("rankings.rankBy")}
           </span>
           <select
             value={field}
@@ -52,7 +56,7 @@ export function RankingsFilters({
           type="text"
           value={query}
           onChange={onQueryChange}
-          placeholder="Search bank name..."
+          placeholder={t("rankings.searchPlaceholder")}
           wrapperClassName="w-64"
         />
         <select
@@ -62,7 +66,7 @@ export function RankingsFilters({
           className="rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
         >
           {currencies.length === 0 ? (
-            <option value="">No currencies</option>
+            <option value="">{t("rankings.noCurrencies")}</option>
           ) : (
             currencies.map((code) => (
               <option key={code} value={code}>

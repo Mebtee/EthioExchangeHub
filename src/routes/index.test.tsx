@@ -39,6 +39,7 @@ vi.mock("@/hooks", () => ({
     data: [{ code: "USD", label: "US Dollar", category: "Major" }] satisfies Currency[],
   }),
   useNews: () => ({ data: [] satisfies NewsItem[] }),
+  useLocale: () => ({ locale: "en", localize: (path: string) => path }),
 }));
 
 function renderPage() {
@@ -75,10 +76,8 @@ describe("HomePage best rate", () => {
 
     // The hero's winning bank is the current-date bank on both sides.
     // (The bank name is rendered inside a nested span, so match on textContent.)
-    const heroBank =
-      (name: string) =>
-      (_content: string, el: Element | null) =>
-        el?.textContent === `Available at ${name}`;
+    const heroBank = (name: string) => (_content: string, el: Element | null) =>
+      el?.textContent === `Available at ${name}`;
     // Both the Best Buy and Best Sell cards show the current-date bank.
     expect(screen.getAllByText(heroBank("Bank A"))).toHaveLength(2);
     expect(screen.queryAllByText(heroBank("Bank B"))).toHaveLength(0);
@@ -90,6 +89,6 @@ describe("HomePage best rate", () => {
     expect(screen.queryAllByText(/120.00/)).toHaveLength(0);
 
     // The "As of" date is the latest business date used for the calculation.
-    expect(screen.getByText("As of Aug 10, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Rates as of Aug 10, 2026")).toBeInTheDocument();
   });
 });
