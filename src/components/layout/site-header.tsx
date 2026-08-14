@@ -1,32 +1,41 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Menu, X } from "lucide-react";
 
-const navItems = [
-  { to: "/", label: "Home" },
-  { to: "/banks", label: "Banks" },
-  { to: "/rankings", label: "Rankings" },
-  { to: "/news", label: "News" },
-  { to: "/about", label: "About" },
-  { to: "/contact", label: "Contact" },
-] as const;
+import { useLocale } from "@/hooks";
+import { LocaleSwitcher } from "./locale-switcher";
 
 export function SiteHeader() {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = [
+    { to: "/", label: t("nav.home") },
+    { to: "/banks", label: t("nav.banks") },
+    { to: "/rankings", label: t("nav.rankings") },
+    { to: "/news", label: t("nav.news") },
+    { to: "/about", label: t("nav.about") },
+    { to: "/contact", label: t("nav.contact") },
+  ] as const;
 
   return (
     <header className="sticky top-0 z-50 bg-card border-b border-border/60">
       <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-6 px-4 md:px-12 py-4">
-        <Link to="/" className="text-xl font-bold text-primary tracking-tight">
+        <Link to={localize("/")} className="text-xl font-bold text-primary tracking-tight">
           Ethio Exchange
         </Link>
 
         {/* Desktop nav */}
-        <nav aria-label="Primary" className="hidden md:flex items-center gap-7 text-sm font-medium">
+        <nav
+          aria-label={t("nav.primary")}
+          className="hidden md:flex items-center gap-7 text-sm font-medium"
+        >
           {navItems.map((n) => (
             <NavLink
               key={n.to}
-              to={n.to}
+              to={localize(n.to)}
               end={n.to === "/"}
               className={({ isActive }) =>
                 isActive
@@ -40,17 +49,19 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <LocaleSwitcher />
+
           <Link
-            to="/rankings"
+            to={localize("/rankings")}
             className="inline-flex px-5 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
-            View Rankings
+            {t("nav.viewRankings")}
           </Link>
 
           {/* Mobile menu toggle */}
           <button
             type="button"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
             onClick={() => setMenuOpen((open) => !open)}
@@ -64,7 +75,7 @@ export function SiteHeader() {
       {/* Mobile nav — always rendered so aria-controls stays valid; hidden until toggled */}
       <nav
         id="mobile-nav"
-        aria-label="Primary"
+        aria-label={t("nav.primary")}
         hidden={!menuOpen}
         className="border-t border-border/60 px-4 py-3 md:hidden"
       >
@@ -72,7 +83,7 @@ export function SiteHeader() {
           {navItems.map((n) => (
             <li key={n.to}>
               <NavLink
-                to={n.to}
+                to={localize(n.to)}
                 end={n.to === "/"}
                 onClick={() => setMenuOpen(false)}
                 className={({ isActive }) =>

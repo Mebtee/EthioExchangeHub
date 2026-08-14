@@ -1,11 +1,22 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
+import { LOCALES } from "@/i18n/locale";
+
 const SITE_URL = "https://ethioexchange.live";
 
 function toCanonical(pathname: string): string {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : "/";
   return `${SITE_URL}${path}`;
+}
+
+/** Strip the active `/:locale` segment so alternates can be re-prefixed per locale. */
+function toBasePath(pathname: string): string {
+  const [, first, ...rest] = pathname.split("/");
+  if (first && (LOCALES as readonly string[]).includes(first)) {
+    return `/${rest.join("/")}`;
+  }
+  return pathname;
 }
 
 export function Seo({
@@ -39,6 +50,30 @@ export function Seo({
       document.head.appendChild(link);
     }
     link.href = canonical ?? toCanonical(pathname);
+
+    const base = toBasePath(pathname);
+    const tail = base === "/" ? "" : base;
+
+    for (const locale of LOCALES) {
+      const href = locale === "en" ? `${SITE_URL}${tail}` : `${SITE_URL}/${locale}${tail}`;
+      let alternate = document.querySelector<HTMLLinkElement>(`link[hreflang="${locale}"]`);
+      if (!alternate) {
+        alternate = document.createElement("link");
+        document.head.appendChild(alternate);
+      }
+      alternate.rel = "alternate";
+      alternate.hreflang = locale;
+      alternate.href = href;
+    }
+
+    let xDefault = document.querySelector<HTMLLinkElement>('link[hreflang="x-default"]');
+    if (!xDefault) {
+      xDefault = document.createElement("link");
+      document.head.appendChild(xDefault);
+    }
+    xDefault.rel = "alternate";
+    xDefault.hreflang = "x-default";
+    xDefault.href = `${SITE_URL}${tail}`;
   }, [title, description, canonical, pathname]);
 
   return null;

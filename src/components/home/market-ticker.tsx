@@ -1,10 +1,12 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { useExchangeRates } from "@/hooks";
 import { buildMarketTicker, type MarketTickerItem } from "@/lib/market-ticker";
 
 export function MarketTicker() {
   const { data } = useExchangeRates();
+  const { t } = useTranslation();
 
   const items = useMemo(() => (data ? buildMarketTicker(data) : []), [data]);
   // Tripled for a seamless loop; memoized so the marquee doesn't rebuild each render.
@@ -27,6 +29,7 @@ export function MarketTicker() {
 }
 
 function TickerEntry({ item }: { item: MarketTickerItem }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-sm font-medium tabular pl-12">
       <span className="text-background/70">{item.pair}</span>
@@ -38,7 +41,10 @@ function TickerEntry({ item }: { item: MarketTickerItem }) {
         </span>
       </span>
       <ChangeBadge change={item.change} />
-      <span className="text-background/50 text-xs" title={`Rates as of ${item.rateDate}`}>
+      <span
+        className="text-background/50 text-xs"
+        title={t("common.ratesAsOf", { date: item.rateDate })}
+      >
         {formatShortDate(item.rateDate)}
       </span>
     </div>

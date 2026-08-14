@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export function AuthShell({
   title,
@@ -10,6 +11,7 @@ export function AuthShell({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-low px-4 py-10">
       <div className="w-full max-w-md">
@@ -21,7 +23,7 @@ export function AuthShell({
             <div className="text-left">
               <p className="text-lg font-bold tracking-tight">Ethio Exchange</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Admin Console
+                {t("auth.shell.console")}
               </p>
             </div>
           </Link>

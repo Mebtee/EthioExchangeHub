@@ -65,6 +65,7 @@ vi.mock("@/hooks", () => ({
     refetch: vi.fn(),
   }),
   useCurrencies: () => ({ data: currencies }),
+  useLocale: () => ({ locale: "en", localize: (path: string) => path }),
 }));
 
 function renderPage() {

@@ -1,8 +1,10 @@
 import { memo } from "react";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { NewsItem } from "@/types/news";
 
 export const NewsCard = memo(function NewsCard({ item }: { item: NewsItem }) {
+  const { t } = useTranslation();
   return (
     <article className="rounded-2xl bg-card border border-border/60 overflow-hidden hover:-translate-y-0.5 transition shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
       <div className="relative">
@@ -19,7 +21,7 @@ export const NewsCard = memo(function NewsCard({ item }: { item: NewsItem }) {
       </div>
       <div className="p-5">
         <p className="text-xs text-muted-foreground">
-          {item.date} • {item.readMinutes} min read
+          {item.date} • {t("common.minRead", { count: item.readMinutes })}
         </p>
         <h3 className="mt-1 font-semibold leading-snug">{item.title}</h3>
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{item.excerpt}</p>
@@ -27,7 +29,7 @@ export const NewsCard = memo(function NewsCard({ item }: { item: NewsItem }) {
           href="#"
           className="mt-3 inline-flex items-center text-sm font-semibold text-primary hover:underline"
         >
-          Read More <ArrowRight className="size-3.5 ml-1" />
+          {t("newsCard.readMore")} <ArrowRight className="size-3.5 ml-1" />
         </a>
       </div>
     </article>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Activity, Building2, Coins, ShieldCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Area,
   AreaChart,
@@ -15,6 +16,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/async-states";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { useDashboardStats, useRateTrend } from "@/hooks/use-admin";
+import { useLocale } from "@/hooks";
 import { formatRelativeTime } from "@/lib/format";
 import { logStatusTone } from "@/lib/status";
 
@@ -22,6 +24,8 @@ const STAT_ICONS = [Building2, Coins, Activity, ShieldCheck] as const;
 const STAT_TONES = ["primary", "gold", "neutral", "success"] as const;
 
 export default function AdminDashboardPage() {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   const {
     data: dashboard,
     isLoading,
@@ -47,30 +51,28 @@ export default function AdminDashboardPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-muted-foreground">
-            Platform overview — scrapers, rates, and recent activity.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("admin.dashboard.title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("admin.dashboard.subtitle")}</p>
         </div>
         <Link
-          to="/"
+          to={localize("/")}
           className="inline-flex rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
         >
-          View live site
+          {t("admin.dashboard.viewLiveSite")}
         </Link>
       </div>
 
       {/* Stat cards */}
       {statsError ? (
         <ErrorState
-          title="Unable to load dashboard statistics"
+          title={t("admin.dashboard.statsError")}
           message={statsErrorObj instanceof Error ? statsErrorObj.message : undefined}
           onRetry={() => void refetchStats()}
         />
       ) : !isLoading && stats.length === 0 ? (
         <EmptyState
-          title="No dashboard statistics available"
-          message="Statistics will appear here once the backend starts reporting."
+          title={t("admin.dashboard.noStatsTitle")}
+          message={t("admin.dashboard.noStatsMessage")}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -95,26 +97,26 @@ export default function AdminDashboardPage() {
         <SurfaceCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-semibold">USD / ETB rate trend</h2>
+              <h2 className="font-semibold">{t("admin.dashboard.rateTrendTitle")}</h2>
               <p className="text-xs text-muted-foreground">
-                Cash buying vs cash selling — last 7 days
+                {t("admin.dashboard.rateTrendSubtitle")}
               </p>
             </div>
-            <StatusBadge tone="success">Live</StatusBadge>
+            <StatusBadge tone="success">{t("admin.dashboard.live")}</StatusBadge>
           </div>
           <div className="h-72">
             {trendLoading ? (
-              <LoadingState label="Loading rate trend…" />
+              <LoadingState label={t("admin.dashboard.loadingTrend")} />
             ) : trendError ? (
               <ErrorState
-                title="Unable to load rate trend"
+                title={t("admin.dashboard.trendError")}
                 message={trendErrorObj instanceof Error ? trendErrorObj.message : undefined}
                 onRetry={() => void refetchTrend()}
               />
             ) : (trend ?? []).length === 0 ? (
               <EmptyState
-                title="No rate trend data available"
-                message="The trend will appear once exchange-rate history is available."
+                title={t("admin.dashboard.noTrendTitle")}
+                message={t("admin.dashboard.noTrendMessage")}
               />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -154,7 +156,7 @@ export default function AdminDashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="cashBuying"
-                    name="Cash buying"
+                    name={t("admin.dashboard.cashBuying")}
                     stroke="var(--primary)"
                     strokeWidth={2}
                     fill="url(#buyFill)"
@@ -162,7 +164,7 @@ export default function AdminDashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="cashSelling"
-                    name="Cash selling"
+                    name={t("admin.dashboard.cashSelling")}
                     stroke="var(--gold)"
                     strokeWidth={2}
                     fill="url(#sellFill)"
@@ -176,13 +178,13 @@ export default function AdminDashboardPage() {
         {/* Recent activity */}
         <SurfaceCard className="flex flex-col">
           <div className="border-b border-border/60 px-6 py-4">
-            <h2 className="font-semibold">Recent activity</h2>
+            <h2 className="font-semibold">{t("admin.dashboard.recentActivity")}</h2>
           </div>
           <ul className="flex-1 divide-y divide-border/60">
             {recentLogs.map((log) => (
               <li key={log.id} className="flex items-start gap-3 px-6 py-3.5">
                 <StatusBadge tone={logStatusTone(log.status)} className="mt-0.5 shrink-0">
-                  {log.status}
+                  {t(`admin.scrapeLogs.${log.status}`)}
                 </StatusBadge>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{log.message ?? log.scenario}</p>
@@ -195,10 +197,10 @@ export default function AdminDashboardPage() {
           </ul>
           <div className="border-t border-border/60 px-6 py-4">
             <Link
-              to="/admin/scrape-logs"
+              to={localize("/admin/scrape-logs")}
               className="text-sm font-semibold text-primary hover:underline"
             >
-              View all logs →
+              {t("admin.dashboard.viewAllLogs")}
             </Link>
           </div>
         </SurfaceCard>

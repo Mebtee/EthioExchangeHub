@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Building2, Clock, Globe, Lightbulb, MapPin, Users } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { BankAvatar } from "@/components/shared/bank-avatar";
@@ -11,18 +12,23 @@ import { SurfaceCard } from "@/components/shared/surface-card";
 import { formatEtbCompact, formatRateDate, formatRateOrDash } from "@/lib/format";
 import type { Bank } from "@/types/bank";
 import { getLatestBusinessDate, getLatestUpdate, getRatesForBank } from "@/lib/rankings";
-import { useBankBySlug, useCurrencies, useExchangeRates } from "@/hooks";
+import { useBankBySlug, useCurrencies, useExchangeRates, useLocale } from "@/hooks";
 import { JsonLd, Seo } from "@/components/shared/seo";
 
-/** Up to three currency codes in a natural list, e.g. "USD, EUR, GBP, and more". */
-function formatCurrencyList(codes: string[]): string {
-  const top = codes.slice(0, 3);
-  const list = top.length <= 2 ? top.join(" and ") : `${top[0]}, ${top[1]}, and ${top[2]}`;
-  return codes.length > top.length ? `${list}, and more` : list;
-}
-
 function BankDetails() {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
   const { slug } = useParams<{ slug: string }>();
+
+  /** Up to three currency codes in a natural list, e.g. "USD, EUR, GBP, and more". */
+  function formatCurrencyList(codes: string[]): string {
+    const top = codes.slice(0, 3);
+    if (top.length === 1) return top[0];
+    if (top.length === 2) return t("common.listTwo", { a: top[0], b: top[1] });
+    const list = t("common.listThree", { a: top[0], b: top[1], c: top[2] });
+    return codes.length > top.length ? t("common.listMore", { list }) : list;
+  }
+
   const { data: bank, isLoading: bankLoading } = useBankBySlug(slug);
   const {
     data: rates = [],
@@ -60,8 +66,11 @@ function BankDetails() {
 
   const metaDescription =
     bank && availableCurrencies.length > 0
-      ? `Check the latest ${bank.name} exchange rates for ${formatCurrencyList(availableCurrencies)}. Compare buying and selling rates on Ethio Exchange.`
-      : `Check the latest ${bank?.name ?? "this bank"} exchange rates and compare buying and selling rates for major currencies on Ethio Exchange.`;
+      ? t("seo.bankDetail.description", {
+          bank: bank.name,
+          currencies: formatCurrencyList(availableCurrencies),
+        })
+      : t("seo.bankDetail.descriptionFallback", { bank: bank?.name ?? t("bankDetail.thisBank") });
 
   const breadcrumb = useMemo(
     () => ({
@@ -71,13 +80,13 @@ function BankDetails() {
         {
           "@type": "ListItem",
           position: 1,
-          name: "Home",
+          name: t("common.home"),
           item: "https://ethioexchange.live/",
         },
         {
           "@type": "ListItem",
           position: 2,
-          name: "Ethiopian Banks",
+          name: t("common.allEthiopianBanks"),
           item: "https://ethioexchange.live/banks",
         },
         {
@@ -88,17 +97,14 @@ function BankDetails() {
         },
       ],
     }),
-    [bank],
+    [bank, t],
   );
 
   if (bankLoading) {
     return (
       <SiteShell>
         <PageContainer>
-          <LoadingState
-            label="Loading bank details…"
-            hint="Fetching this bank's profile and rates."
-          />
+          <LoadingState label={t("common.loadingBankDetails")} hint={t("common.fetchProfile")} />
         </PageContainer>
       </SiteShell>
     );
@@ -108,13 +114,13 @@ function BankDetails() {
     return (
       <SiteShell>
         <PageContainer>
-          <h1 className="text-2xl font-bold">Bank not found</h1>
+          <h1 className="text-2xl font-bold">{t("bankDetail.notFound")}</h1>
           <Link
-            to="/banks"
+            to={localize("/banks")}
             className="mt-4 inline-flex items-center gap-2 text-primary hover:underline"
           >
             <ArrowLeft className="size-4" />
-            Back to all banks
+            {t("bankDetail.backToBanks")}
           </Link>
         </PageContainer>
       </SiteShell>
@@ -123,38 +129,35 @@ function BankDetails() {
 
   return (
     <SiteShell>
-      <Seo
-        title={`${bank.name} Exchange Rate Today — Ethio Exchange`}
-        description={metaDescription}
-      />
+      <Seo title={t("seo.bankDetail.title", { bank: bank.name })} description={metaDescription} />
       <JsonLd id="bank-breadcrumbs" data={breadcrumb} />
       <PageContainer>
         <Link
-          to="/banks"
+          to={localize("/banks")}
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
         >
           <ArrowLeft className="size-4" />
-          Back to all banks
+          {t("bankDetail.backToBanks")}
         </Link>
 
         {/* Breadcrumb-style contextual navigation */}
         <nav aria-label="Breadcrumb" className="mb-6">
           <ol className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <li>
-              <Link to="/" className="hover:text-primary transition-colors">
-                Home
+              <Link to={localize("/")} className="hover:text-primary transition-colors">
+                {t("common.home")}
               </Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link to="/banks" className="hover:text-primary transition-colors">
-                All Ethiopian Banks
+              <Link to={localize("/banks")} className="hover:text-primary transition-colors">
+                {t("common.allEthiopianBanks")}
               </Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link to="/rankings" className="hover:text-primary transition-colors">
-                Bank Rankings
+              <Link to={localize("/rankings")} className="hover:text-primary transition-colors">
+                {t("common.bankRankings")}
               </Link>
             </li>
             <li aria-hidden="true">/</li>
@@ -176,7 +179,7 @@ function BankDetails() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {bank.name} Exchange Rates
+                {t("bankDetail.exchangeRatesTitle", { bank: bank.name })}
               </h1>
               <span className="rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1">
                 {bank.type}
@@ -190,7 +193,7 @@ function BankDetails() {
                 icon={<Clock className="size-4 text-muted-foreground" />}
                 className="bg-surface-low text-xs"
               >
-                Rates as of {latestUpdate ? formatRateDate(latestUpdate) : "—"}
+                {t("common.ratesAsOf", { date: latestUpdate ? formatRateDate(latestUpdate) : "—" })}
               </Pill>
             </div>
           </div>
@@ -201,52 +204,60 @@ function BankDetails() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           {/* FX rates table */}
           <SurfaceCard className="p-6">
-            <h2 className="text-lg font-semibold mb-5">Foreign Exchange Rates</h2>
+            <h2 className="text-lg font-semibold mb-5">{t("bankDetail.fxRates")}</h2>
 
             {bankRates.length > 0 && (
               <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-                The table lists {bank.name}'s exchange rates for{" "}
-                {formatCurrencyList(availableCurrencies)}. The{" "}
-                <strong className="font-semibold text-foreground">buying rate</strong> is what the
-                bank pays to purchase foreign currency from you, while the{" "}
-                <strong className="font-semibold text-foreground">selling rate</strong> is what the
-                bank charges to sell foreign currency to you. Rates shown are as of{" "}
-                {latestUpdate ? formatRateDate(latestUpdate) : "the latest update"} —{" "}
-                <Link to="/rankings" className="text-primary font-semibold hover:underline">
-                  compare this bank with others
-                </Link>
-                , or use the{" "}
-                <Link to="/" className="text-primary font-semibold hover:underline">
-                  currency converter
-                </Link>{" "}
-                to convert at the best available rate.
+                <Trans
+                  i18nKey="bankDetail.fxIntro"
+                  values={{
+                    bank: bank.name,
+                    currencies: formatCurrencyList(availableCurrencies),
+                    date: latestUpdate
+                      ? formatRateDate(latestUpdate)
+                      : t("bankDetail.latestUpdate"),
+                  }}
+                  components={{
+                    buy: <strong className="font-semibold text-foreground" />,
+                    sell: <strong className="font-semibold text-foreground" />,
+                    compare: (
+                      <Link
+                        to={localize("/rankings")}
+                        className="text-primary font-semibold hover:underline"
+                      />
+                    ),
+                    converter: (
+                      <Link
+                        to={localize("/")}
+                        className="text-primary font-semibold hover:underline"
+                      />
+                    ),
+                  }}
+                />
               </p>
             )}
 
             {ratesLoading ? (
-              <LoadingState
-                label="Loading exchange rates…"
-                hint="Fetching this bank's latest rates from the market service."
-              />
+              <LoadingState label={t("common.loadingRates")} hint={t("common.fetchMarket")} />
             ) : ratesError ? (
               <ErrorState
-                title="Unable to load exchange rates"
+                title={t("bankDetail.unableToLoad")}
                 message={error instanceof Error ? error.message : undefined}
                 onRetry={() => void refetchRates()}
               />
             ) : bankRates.length === 0 ? (
               <EmptyState
-                title="No exchange rates available"
-                message="This bank has not published rate data yet. Rates will appear here as soon as they are collected."
+                title={t("bankDetail.noRates")}
+                message={t("bankDetail.noRatesMessage")}
               />
             ) : (
               <>
                 <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_1fr] gap-2 px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  <span>Currency</span>
-                  <span className="text-right">Cash Buy</span>
-                  <span className="text-right">Cash Sell</span>
-                  <span className="text-right">Trans. Buy</span>
-                  <span className="text-right">Trans. Sell</span>
+                  <span>{t("bankDetail.currency")}</span>
+                  <span className="text-right">{t("bankDetail.cashBuy")}</span>
+                  <span className="text-right">{t("bankDetail.cashSell")}</span>
+                  <span className="text-right">{t("bankDetail.transBuy")}</span>
+                  <span className="text-right">{t("bankDetail.transSell")}</span>
                 </div>
                 <ul className="mt-2 divide-y divide-border/60">
                   {bankRates.map((r) => {
@@ -290,20 +301,20 @@ function BankDetails() {
           {/* Real bank profile details */}
           <section className="space-y-6">
             <SurfaceCard className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Bank Details</h3>
+              <h3 className="text-lg font-semibold mb-4">{t("bankDetail.bankDetails")}</h3>
               <InfoItem
                 icon={<Building2 className="size-4 text-primary" />}
-                label="Bank Type"
+                label={t("bankDetail.bankType")}
                 value={bank.type}
               />
               <InfoItem
                 icon={<MapPin className="size-4 text-primary" />}
-                label="Total Branches"
+                label={t("bankDetail.totalBranches")}
                 value={bank.branches ? bank.branches.toLocaleString() : "—"}
               />
               <InfoItem
                 icon={<Users className="size-4 text-primary" />}
-                label="Total Employees"
+                label={t("bankDetail.totalEmployees")}
                 value={bank.totalEmployees ? bank.totalEmployees.toLocaleString() : "—"}
               />
               {bank.website && (
@@ -314,7 +325,7 @@ function BankDetails() {
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
                 >
                   <Globe className="size-4" />
-                  Visit Official Website
+                  {t("bankDetail.visitWebsite")}
                 </a>
               )}
             </SurfaceCard>
@@ -323,11 +334,10 @@ function BankDetails() {
 
             <div className="rounded-2xl bg-[color:var(--gold-soft)] border border-[color:var(--gold)]/30 p-5">
               <div className="flex items-center gap-2 text-[color:var(--gold-foreground)] font-semibold text-sm">
-                <Lightbulb className="size-4" /> Pro Tip
+                <Lightbulb className="size-4" /> {t("bankDetail.proTip")}
               </div>
               <p className="text-sm text-[color:var(--gold-foreground)]/80 mt-2">
-                Check rates during market opening hours (GMT+3) for the most accurate and real-time
-                execution prices.
+                {t("bankDetail.proTipText")}
               </p>
             </div>
           </section>
@@ -342,6 +352,7 @@ function BankDetails() {
  * actually publishes financials; each metric falls back to an em-dash.
  */
 function BankFinancialSnapshot({ bank }: { bank: Bank }) {
+  const { t } = useTranslation();
   const hasFinancials =
     bank.totalAssets !== undefined ||
     bank.totalDeposits !== undefined ||
@@ -355,23 +366,23 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
   if (!hasFinancials) return null;
 
   const metrics: { label: string; value: string }[] = [
-    { label: "Total Assets", value: formatEtbCompact(bank.totalAssets) },
-    { label: "Total Liabilities", value: formatEtbCompact(bank.totalLiabilities) },
-    { label: "Total Deposits", value: formatEtbCompact(bank.totalDeposits) },
-    { label: "Paid-up Capital", value: formatEtbCompact(bank.paidUpCapital) },
-    { label: "Reserves", value: formatEtbCompact(bank.reserves) },
-    { label: "Profit Before Tax", value: formatEtbCompact(bank.profitBeforeTax) },
-    { label: "Profit After Tax", value: formatEtbCompact(bank.profitAfterTax) },
-    { label: "Branches", value: formatEtbCompact(bank.branches) },
-    { label: "Employees", value: formatEtbCompact(bank.totalEmployees) },
+    { label: t("bankDetail.totalAssets"), value: formatEtbCompact(bank.totalAssets) },
+    { label: t("bankDetail.totalLiabilities"), value: formatEtbCompact(bank.totalLiabilities) },
+    { label: t("bankDetail.totalDeposits"), value: formatEtbCompact(bank.totalDeposits) },
+    { label: t("bankDetail.paidUpCapital"), value: formatEtbCompact(bank.paidUpCapital) },
+    { label: t("bankDetail.reserves"), value: formatEtbCompact(bank.reserves) },
+    { label: t("bankDetail.profitBeforeTax"), value: formatEtbCompact(bank.profitBeforeTax) },
+    { label: t("bankDetail.profitAfterTax"), value: formatEtbCompact(bank.profitAfterTax) },
+    { label: t("bankDetail.branches"), value: formatEtbCompact(bank.branches) },
+    { label: t("bankDetail.employees"), value: formatEtbCompact(bank.totalEmployees) },
   ];
 
   return (
     <SurfaceCard className="p-6 mt-8">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
-        <h2 className="text-lg font-semibold">Financial Snapshot</h2>
+        <h2 className="text-lg font-semibold">{t("bankDetail.financialSnapshot")}</h2>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-          Figures in ETB
+          {t("bankDetail.figuresEtb")}
         </span>
       </div>
       <dl className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -394,17 +405,18 @@ function BankFinancialSnapshot({ bank }: { bank: Bank }) {
  * are displayed directly rather than scaled.
  */
 function BankFinancialHealth({ bank }: { bank: Bank }) {
+  const { t } = useTranslation();
   const ratios: { label: string; value?: number }[] = [
-    { label: "Loan to Deposit Ratio", value: bank.loanToDepositRatio },
-    { label: "Return on Assets", value: bank.returnOnAsset },
-    { label: "Return on Equity", value: bank.returnOnEquity },
+    { label: t("bankDetail.loanToDeposit"), value: bank.loanToDepositRatio },
+    { label: t("bankDetail.returnOnAssets"), value: bank.returnOnAsset },
+    { label: t("bankDetail.returnOnEquity"), value: bank.returnOnEquity },
   ];
   const present = ratios.filter((r) => typeof r.value === "number");
   if (present.length === 0) return null;
 
   return (
     <SurfaceCard className="p-6">
-      <h3 className="text-lg font-semibold">Financial Health</h3>
+      <h3 className="text-lg font-semibold">{t("bankDetail.financialHealth")}</h3>
       <dl className="mt-3 space-y-2.5">
         {present.map((r) => (
           <div key={r.label} className="flex items-center justify-between gap-3 py-2">

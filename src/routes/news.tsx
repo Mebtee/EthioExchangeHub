@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { ListRowsSkeleton } from "@/components/shared/skeletons";
@@ -8,13 +9,12 @@ import { NewsCard } from "@/components/news/news-card";
 import { useNews, useNewsCategories } from "@/hooks";
 import { Seo } from "@/components/shared/seo";
 
-const ALL_CATEGORIES = "All";
-
 function NewsPage() {
+  const { t } = useTranslation();
   const { data: news = [], isLoading } = useNews();
   const { data: newsCategories = [] } = useNewsCategories();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState(ALL_CATEGORIES);
+  const [category, setCategory] = useState<string>(t("news.all"));
 
   // Per-category counts derived from the fetched list so the sidebar always
   // reflects the actual data (independent of the API-provided counts).
@@ -27,32 +27,29 @@ function NewsPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return news.filter((n) => {
-      const matchesCategory = category === ALL_CATEGORIES || n.category === category;
+      const matchesCategory = category === t("news.all") || n.category === category;
       const matchesQuery = q
         ? n.title.toLowerCase().includes(q) || n.excerpt.toLowerCase().includes(q)
         : true;
       return matchesCategory && matchesQuery;
     });
-  }, [news, query, category]);
+  }, [news, query, category, t]);
 
   const featured = filtered.find((n) => n.featured) ?? filtered[0];
   const rest = filtered.filter((n) => n !== featured);
 
   return (
     <SiteShell>
-      <Seo
-        title="Market Insights & Banking News — Ethio Exchange"
-        description="Latest trends and official announcements from Ethiopia's financial sector."
-      />
+      <Seo title={t("seo.news.title")} description={t("seo.news.description")} />
       <PageContainer>
         <PageHeader
-          title="Market Insights"
-          description="Latest trends and official announcements from Ethiopia's financial sector."
+          title={t("news.title")}
+          description={t("news.description")}
           action={
             <SearchInput
               value={query}
               onChange={setQuery}
-              placeholder="Search news and updates..."
+              placeholder={t("news.searchPlaceholder")}
               wrapperClassName="w-full sm:w-80"
             />
           }
@@ -62,18 +59,18 @@ function NewsPage() {
           {/* Sidebar */}
           <aside className="space-y-6">
             <div className="rounded-2xl bg-card border border-border/60 p-5">
-              <h3 className="font-semibold mb-3">Categories</h3>
+              <h3 className="font-semibold mb-3">{t("news.categories")}</h3>
               <ul className="space-y-1">
                 <li>
                   <button
                     type="button"
-                    onClick={() => setCategory(ALL_CATEGORIES)}
-                    aria-pressed={category === ALL_CATEGORIES}
-                    className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm ${category === ALL_CATEGORIES ? "bg-primary text-primary-foreground" : "hover:bg-surface-low"}`}
+                    onClick={() => setCategory(t("news.all"))}
+                    aria-pressed={category === t("news.all")}
+                    className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm ${category === t("news.all") ? "bg-primary text-primary-foreground" : "hover:bg-surface-low"}`}
                   >
-                    <span>{ALL_CATEGORIES}</span>
+                    <span>{t("news.all")}</span>
                     <span
-                      className={`text-xs ${category === ALL_CATEGORIES ? "opacity-90" : "text-muted-foreground"}`}
+                      className={`text-xs ${category === t("news.all") ? "opacity-90" : "text-muted-foreground"}`}
                     >
                       {news.length}
                     </span>
@@ -116,7 +113,7 @@ function NewsPage() {
                       className="w-full h-full object-cover"
                     />
                     <span className="absolute top-4 left-4 rounded-md bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">
-                      Featured
+                      {t("news.featured")}
                     </span>
                   </div>
                   <div className="p-6 flex flex-col">
@@ -146,7 +143,7 @@ function NewsPage() {
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               {rest.length === 0 ? (
                 <p className="text-sm text-muted-foreground col-span-full">
-                  No articles match your search or category selection.
+                  {t("news.noArticles")}
                 </p>
               ) : (
                 rest.map((n) => <NewsCard key={n.id} item={n} />)
@@ -158,20 +155,19 @@ function NewsPage() {
         {/* Newsletter */}
         <section className="mt-12 rounded-2xl bg-primary text-primary-foreground p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <h3 className="text-2xl font-bold">Stay ahead of the market.</h3>
+            <h3 className="text-2xl font-bold">{t("news.newsletterTitle")}</h3>
             <p className="text-sm text-primary-foreground/80 max-w-md mt-1">
-              Get the latest currency updates and bank rankings delivered to your inbox every
-              morning.
+              {t("news.newsletterText")}
             </p>
           </div>
           <form className="flex w-full md:w-auto gap-3">
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder={t("news.emailPlaceholder")}
               className="flex-1 md:w-72 rounded-xl bg-primary-foreground/10 border border-primary-foreground/30 placeholder:text-primary-foreground/70 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-foreground/50"
             />
             <button className="rounded-xl bg-[color:var(--gold)] text-[color:var(--gold-foreground)] px-5 py-3 text-sm font-semibold hover:opacity-90">
-              Subscribe Now
+              {t("news.subscribe")}
             </button>
           </form>
         </section>

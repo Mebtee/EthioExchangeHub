@@ -1,4 +1,5 @@
 import { Activity, CalendarClock, HeartPulse, ShieldAlert } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -9,6 +10,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { scraperStatusTone } from "@/lib/status";
 
 export default function AdminScraperHealthPage() {
+  const { t } = useTranslation();
   const { data: summary, isLoading, isError, error, refetch } = useScraperHealth();
   const {
     data: rows,
@@ -27,57 +29,54 @@ export default function AdminScraperHealthPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Scraper Health</h1>
-        <p className="mt-1 text-muted-foreground">
-          Status and performance of every bank scraper. Data is read-only — no trigger control is
-          shown because no scraper-run service exists yet.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("admin.scraperHealth.title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("admin.scraperHealth.intro")}</p>
       </div>
 
       {isError ? (
         <ErrorState
-          title="Unable to load scraper summary"
+          title={t("admin.scraperHealth.errorTitle")}
           message={error instanceof Error ? error.message : undefined}
           onRetry={() => void refetch()}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Total scrapers"
+            label={t("admin.scraperHealth.totalScrapers")}
             value={isLoading ? "…" : String(total)}
-            delta={`${healthy} healthy`}
+            delta={t("admin.scraperHealth.healthyCount", { count: healthy })}
             direction="up"
             icon={Activity}
             tone="primary"
           />
           <StatCard
-            label="Healthy"
+            label={t("admin.scraperHealth.healthy")}
             value={isLoading ? "…" : String(healthy)}
-            delta="Running normally"
+            delta={t("admin.scraperHealth.healthyDelta")}
             direction="up"
             icon={HeartPulse}
             tone="success"
           />
           <StatCard
-            label="Degraded"
+            label={t("admin.scraperHealth.degraded")}
             value={isLoading ? "…" : String(degraded)}
-            delta="Needs attention"
+            delta={t("admin.scraperHealth.degradedDelta")}
             direction="neutral"
             icon={ShieldAlert}
             tone="gold"
           />
           <StatCard
-            label="Offline"
+            label={t("admin.scraperHealth.offline")}
             value={isLoading ? "…" : String(offline)}
-            delta="Not collecting"
+            delta={t("admin.scraperHealth.offlineDelta")}
             direction="down"
             icon={Activity}
             tone="destructive"
           />
           <StatCard
-            label="Stale data"
+            label={t("admin.scraperHealth.staleData")}
             value={isLoading ? "…" : String(stale)}
-            delta="Rate older than window"
+            delta={t("admin.scraperHealth.staleDelta")}
             direction={stale > 0 ? "down" : "neutral"}
             icon={CalendarClock}
             tone={stale > 0 ? "gold" : "neutral"}
@@ -89,20 +88,20 @@ export default function AdminScraperHealthPage() {
         {rowsError ? (
           <div className="p-6">
             <ErrorState
-              title="Unable to load scraper details"
+              title={t("admin.scraperHealth.rowsErrorTitle")}
               message={rowsErrorObj instanceof Error ? rowsErrorObj.message : undefined}
               onRetry={() => void refetchRows()}
             />
           </div>
         ) : rowsLoading ? (
           <div className="p-6">
-            <LoadingState label="Loading scrapers…" />
+            <LoadingState label={t("admin.scraperHealth.loadingRows")} />
           </div>
         ) : (rows ?? []).length === 0 ? (
           <div className="p-6">
             <EmptyState
-              title="No scraper records yet"
-              message="Per-bank health rows will appear here once scrapers start reporting."
+              title={t("admin.scraperHealth.noRowsTitle")}
+              message={t("admin.scraperHealth.noRowsMessage")}
             />
           </div>
         ) : (
@@ -115,25 +114,35 @@ export default function AdminScraperHealthPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{row.bankName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {row.bankCode} · Rate as of {row.lastRateDate ?? "—"}
+                    {row.bankCode} · {t("admin.scraperHealth.rateAsOf")} {row.lastRateDate ?? "—"}
                   </p>
                 </div>
-                <StatusBadge tone={scraperStatusTone(row.status)}>{row.status}</StatusBadge>
+                <StatusBadge tone={scraperStatusTone(row.status)}>
+                  {t(`admin.scraperHealth.${row.status}`)}
+                </StatusBadge>
                 <div className="w-32 text-right">
                   <p className="text-sm font-medium tabular">{row.responseTimeMs ?? "—"} ms</p>
-                  <p className="text-xs text-muted-foreground">response time</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.scraperHealth.responseTime")}
+                  </p>
                 </div>
                 <div className="w-36 text-right">
                   <p className="text-sm font-medium tabular">
                     {row.consecutiveFailures === null ? "—" : `${row.consecutiveFailures}×`}
                   </p>
-                  <p className="text-xs text-muted-foreground">consecutive failures</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.scraperHealth.consecutiveFailures")}
+                  </p>
                 </div>
                 <div className="w-36 text-right">
                   <p className="truncate text-sm font-medium">
-                    {row.lastSuccess ? formatRelativeTime(row.lastSuccess) : "never"}
+                    {row.lastSuccess
+                      ? formatRelativeTime(row.lastSuccess)
+                      : t("admin.scraperHealth.never")}
                   </p>
-                  <p className="text-xs text-muted-foreground">last success</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.scraperHealth.lastSuccess")}
+                  </p>
                 </div>
               </li>
             ))}

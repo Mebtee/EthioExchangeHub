@@ -5,6 +5,9 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/context/auth-context";
 import { queryClient } from "./query-client";
 
+// Initialize i18next (resources, language detector) before first render.
+import "@/i18n";
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>

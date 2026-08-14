@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState, ErrorState } from "@/components/shared/async-states";
 import { TableRowsSkeleton } from "@/components/shared/skeletons";
@@ -44,6 +45,8 @@ export function DataTable<T>({
   emptyMessage,
   footer,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
+
   if (isLoading) {
     return <TableRowsSkeleton rows={6} columns={columns.length} />;
   }
@@ -51,15 +54,17 @@ export function DataTable<T>({
   if (isError) {
     return (
       <ErrorState
-        title="Unable to load data"
-        message={errorMessage ?? "Something went wrong while contacting the service."}
+        title={t("admin.dataTable.unableToLoad")}
+        message={errorMessage ?? t("admin.dataTable.errorMessage")}
         onRetry={onRetry}
       />
     );
   }
 
   if (rows.length === 0) {
-    return <EmptyState title={emptyTitle ?? "No records found"} message={emptyMessage} />;
+    return (
+      <EmptyState title={emptyTitle ?? t("admin.dataTable.noRecords")} message={emptyMessage} />
+    );
   }
 
   return (

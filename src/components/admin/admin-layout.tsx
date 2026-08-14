@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
@@ -7,6 +8,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 
 export function AdminLayout() {
+  const { t } = useTranslation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
@@ -19,7 +21,7 @@ export function AdminLayout() {
       {/* Mobile sidebar */}
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetContent side="left" className="w-72 p-0">
-          <SheetTitle className="sr-only">Admin navigation</SheetTitle>
+          <SheetTitle className="sr-only">{t("admin.mobileNavAria")}</SheetTitle>
           <AdminSidebar onNavigate={() => setMobileNavOpen(false)} />
         </SheetContent>
       </Sheet>

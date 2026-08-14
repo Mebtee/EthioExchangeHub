@@ -1,34 +1,37 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Globe, AtSign, Share2 } from "lucide-react";
 
+import { useLocale } from "@/hooks";
+
 export function SiteFooter() {
+  const { t } = useTranslation();
+  const { localize } = useLocale();
+
   return (
     <footer className="mt-16 border-t border-border/60 bg-surface-low">
       <div className="mx-auto max-w-[1280px] px-4 md:px-12 py-12 grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         <div>
           <div className="text-xl font-bold text-primary mb-3">Ethio Exchange</div>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Empowering the Ethiopian financial landscape with real-time exchange insights and secure
-            banking aggregation.
-          </p>
+          <p className="text-sm text-muted-foreground max-w-xs">{t("footer.tagline")}</p>
           <div className="mt-5 flex gap-3">
             <a
               href="#"
-              aria-label="Visit our website"
+              aria-label={t("footer.ariaWebsite")}
               className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
             >
               <Globe className="size-4" />
             </a>
             <a
               href="#"
-              aria-label="Contact us by email"
+              aria-label={t("footer.ariaEmail")}
               className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
             >
               <AtSign className="size-4" />
             </a>
             <a
               href="#"
-              aria-label="Share on social media"
+              aria-label={t("footer.ariaSocial")}
               className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
             >
               <Share2 className="size-4" />
@@ -36,64 +39,68 @@ export function SiteFooter() {
           </div>
         </div>
         <FooterCol
-          title="Quick Links"
+          title={t("footer.quickLinks")}
           links={[
-            { to: "/", label: "Rates" },
-            { to: "/banks", label: "Banks" },
-            { to: "/rankings", label: "Rankings" },
-            { to: "/news", label: "News" },
+            { to: "/", label: t("footer.rates") },
+            { to: "/banks", label: t("footer.banks") },
+            { to: "/rankings", label: t("footer.rankings") },
+            { to: "/news", label: t("footer.news") },
           ]}
         />
         <FooterCol
-          title="Currency Converter"
+          title={t("footer.currencyConverter")}
           links={[
-            { to: "/usd-to-etb", label: "USD to ETB" },
-            { to: "/eur-to-etb", label: "EUR to ETB" },
-            { to: "/gbp-to-etb", label: "GBP to ETB" },
-            { to: "/sar-to-etb", label: "SAR to ETB" },
-            { to: "/aed-to-etb", label: "AED to ETB" },
+            { to: "/usd-to-etb", label: t("currencyToEtb.pairLabel", { code: "USD" }) },
+            { to: "/eur-to-etb", label: t("currencyToEtb.pairLabel", { code: "EUR" }) },
+            { to: "/gbp-to-etb", label: t("currencyToEtb.pairLabel", { code: "GBP" }) },
+            { to: "/sar-to-etb", label: t("currencyToEtb.pairLabel", { code: "SAR" }) },
+            { to: "/aed-to-etb", label: t("currencyToEtb.pairLabel", { code: "AED" }) },
           ]}
         />
         <FooterCol
-          title="About"
+          title={t("footer.about")}
           links={[
-            { to: "/about", label: "Our Story" },
-            { to: "/about", label: "Methodology" },
-            { to: "/about", label: "Privacy" },
+            { to: "/about", label: t("footer.ourStory") },
+            { to: "/about", label: t("footer.methodology") },
+            { to: "/about", label: t("footer.privacy") },
           ]}
         />
         <FooterCol
-          title="Contact"
+          title={t("footer.contact")}
           links={[
-            { to: "/contact", label: "Support" },
-            { to: "/contact", label: "API Access" },
-            { to: "/contact", label: "Feedback" },
+            { to: "/contact", label: t("footer.support") },
+            { to: "/contact", label: t("footer.apiAccess") },
+            { to: "/contact", label: t("footer.feedback") },
           ]}
         />
         <FooterCol
-          title="Legal"
+          title={t("footer.legal")}
           links={[
-            { to: "/about", label: "Terms of Service" },
-            { to: "/about", label: "Privacy Policy" },
-            { to: "/about", label: "Disclaimer" },
+            { to: "/about", label: t("footer.terms") },
+            { to: "/about", label: t("footer.privacyPolicy") },
+            { to: "/about", label: t("footer.disclaimer") },
           ]}
         />
       </div>
       <div className="border-t border-border/60 py-5 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Ethio Exchange. All rights reserved.
+        {t("footer.rights", { year: new Date().getFullYear() })}
       </div>
     </footer>
   );
 }
 
 function FooterCol({ title, links }: { title: string; links: { to: string; label: string }[] }) {
+  const { localize } = useLocale();
   return (
     <div>
       <h5 className="text-primary font-semibold mb-3 text-sm">{title}</h5>
       <ul className="space-y-2 text-sm">
         {links.map((l, i) => (
           <li key={i}>
-            <Link to={l.to} className="text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              to={localize(l.to)}
+              className="text-muted-foreground hover:text-primary transition-colors"
+            >
               {l.label}
             </Link>
           </li>

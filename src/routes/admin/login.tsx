@@ -2,17 +2,21 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
+import { useLocale } from "@/hooks";
 
 export default function AdminLoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { localize } = useLocale();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,14 +34,14 @@ export default function AdminLoginPage() {
       await login({ email, password });
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to sign in. Please try again.");
+      setError(err instanceof Error ? err.message : t("auth.login.errorFallback"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <AuthShell title="Sign in" subtitle="Access the Ethio Exchange admin console.">
+    <AuthShell title={t("auth.login.title")} subtitle={t("auth.login.subtitle")}>
       <form onSubmit={handleSubmit} className="grid gap-5" noValidate>
         {error && (
           <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
@@ -46,7 +50,7 @@ export default function AdminLoginPage() {
         )}
 
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("auth.login.email")}</Label>
           <Input
             id="email"
             type="email"
@@ -60,12 +64,12 @@ export default function AdminLoginPage() {
 
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("auth.login.password")}</Label>
             <Link
-              to="/admin/forgot-password"
+              to={localize("/admin/forgot-password")}
               className="text-xs font-semibold text-primary hover:underline"
             >
-              Forgot password?
+              {t("auth.login.forgotPassword")}
             </Link>
           </div>
           <div className="relative">
@@ -83,7 +87,9 @@ export default function AdminLoginPage() {
               type="button"
               onClick={() => setShowPassword((s) => !s)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={
+                showPassword ? t("auth.login.hidePassword") : t("auth.login.showPassword")
+              }
             >
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
@@ -92,7 +98,7 @@ export default function AdminLoginPage() {
 
         <Button type="submit" size="lg" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-          {isSubmitting ? "Signing in…" : "Sign in"}
+          {isSubmitting ? t("auth.login.signingIn") : t("auth.login.signIn")}
         </Button>
       </form>
     </AuthShell>
