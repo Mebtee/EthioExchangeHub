@@ -3,6 +3,7 @@ import {
   Activity,
   ExternalLink,
   LayoutDashboard,
+  Megaphone,
   PencilLine,
   ScrollText,
   Settings,
@@ -19,6 +20,7 @@ const NAV_ITEMS: Array<{
   labelKey:
     | "admin.nav.dashboard"
     | "admin.nav.manualRates"
+    | "admin.nav.featured"
     | "admin.nav.scraperHealth"
     | "admin.nav.scrapeLogs"
     | "admin.nav.profile"
@@ -28,6 +30,7 @@ const NAV_ITEMS: Array<{
 }> = [
   { to: "/admin", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/manual-rates", labelKey: "admin.nav.manualRates", icon: PencilLine },
+  { to: "/admin/featured", labelKey: "admin.nav.featured", icon: Megaphone },
   { to: "/admin/scraper-health", labelKey: "admin.nav.scraperHealth", icon: Activity },
   { to: "/admin/scrape-logs", labelKey: "admin.nav.scrapeLogs", icon: ScrollText },
   { to: "/admin/profile", labelKey: "admin.nav.profile", icon: User },

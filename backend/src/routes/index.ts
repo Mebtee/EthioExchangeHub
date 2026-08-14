@@ -5,6 +5,7 @@ import { AuthController } from "@/controllers/AuthController";
 import { BanksController } from "@/controllers/BanksController";
 import { ContactController } from "@/controllers/ContactController";
 import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
+import { FeaturedContentController } from "@/controllers/FeaturedContentController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
 import { NewsController } from "@/controllers/NewsController";
 import { ScraperHealthController } from "@/controllers/ScraperHealthController";
@@ -14,6 +15,8 @@ import { createAuthLimiter } from "@/middleware/rate-limit";
 import { BanksRepository } from "@/repositories/BanksRepository";
 import { ContactRepository } from "@/repositories/ContactRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
+import { FeaturedContentClicksRepository } from "@/repositories/FeaturedContentClicksRepository";
+import { FeaturedContentRepository } from "@/repositories/FeaturedContentRepository";
 import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
 import { NewsService } from "@/services/NewsService";
 import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
@@ -24,6 +27,7 @@ import { AuthServiceImpl } from "@/services/AuthService";
 import { BanksServiceImpl } from "@/services/BanksService";
 import { ContactServiceImpl } from "@/services/ContactService";
 import { ExchangeRatesServiceImpl } from "@/services/ExchangeRatesService";
+import { FeaturedContentServiceImpl } from "@/services/FeaturedContentService";
 import { ManualRatesServiceImpl } from "@/services/ManualRatesService";
 import { ScraperHealthServiceImpl } from "@/services/ScraperHealthService";
 import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
@@ -34,6 +38,7 @@ import { authRouter } from "./auth.routes";
 import { banksRouter } from "./banks.routes";
 import { contactRouter } from "./contact.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
+import { featuredAdminRouter, featuredRouter } from "./featured.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
 import { newsRouter } from "./news.routes";
 import { scraperHealthRouter } from "./scraper-health.routes";
@@ -74,6 +79,18 @@ const manualRatesController = new ManualRatesController(manualRatesService);
 
 const newsService = new NewsService();
 const newsController = new NewsController(newsService);
+
+// Featured content: the admin CRUD surface and the append-only click log share
+// one service. The homepage selection rule (is_active + schedule window +
+// display order) lives entirely in FeaturedContentService — this composition
+// root only wires repositories together.
+const featuredContentRepository = new FeaturedContentRepository();
+const featuredClicksRepository = new FeaturedContentClicksRepository();
+const featuredContentService = new FeaturedContentServiceImpl(
+  featuredContentRepository,
+  featuredClicksRepository,
+);
+const featuredContentController = new FeaturedContentController(featuredContentService);
 
 // Public contact form — submissions are persisted to Supabase first (the
 // source of truth); the Resend-backed email service then best-effort forwards
@@ -135,6 +152,13 @@ apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));
 apiRouter.use("/manual-rates", requireAuth, requireAdmin, manualRatesRouter(manualRatesController));
 apiRouter.use("/news", newsRouter(newsController));
+apiRouter.use("/featured", featuredRouter(featuredContentController));
+apiRouter.use(
+  "/admin/featured",
+  requireAuth,
+  requireAdmin,
+  featuredAdminRouter(featuredContentController),
+);
 apiRouter.use("/contact", contactRouter(contactController));
 apiRouter.use("/scraper-health", scraperHealthRouter(scraperHealthController));
 apiRouter.use("/scrape-logs", scrapeLogsRouter(scrapeLogsController));
