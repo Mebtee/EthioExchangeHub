@@ -20,7 +20,7 @@
     "exchangeRates": "የምንዛሪ ተመኖች",
     "bankRankings": "የባንክ ደረጃዎች",
     "allEthiopianBanks": "ሁሉም የኢትዮጵያ ባንኮች",
-    "currencyConverter": "የምንዛሪ ቀያሪ",
+    "currencyConverter": "የምንዛሪ መቀየሪያ",
     "ratesAsOf": "እስከ {{date}} ተመኖች",
     "minRead_one": "{{count}} ደቂቃ ንባብ",
     "minRead_other": "{{count}} ደቂቃ ንባብ",
@@ -55,7 +55,7 @@
     "banks": "ባንኮች",
     "rankings": "ደረጃዎች",
     "news": "ዜና",
-    "currencyConverter": "የምንዛሪ ቀያሪ",
+    "currencyConverter": "የምንዛሪ መቀየሪያ",
     "about": "ስለእኛ",
     "ourStory": "ታሪካችን",
     "methodology": "ዘዴአችን",
@@ -74,7 +74,7 @@
     "ariaSocial": "በማህበራዊ ሚዲያ ያካፍሉ"
   },
   "home": {
-    "heroTitle": "የኢትዮጵያ ባንክ የምንዛሪ ተመኖች እና <highlight>የምንዛሪ ቀያሪ</highlight>",
+    "heroTitle": "የኢትዮጵያ ባንክ የምንዛሪ ተመኖች እና <highlight>የምንዛሪ መቀየሪያ</highlight>",
     "heroDescription": "ኢትዮ ኤክስቸንጅ ከኢትዮጵያ የንግድ ባንኮች የሚገኙትን የግዢ እና የሽያጭ ምንዛሪ ተመኖች ለዋና የውጭ ምንዛሪዎች USD፣ EUR እና GBP ጨምሮ በቅጽበት ያወዳድራል። የውጭ ምንዛሪን ወደ ኢትዮጵያ ብር (ETB) ይቀይሩ እና የትኛው ባንክ የበለጠ ተወዳዳሪ ተመን እንደሚሰጥ ይመልከቱ — ሁሉም በቅጽበት የተዘመነ።",
     "compareBanks": "ባንኮችን ያወዳድሩ",
     "todaysBestRates": "የዛሬ ምርጥ ተመኖች",
@@ -101,7 +101,7 @@
     "noRatesMessage": "ገና ምንም ባንክ የተመን መረጃ አላትም። ተመኖች ሲሰበሰቡ ባንኮች እዚህ ይታያሉ።"
   },
   "converter": {
-    "title": "የምንዛሪ ቀያሪ",
+    "title": "የምንዛሪ መቀየሪያ",
     "subtitle": "በምርጥ ባለው የባንክ ተመን ይቀይሩ",
     "from": "ከ",
     "to": "ወደ",
