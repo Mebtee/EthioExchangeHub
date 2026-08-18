@@ -25,9 +25,9 @@ function bankRow(overrides: Partial<BackendBankRow> = {}): BackendBankRow {
     total_deposite: 71_900_000_000,
     total_branches: 546,
     total_employee: 4_651,
-    ratio_loan_to_deposite: 0.6843,
-    ratio_return_on_asset: 0.0328,
-    ratio_return_on_equity: 0.2458,
+    loan_to_deposite_ratio: 0.6843,
+    return_on_asset: 0.0328,
+    return_on_equity: 0.2458,
     profit_before_tax: 4_200_000_000,
     profit_after_tax: 3_000_000_000,
     retained_earning: 2_000_000_000,
@@ -235,6 +235,8 @@ describe("mapScraperHealthRow", () => {
     expect(mapScraperHealthRow({ ...base, status: "healthy" }).status).toBe("healthy");
     expect(mapScraperHealthRow({ ...base, status: "degraded" }).status).toBe("degraded");
     expect(mapScraperHealthRow({ ...base, status: "failed" }).status).toBe("failed");
+    expect(mapScraperHealthRow({ ...base, status: "offline" }).status).toBe("failed");
+    expect(mapScraperHealthRow({ ...base, status: "error" }).status).toBe("failed");
     expect(mapScraperHealthRow({ ...base, status: "unknown" }).status).toBe("unknown");
     expect(mapScraperHealthRow({ ...base, status: "weird text" }).status).toBe("unknown");
   });
