@@ -48,7 +48,11 @@ export const resetPasswordBodySchema = z
   .object({
     token: z.string().min(1, "token is required"),
     password: trimmedStringSchema
-      .min(8, "must be at least 8 characters")
-      .max(1024, "must be at most 1024 characters"),
+      .min(12, "must be at least 12 characters")
+      .max(1024, "must be at most 1024 characters")
+      .regex(/[A-Z]/, "must contain at least one uppercase letter")
+      .regex(/[a-z]/, "must contain at least one lowercase letter")
+      .regex(/[0-9]/, "must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "must contain at least one special character"),
   })
   .strict();

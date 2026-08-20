@@ -1,11 +1,10 @@
 # Security Review
 
-Infrastructure-only security posture of the backend API. **There is no
-authentication, billing, or payment in this application** — all API endpoints
-are public. This document reviews every enabled protection layer (Phase 3A
-hardening).
+Security posture of the Ethio Exchange Hub backend API. This document reflects
+the **actual implemented protections** as of the latest production hardening
+phase.
 
-## Middleware order (Phase 3A)
+## Middleware order
 
 The order in `src/app.ts` is deliberate — each layer protects the next:
 
@@ -23,159 +22,291 @@ morgan (access log)      → method, path, status, duration, requestId
 routes (/health /ready /live /metrics /docs /api/v1)
 strict rate limiter      → /docs, /docs.json, /metrics (30/min/IP)
 general rate limiter     → /api/v1 (100/min/IP)
+auth rate limiter        → /api/v1/auth (10/min/IP, brute-force protection)
 notFound → errorHandler  → standardized envelopes, no leaks
 ```
 
-## Protection layers
+## Authentication
 
-### Helmet
+JWT-based authentication with three token types:
 
-`helmet` is enabled globally with production-safe, environment-aware options:
+| Token Type | Purpose | Lifetime | Claim |
+|---|---|---|---|
+| Access | API authorization | 15 minutes (configurable) | `{ sub, role, type: "access" }` |
+| Refresh | Token renewal | 30 days (configurable) | `{ sub, type: "refresh" }` |
+| Password Reset | Password change | 30 minutes (configurable) | `{ sub, purpose: "password-reset" }` |
 
-```ts
-helmet({
-  contentSecurityPolicy: false, // no user-controlled HTML served
-  strictTransportSecurity:
-    NODE_ENV === "production"
-      ? { maxAge: 31536000, includeSubDomains: true, preload: true }
-      : false,
-  referrerPolicy: { policy: "no-referrer" },
-  dnsPrefetchControl: { allow: false },
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  xXssProtection: false, // deprecated by browsers; CSP+nosniff cover it
-});
-```
+### Token properties
 
-| Header                                       | Status                  | Effect                                          |
-| -------------------------------------------- | ----------------------- | ----------------------------------------------- |
-| `Content-Security-Policy`                    | **disabled** (explicit) | No user HTML served; enable via env when needed |
-| `X-Content-Type-Options: nosniff`            | on                      | Prevents MIME-sniffing                          |
-| `X-Frame-Options: SAMEORIGIN`                | on (frameguard)         | Blocks clickjacking via framing                 |
-| `Referrer-Policy: no-referrer`               | on                      | No referrer leakage                             |
-| `Strict-Transport-Security`                  | **production only**     | HSTS (max-age 1y, includeSubDomains, preload)   |
-| `X-DNS-Prefetch-Control: off`                | on                      | Disables DNS prefetching                        |
-| `Cross-Origin-Resource-Policy: cross-origin` | on                      | Lets the React SPA read API responses           |
-| `X-Powered-By`                               | removed (hidePoweredBy) | No framework fingerprint                        |
+- Signed with `JWT_SECRET` (minimum 32 characters enforced at boot).
+- Tokens are **discriminated** by `type`/`purpose` claims — a stolen refresh
+  token cannot be used as an access token (or vice versa).
+- Verification checks both the signature and the discriminator.
+- Password-reset tokens are **never** returned in HTTP responses; in
+  development they are logged server-side only.
 
-`X-XSS-Protection` is explicitly disabled: modern browsers removed support for
-it, and the CSP + `nosniff` combination is the effective control.
+### Bootstrap admin
 
-### CORS
+A single administrator account is provisioned from server configuration
+(`ADMIN_EMAIL` + `ADMIN_PASSWORD`) on **first login only**. The plaintext
+password is never stored — only its scrypt hash. Credentials are provided
+via environment variables, never hardcoded in source or SQL migrations.
+
+### Password hashing
+
+- Algorithm: `scrypt` (Node.js built-in).
+- Salt: 16 bytes, randomly generated per password.
+- Hash: 64 bytes.
+- Comparison: constant-time via `timingSafeEqual`.
+- Storage format: `salt:hash` (hex-encoded).
+
+## Authorization
+
+### Roles
+
+Two admin roles exist: `admin` and `super_admin`. Both grant full access to
+the admin surface. The role is stored in the `users` table and included in
+the JWT access token.
+
+### Route protection
+
+The composition root (`src/routes/index.ts`) applies middleware at mount
+level:
+
+| Mount path | Middleware | Effect |
+|---|---|---|
+| `/auth` | `createAuthLimiter()` | Rate-limited; individual routes handle auth |
+| `/auth/me` | `requireAuth` | Requires valid access token |
+| `/admin` | `requireAuth` + `requireAdmin` | Admin-only |
+| `/manual-rates` | `requireAuth` + `requireAdmin` | Admin-only |
+| `/admin/featured` | `requireAuth` + `requireAdmin` | Admin-only |
+| `/scraper-health` | `requireAuth` + `requireAdmin` | Admin-only |
+| `/scrape-logs` | `requireAuth` + `requireAdmin` | Admin-only |
+| `/banks` | None | Public |
+| `/rates` | None | Public |
+| `/news` | None | Public |
+| `/featured` | None | Public (read-only) |
+| `/contact` | None | Public (write-only) |
+
+### `requireAuth` behavior
+
+1. Verifies the `Authorization: Bearer <token>` header.
+2. Verifies the token signature and `type: "access"` discriminator.
+3. Loads the user from the database (deleted/disabled accounts lose access
+   immediately).
+4. Attaches the user to `req.user`.
+
+### `requireAdmin` behavior
+
+Checks `req.user.role` against the allowed roles (`admin`, `super_admin`).
+Returns 403 on mismatch.
+
+### Frontend route guards
+
+The React frontend wraps all admin routes in `<RequireAuth>` and
+`<RequireRole>` components. **These are UX guards, not security boundaries.**
+The backend independently enforces authentication on every protected endpoint.
+
+## Public endpoints
+
+The following endpoints are intentionally public (no authentication required):
+
+- `GET /health`, `GET /ready`, `GET /live` — infrastructure probes
+- `GET /metrics` — Prometheus metrics (rate-limited)
+- `GET /docs`, `GET /docs.json` — OpenAPI documentation (rate-limited)
+- `GET /banks`, `GET /banks/active`, `GET /banks/:bankCode` — bank directory
+- `GET /rates/latest`, `GET /rates/history/*`, `GET /rates/date-range` — exchange rates
+- `GET /news`, `GET /news/categories` — news (placeholder)
+- `GET /featured` — active homepage campaign
+- `POST /featured/:id/click` — click tracking
+- `POST /contact/messages` — contact form submission
+- `POST /auth/login` — authentication (rate-limited)
+- `POST /auth/refresh` — token renewal (rate-limited)
+- `POST /auth/forgot-password` — password reset request (rate-limited)
+- `POST /auth/reset-password` — password reset application (rate-limited)
+
+## Rate limiting
+
+Three tiers of rate limiting, all using standard `RateLimit-*` draft-8
+headers:
+
+| Limiter | Applied to | Default | Env vars |
+|---|---|---|---|
+| General | `/api/v1/*` | 100 req/15min/IP | `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` |
+| Strict | `/docs`, `/docs.json`, `/metrics` | 30 req/15min/IP | `RATE_LIMIT_STRICT_MAX` |
+| Auth | `/auth/*` | 10 req/15min/IP | `AUTH_RATE_LIMIT_MAX` |
+
+### Slow-down
+
+`express-slow-down` applies gradual delay past a threshold (default: 50
+requests). Each excess request adds 250ms, capped at 2000ms. Never blocks.
+Infrastructure probes are skipped.
+
+**Known limitation:** The default in-memory store is per-process. In
+multi-instance deployments, rate limits are divided across instances. Consider
+a Redis-backed store for horizontal scaling.
+
+## CORS
 
 ```ts
 const allowedOrigins = new Set(
   env.ALLOWED_ORIGINS.length > 0 ? env.ALLOWED_ORIGINS : [env.FRONTEND_URL],
 );
-
-cors({
-  origin(origin, cb) {
-    if (!origin || allowedOrigins.has(origin)) cb(null, true);
-    else cb(null, false);
-  },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  credentials: false,
-});
 ```
 
-- Only the configured **allow-list** is allowed: `ALLOWED_ORIGINS`
-  (comma-separated, e.g. `ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173`);
-  when unset it falls back to the legacy `FRONTEND_URL`. **Unknown origins are
-  rejected** — no `Access-Control-Allow-Origin` header is emitted, so browsers
-  block the response. No `*`.
-- `credentials: false` — the API is authentication-free, so we never advertise
-  credential support (`Access-Control-Allow-Credentials` is not emitted).
-- All standard methods + preflight `OPTIONS` are supported.
-- Non-browser clients (no `Origin` header) pass through untouched.
-- **Local development**: set `ALLOWED_ORIGINS` to your dev-server origin(s)
-  (e.g. `http://localhost:5173` for Vite).
+- Only configured origins are allowed. Unknown origins are **rejected** — no
+  `Access-Control-Allow-Origin` header is emitted.
+- `credentials: false` — Bearer tokens are used (no cookies for auth).
+- Non-browser clients (no `Origin` header) bypass CORS — intentional for API
+  usage.
+- **Production requirement:** Set `ALLOWED_ORIGINS=https://ethioexchange.live`.
 
-### Rate limiting (`express-rate-limit` v8)
+## Request validation
 
-Two limiters, both using standard `RateLimit-*` headers (`standardHeaders:
-"draft-8"`) with **no legacy** `X-RateLimit-*` headers:
+All API endpoints use Zod schemas with `.strict()` mode — unknown keys are
+rejected with 422. Validation is applied via reusable middleware factories:
 
-| Limiter | Applied to                        | Default limit    | Env vars                                 |
-| ------- | --------------------------------- | ---------------- | ---------------------------------------- |
-| General | `/api/v1/*`                       | 100 req/15min/IP | `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` |
-| Strict  | `/docs`, `/docs.json`, `/metrics` | 30 req/15min/IP  | `RATE_LIMIT_STRICT_MAX`                  |
+- `validateParams` — route parameters
+- `validateQuery` — query strings
+- `validateBody` — request bodies
 
-Exceeding the limit returns `429 { success: false, message, data: null }`.
-Health/readiness/liveness probes are intentionally **not** rate-limited so
-orchestrators and load balancers are never throttled.
+Password validation enforces minimum 12 characters with uppercase, lowercase,
+number, and special character requirements.
 
-### Slow-down (`express-slow-down` v3)
+Featured content URL validation rejects `javascript:`, `data:`, and
+protocol-relative URLs.
 
-Applied globally **after** cookie parsing, **before** routes:
+## Error handling
 
-- `SLOW_DOWN_DELAY_AFTER` (default 50) requests per window run at full speed.
-- Past the threshold, each response is delayed gradually — `250 ms` per excess
-  request, capped at `SLOW_DOWN_MAX_DELAY_MS` (default 2000 ms).
-- Never blocks — clients are always eventually served, making brute-force
-  and scrape loops expensive without breaking legitimate traffic.
-- Infrastructure probe paths (`/health`, `/ready`, `/live`, `/metrics`,
-  `/docs`, `/docs.json`) are skipped.
+The centralized error handler (`middleware/error-handler.ts`) classifies errors:
 
-### Request size limits
+- **AppError subclasses:** Controlled application errors with HTTP status and
+  machine-readable codes. Logged at `warn` level.
+- **Body-parser errors:** Mapped to clean 400/413 responses.
+- **Unhandled errors:** Production returns generic "Internal server error."
+  Non-production returns the error message. Full error + stack is logged
+  server-side only.
 
-| Parser               | Limit (default) | Env/constant | Oversize response |
-| -------------------- | --------------- | ------------ | ----------------- |
-| `express.json`       | `1mb`           | `BODY_LIMIT` | `413`             |
-| `express.urlencoded` | `1mb`           | `BODY_LIMIT` | `413`             |
+Stack traces, SQL queries, Supabase URLs/keys, and internal file paths are
+**never** sent to clients in production.
 
-Malformed JSON bodies are rejected with `400` (`entity.parse.failed` is mapped
-in `error-handler.ts`). Oversized payloads are rejected with `413`
-(`entity.too.large`) — no request ever buffers unbounded data.
+## Secrets management
 
-### Trust proxy
+### Environment variables
 
-`app.set("trust proxy", env.TRUST_PROXY)` — set to the number of proxy hops
-behind nginx/a load balancer (e.g. `1`) so `req.ip` and rate-limit keys
-reflect the **real client address**. Default `0` (off) keeps direct
-connections correct.
+All secrets are validated at boot via Zod schemas. The server refuses to start
+when required values are missing or invalid.
 
-### Compression
-
-`compression({ threshold: 1024 })` — enabled globally, registered after
-helmet/CORS and before routes:
-
-- Responses **≥ 1 KB** are gzip-compressed; smaller responses are sent raw.
-- Exclusions (automatic, per the `compression` package):
-  - Responses already carrying a `Content-Encoding` header (never double-compressed).
-  - Streaming responses (`Transfer-Encoding: chunked` without content-length).
-  - Content types that are already compressed (images, archives).
-- The `Cache-Control: no-transform` header is respected.
-
-### Error leakage
-
-- **Production** never exposes stack traces, SQL, Supabase URLs/keys, or file
-  paths: unknown errors return the generic `"Internal server error."`
-  (`error-handler.ts`, gated on `NODE_ENV`).
-- Database errors are wrapped (`DatabaseError`) with a generic client message;
-  the underlying cause is only written to server logs.
-- Body-parser errors map to clean `400` / `413` envelopes.
+| Variable | Required | Description |
+|---|---|---|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service-role key (full DB access) |
+| `JWT_SECRET` | Yes | JWT signing secret (min 32 chars) |
+| `ADMIN_EMAIL` | Yes | Bootstrap admin email |
+| `ADMIN_PASSWORD` | Yes | Bootstrap admin password (min 12 chars, complexity enforced) |
+| `ALLOWED_ORIGINS` | Yes* | Comma-separated CORS allow-list |
+| `RESEND_API_KEY` | No | Email service API key |
+| `OPENAPI_SERVER_URL` | No | Override for Swagger UI server URL |
 
 ### Secret handling
 
-- `.env` is git-ignored; `.env.example` ships placeholders only.
+- `.env` files are git-ignored. `.env.example` ships placeholders only.
 - Startup logs print only safe configuration (booleans/redacted) — secrets
-  (`SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`) are never logged.
+  are never logged.
 - Docker `.dockerignore` excludes `.env` and logs from the build context.
 - The production Docker image runs as the unprivileged `node` user.
 
+### Production secrets
+
+Production values must be injected by the deployment platform or secrets
+manager. **Never commit real secrets to version control.**
+
+Generate strong secrets:
+```bash
+# JWT secret
+openssl rand -base64 48
+
+# Admin password (use a password manager for production)
+```
+
+## Security headers (Helmet)
+
+| Header | Status | Effect |
+|---|---|---|
+| `Content-Security-Policy` | Disabled (API-only; frontend uses Vercel headers) | No user HTML served |
+| `X-Content-Type-Options: nosniff` | Enabled | Prevents MIME-sniffing |
+| `X-Frame-Options: SAMEORIGIN` | Enabled (frameguard) | Blocks clickjacking |
+| `Referrer-Policy: no-referrer` | Enabled | No referrer leakage |
+| `Strict-Transport-Security` | Production only | HSTS (max-age 1y) |
+| `X-DNS-Prefetch-Control: off` | Enabled | Disables DNS prefetching |
+| `Cross-Origin-Resource-Policy: cross-origin` | Enabled | Lets SPA read API responses |
+| `X-Powered-By` | Removed | No framework fingerprint |
+
+`X-XSS-Protection` is disabled — modern browsers removed support; CSP +
+`nosniff` is the effective control.
+
+## Input size limits
+
+| Parser | Limit | Env var | Oversize response |
+|---|---|---|---|
+| `express.json` | 1 MB | `BODY_LIMIT` | 413 |
+| `express.urlencoded` | 1 MB | `BODY_LIMIT` | 413 |
+
+## Deployment security
+
+### Docker
+
+- Multi-stage build: deps → build → runtime.
+- Production image uses `node:22-alpine`.
+- Runs as unprivileged `node` user.
+- Only production dependencies included (`npm ci --omit=dev`).
+- Source code is not included in the final image.
+
+### Nginx (optional)
+
+- `server_tokens off` to hide nginx version.
+- Forwards `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Request-ID`.
+- TLS termination is expected at the platform level (Render/Vercel).
+
+## Database security
+
+### Supabase
+
+- Backend uses the **service-role key** which bypasses Row Level Security.
+- The frontend never talks to Supabase directly — all requests go through
+  the Express API.
+
+### Row Level Security (RLS)
+
+RLS is enabled as defense-in-depth on:
+
+- `featured_content` — public SELECT for active rows only.
+- `featured_content_clicks` — public INSERT only.
+- `users` — no public policies (backend service-role only).
+- `settings` — no public policies (backend service-role only).
+- `contact_messages` — no public policies (backend service-role only).
+
+### Migrations
+
+SQL migrations use idempotent patterns (`IF NOT EXISTS`, `DROP IF EXISTS`).
+Rollback is manual. The bootstrap admin is never inserted via migrations.
+
 ## What is NOT present (by design)
 
-- **No authentication** — no login, no sessions, no JWT enforcement (auth is a
-  later phase; the OpenAPI doc already declares a `bearerAuth` scheme).
 - **No billing / payments** — out of scope.
 - **No file upload** — no upload surface.
-- **No secret exposure** — verified by the Phase 3A secret audit.
+- **No OAuth / social login** — JWT-only authentication.
+- **No account enumeration** — forgot-password returns identical responses
+  for known and unknown emails.
+- **No refresh token revocation** — tokens expire naturally. Logout clears
+  client-side tokens only. This is a known trade-off for stateless auth.
 
-## Recommendations before public launch
+## Recommendations for production
 
-1. **Terminate TLS** at the proxy; keep `:5000` private (HSTS only helps over HTTPS).
-2. Add an **ingress allow-list / WAF** at the proxy for `/metrics` if it should
-   not be public.
-3. **Enable auth** before exposing write endpoints.
-4. Rotate `JWT_SECRET` and the Supabase service-role key on any suspected leak.
-5. Consider a **persistent rate-limit store** (Redis) when scaling to multiple
-   instances — the default in-memory store is per-process.
+1. **Rotate `JWT_SECRET`** and the Supabase service-role key on any suspected leak.
+2. **Use a persistent rate-limit store** (Redis) when scaling to multiple instances.
+3. **Enable CSP** on the frontend via Vercel headers (already configured in `vercel.json`).
+4. **Monitor auth failures** — the Prometheus `http_requests_total` metric
+   tracks all requests including 401/403 responses.
+5. **Restrict `/metrics`** behind authentication or network policy if it
+   should not be public.

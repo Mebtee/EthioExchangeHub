@@ -18,14 +18,14 @@ process.env.ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:3000";
 process.env.BODY_LIMIT = "1mb";
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
-process.env.JWT_SECRET = "test-secret-that-is-long-enough";
+process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-32-characters";
 process.env.JWT_EXPIRES_IN = "15m";
 process.env.REFRESH_TOKEN_EXPIRES_IN = "30d";
 process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN = "30m";
 // Bootstrap admin credentials used by auth integration tests (provisioned on
 // first login against the in-memory fake client — no real users table needed).
 process.env.ADMIN_EMAIL = "admin@ethioexchange.test";
-process.env.ADMIN_PASSWORD = "test-admin-password-123";
+process.env.ADMIN_PASSWORD = "Test-Admin-123!";
 process.env.LOG_LEVEL = "fatal";
 
 // Phase 3A security hardening: set very high limits so the test suite (which

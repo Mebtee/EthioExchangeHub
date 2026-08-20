@@ -64,7 +64,7 @@ export const envSchema = z
     // fails fast at boot instead of silently running with placeholder values.
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-    JWT_SECRET: z.string().min(8),
+    JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters (use: openssl rand -base64 48)"),
 
     // Tuning knobs — safe defaults.
     JWT_EXPIRES_IN: z.string().min(1).default("15m"),
@@ -79,7 +79,13 @@ export const envSchema = z
      * production; the placeholder email matches the frontend login page hint.
      */
     ADMIN_EMAIL: z.string().email().default("admin@ethioexchange.dev"),
-    ADMIN_PASSWORD: z.string().min(8),
+    ADMIN_PASSWORD: z
+      .string()
+      .min(12, "ADMIN_PASSWORD must be at least 12 characters")
+      .regex(/[A-Z]/, "ADMIN_PASSWORD must contain at least one uppercase letter")
+      .regex(/[a-z]/, "ADMIN_PASSWORD must contain at least one lowercase letter")
+      .regex(/[0-9]/, "ADMIN_PASSWORD must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "ADMIN_PASSWORD must contain at least one special character"),
 
     LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "http", "debug"]).default("info"),
 
@@ -97,6 +103,9 @@ export const envSchema = z
 
     /** Max JSON + URL-encoded request body size (oversized → 413). */
     BODY_LIMIT: z.string().min(1).default(REQUEST_BODY_LIMIT),
+
+    /** Optional override for the OpenAPI/Swagger server URL (e.g. production API base). */
+    OPENAPI_SERVER_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
 
     /** General API rate limit: requests allowed per window, per IP. */
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
