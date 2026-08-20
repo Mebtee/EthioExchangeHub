@@ -46,9 +46,8 @@ import { apiTags } from "./tags";
  * IMPORTANT: this document DESCRIBES the API — it is never the source of
  * truth. The code is. It mirrors the actual controllers/routes/validators and
  * is kept accurate by construction (schemas mirror the database row types,
- * paths mirror the route tree). Authentication is currently not required; the
- * `bearerAuth` scheme is declared so it can be enforced later without
- * changing any endpoint definitions.
+ * paths mirror the route tree). Authentication is enforced on the admin surface
+ * via JWT bearer tokens; the `bearerAuth` scheme is declared below.
  */
 export const openApiDocument: OpenAPIV3_1.Document = {
   openapi: "3.1.0",
@@ -64,13 +63,13 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       "",
       "**Operations (Phase 2K)**: unversioned infrastructure endpoints — `GET /live` (liveness, no DB call), `GET /ready` (readiness), and `GET /metrics` (Prometheus) — are also outside `/api/v1` and not listed above.",
       "",
-      "**Authentication**: the admin surface (`/admin`, `/manual-rates`, `/auth/me`) requires a `bearerAuth` (JWT) access token obtained from `POST /auth/login`. All public endpoints (`/banks`, `/rates`, `/news`, `/featured`, `/scraper-health`, `/scrape-logs`) remain open. Protected operations declare `security: [{ bearerAuth: [] }]`.",
+      "**Authentication**: the admin surface (`/admin`, `/manual-rates`, `/auth/me`, `/scraper-health`, `/scrape-logs`) requires a `bearerAuth` (JWT) access token obtained from `POST /auth/login`. Public endpoints (`/banks`, `/rates`, `/news`, `/featured`, `/contact`) remain open. Protected operations declare `security: [{ bearerAuth: [] }]`.",
     ].join("\n"),
   },
   servers: [
     {
-      url: `http://localhost:${env.PORT}/api/v1`,
-      description: "Local development server",
+      url: env.OPENAPI_SERVER_URL || `http://localhost:${env.PORT}/api/v1`,
+      description: env.OPENAPI_SERVER_URL ? "Configured server" : "Local development server",
     },
   ],
   security: [],

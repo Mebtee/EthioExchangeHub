@@ -11,6 +11,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { hashPassword } from "@/lib/password";
+import { signToken } from "@/lib/tokens";
 
 vi.mock("@/lib/supabase", async () => {
   const { getFakeClient, isDatabaseConnected } = await import("../../helpers/supabase");
@@ -602,7 +603,8 @@ describe("Featured-content endpoints", () => {
 
 describe("Scraper-health endpoints", () => {
   it("GET /api/v1/scraper-health returns the aggregate summary (derived from scrape logs)", async () => {
-    const res = await request(app).get("/api/v1/scraper-health");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scraper-health").set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
       total: 3,
@@ -616,7 +618,8 @@ describe("Scraper-health endpoints", () => {
   });
 
   it("GET /api/v1/scraper-health/list returns every row alphabetically", async () => {
-    const res = await request(app).get("/api/v1/scraper-health/list");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scraper-health/list").set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data.map((r: { bank_code: string }) => r.bank_code)).toEqual([
       "ABY",
@@ -626,21 +629,29 @@ describe("Scraper-health endpoints", () => {
   });
 
   it("GET /api/v1/scraper-health/:bankCode returns the row for a bank", async () => {
-    const res = await request(app).get("/api/v1/scraper-health/ABY");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scraper-health/ABY").set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("healthy");
   });
 
   it("GET /api/v1/scraper-health/:bankCode returns null data when absent", async () => {
-    const res = await request(app).get("/api/v1/scraper-health/NOPE");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scraper-health/NOPE").set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data).toBeNull();
+  });
+
+  it("GET /api/v1/scraper-health rejects unauthenticated requests", async () => {
+    const res = await request(app).get("/api/v1/scraper-health");
+    expect(res.status).toBe(401);
   });
 });
 
 describe("Scrape-log endpoints", () => {
   it("GET /api/v1/scrape-logs lists logs newest-first", async () => {
-    const res = await request(app).get("/api/v1/scrape-logs");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scrape-logs").set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data.map((l: { id: string }) => l.id)).toEqual([
       "log-2",
@@ -651,18 +662,21 @@ describe("Scrape-log endpoints", () => {
   });
 
   it("GET /api/v1/scrape-logs filters by status and paginates", async () => {
-    const res = await request(app).get("/api/v1/scrape-logs?status=success&limit=2");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scrape-logs?status=success&limit=2").set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data.map((l: { id: string }) => l.id)).toEqual(["log-2", "log-1"]);
   });
 
   it("GET /api/v1/scrape-logs rejects an invalid status enum", async () => {
-    const res = await request(app).get("/api/v1/scrape-logs?status=weird");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scrape-logs?status=weird").set(auth);
     expect(res.status).toBe(422);
   });
 
   it("GET /api/v1/scrape-logs rejects limit=0", async () => {
-    const res = await request(app).get("/api/v1/scrape-logs?limit=0");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scrape-logs?limit=0").set(auth);
     expect(res.status).toBe(422);
   });
 
@@ -681,14 +695,21 @@ describe("Scrape-log endpoints", () => {
       ran_at: "2026-08-02T08:01:00.000Z",
     });
 
-    const res = await request(app).get(`/api/v1/scrape-logs/${runId}`);
+    const auth = await adminAuth();
+    const res = await request(app).get(`/api/v1/scrape-logs/${runId}`).set(auth);
     expect(res.status).toBe(200);
     expect(res.body.data.map((l: { id: string }) => l.id)).toEqual(["log-5"]);
   });
 
   it("GET /api/v1/scrape-logs/:runId rejects a non-UUID runId", async () => {
-    const res = await request(app).get("/api/v1/scrape-logs/not-a-uuid");
+    const auth = await adminAuth();
+    const res = await request(app).get("/api/v1/scrape-logs/not-a-uuid").set(auth);
     expect(res.status).toBe(422);
+  });
+
+  it("GET /api/v1/scrape-logs rejects unauthenticated requests", async () => {
+    const res = await request(app).get("/api/v1/scrape-logs");
+    expect(res.status).toBe(401);
   });
 });
 
@@ -934,8 +955,8 @@ describe("Auth endpoints", () => {
       .send({ email: process.env.ADMIN_EMAIL });
     expect(known.status).toBe(200);
     expect(known.body.data.sent).toBe(true);
-    // Non-production build: the genuinely issued token is returned as devToken.
-    expect(known.body.data.devToken).toBeTypeOf("string");
+    // The devToken must NEVER be returned in the HTTP response.
+    expect(known.body.data).not.toHaveProperty("devToken");
 
     const unknown = await request(app)
       .post("/api/v1/auth/forgot-password")
@@ -945,19 +966,31 @@ describe("Auth endpoints", () => {
   });
 
   it("POST /auth/reset-password changes the password (old stops working, new works)", async () => {
-    // Provision the bootstrap admin so forgot-password issues a real token.
+    // Provision the bootstrap admin so the users table has an entry.
     await request(app).post("/api/v1/auth/login").send({
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD,
     });
-    const forgot = await request(app)
-      .post("/api/v1/auth/forgot-password")
-      .send({ email: process.env.ADMIN_EMAIL });
-    const devToken = forgot.body.data.devToken as string;
+
+    // Look up the provisioned admin user ID from the fake client.
+    const client = getFakeClient();
+    const { data: adminUser } = await client
+      .from("users")
+      .select("id")
+      .eq("email", process.env.ADMIN_EMAIL)
+      .maybeSingle();
+    expect(adminUser).not.toBeNull();
+
+    // Generate a valid password-reset token directly (the API no longer returns it).
+    const resetToken = signToken(
+      { sub: (adminUser as { id: string }).id, purpose: "password-reset" },
+      process.env.JWT_SECRET!,
+      "30m",
+    );
 
     const reset = await request(app)
       .post("/api/v1/auth/reset-password")
-      .send({ token: devToken, password: "brand-new-password-456" });
+      .send({ token: resetToken, password: "Brand-New-Password-456!" });
     expect(reset.status).toBe(200);
 
     const oldLogin = await request(app).post("/api/v1/auth/login").send({
@@ -968,7 +1001,7 @@ describe("Auth endpoints", () => {
 
     const newLogin = await request(app).post("/api/v1/auth/login").send({
       email: process.env.ADMIN_EMAIL,
-      password: "brand-new-password-456",
+      password: "Brand-New-Password-456!",
     });
     expect(newLogin.status).toBe(200);
   });

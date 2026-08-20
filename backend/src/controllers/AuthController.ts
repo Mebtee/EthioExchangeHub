@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import { AuthenticationError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { asyncHandler } from "@/middleware/async-handler";
 import type { AuthService } from "@/services/AuthService";
 import { successResponse } from "@/utils/api-response";
@@ -12,9 +13,9 @@ import { env } from "@/utils/validate-env";
  *
  * The forgot-password response is deliberately constant from the client's
  * perspective (`{ sent: true }` — an unknown email answers identically to a
- * known one, so the endpoint cannot be used to enumerate accounts). In
- * non-production builds the genuinely issued reset token is included as
- * `devToken` because no mailer is wired yet; production never exposes it.
+ * known one, so the endpoint cannot be used to enumerate accounts). The
+ * password-reset token is NEVER returned in the HTTP response; in development
+ * it is logged server-side only for debugging.
  */
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -52,11 +53,14 @@ export class AuthController {
   forgotPassword = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { email } = req.body as { email: string };
     const token = await this.authService.forgotPassword(email);
-    const data =
-      env.NODE_ENV === "production" || token === null
-        ? { sent: true }
-        : { sent: true, devToken: token };
-    successResponse(res, data, "If an account exists, a password reset has been issued.");
+
+    // The token is NEVER exposed in the HTTP response. In non-production
+    // environments it is logged server-side only for development debugging.
+    if (env.NODE_ENV !== "production" && token !== null) {
+      logger.info(`[DEV] Password reset token for ${email}: ${token}`);
+    }
+
+    successResponse(res, { sent: true }, "If an account exists, a password reset has been issued.");
   });
 
   /** Applies the new password using the reset token. */

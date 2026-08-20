@@ -11,7 +11,8 @@ import { createMockNext, createMockRequest, createMockResponse } from "../../hel
 import { createFakeSupabaseClient } from "../../helpers/supabase-client";
 
 // Matches tests/setup/env.ts — the validated env singleton the middleware reads.
-const TEST_SECRET = "test-secret-that-is-long-enough";
+import { env } from "@/utils/validate-env";
+const TEST_SECRET = env.JWT_SECRET;
 
 function makeUser(): UserRow {
   return {

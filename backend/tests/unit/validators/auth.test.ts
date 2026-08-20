@@ -54,8 +54,8 @@ describe("forgotPasswordBodySchema", () => {
 });
 
 describe("resetPasswordBodySchema", () => {
-  it("accepts a token and a password of at least 8 characters", () => {
-    const parsed = resetPasswordBodySchema.safeParse({ token: "t", password: "longenough" });
+  it("accepts a token and a password meeting complexity requirements", () => {
+    const parsed = resetPasswordBodySchema.safeParse({ token: "t", password: "LongPass-1234" });
     expect(parsed.success).toBe(true);
   });
 
@@ -65,8 +65,14 @@ describe("resetPasswordBodySchema", () => {
     );
   });
 
+  it("rejects a password missing complexity", () => {
+    expect(resetPasswordBodySchema.safeParse({ token: "t", password: "alllowercase123" }).success).toBe(
+      false,
+    );
+  });
+
   it("rejects an empty token", () => {
-    expect(resetPasswordBodySchema.safeParse({ token: "", password: "longenough" }).success).toBe(
+    expect(resetPasswordBodySchema.safeParse({ token: "", password: "LongPass-1234" }).success).toBe(
       false,
     );
   });

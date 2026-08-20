@@ -5,9 +5,9 @@ import { validateEnv } from "@/utils/validate-env";
 const required = {
   SUPABASE_URL: "https://x.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-key",
-  JWT_SECRET: "super-secret-value",
+  JWT_SECRET: "super-secret-value-that-is-at-least-32-chars",
   // Required secrets added with auth (A1) — no defaults.
-  ADMIN_PASSWORD: "admin-password-123",
+  ADMIN_PASSWORD: "Admin-123-test!",
 };
 
 describe("validateEnv", () => {

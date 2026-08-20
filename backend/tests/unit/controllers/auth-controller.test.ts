@@ -168,7 +168,7 @@ describe("AuthController.forgotPassword", () => {
     );
   });
 
-  it("includes the dev token only outside production (test env)", async () => {
+  it("never exposes the devToken in the HTTP response (even in non-production)", async () => {
     const { controller } = makeController([makeUser()]);
     const res = createMockResponse();
 
@@ -179,9 +179,9 @@ describe("AuthController.forgotPassword", () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { sent: true, devToken: expect.any(String) } }),
-    );
+    const body = res.json.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(body.data).toEqual({ sent: true });
+    expect(body.data).not.toHaveProperty("devToken");
   });
 });
 

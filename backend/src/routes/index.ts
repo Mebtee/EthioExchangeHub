@@ -160,5 +160,5 @@ apiRouter.use(
   featuredAdminRouter(featuredContentController),
 );
 apiRouter.use("/contact", contactRouter(contactController));
-apiRouter.use("/scraper-health", scraperHealthRouter(scraperHealthController));
-apiRouter.use("/scrape-logs", scrapeLogsRouter(scrapeLogsController));
+apiRouter.use("/scraper-health", requireAuth, requireAdmin, scraperHealthRouter(scraperHealthController));
+apiRouter.use("/scrape-logs", requireAuth, requireAdmin, scrapeLogsRouter(scrapeLogsController));
