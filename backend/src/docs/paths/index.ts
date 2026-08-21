@@ -1,10 +1,10 @@
 import { type DocPathItem } from "../helpers";
 
-import { adminPaths } from "./admin";
+import { adminPaths, adminPaymentPaths } from "./admin";
 import { authPaths } from "./auth";
 import { banksPaths } from "./banks";
 import { contactPaths } from "./contact";
-import { customerApiKeysPaths } from "./customer";
+import { customerApiKeysPaths, customerPaymentPaths } from "./customer";
 import { exchangeRatesPaths } from "./exchange-rates";
 import { featuredPaths } from "./featured";
 import { manualRatesPaths } from "./manual-rates";
@@ -20,10 +20,12 @@ import { scrapeLogsPaths } from "./scrape-logs";
  */
 export const apiPaths: Record<string, DocPathItem> = {
   ...adminPaths,
+  ...adminPaymentPaths,
   ...authPaths,
   ...banksPaths,
   ...contactPaths,
   ...customerApiKeysPaths,
+  ...customerPaymentPaths,
   ...exchangeRatesPaths,
   ...featuredPaths,
   ...manualRatesPaths,

@@ -4,7 +4,7 @@ import type { ApiPlansRepository } from "@/repositories/ApiPlansRepository";
 import type { CustomersRepository } from "@/repositories/CustomersRepository";
 import type { SubscriptionsRepository } from "@/repositories/SubscriptionsRepository";
 import type { ApiPlanRow, SubscriptionRow } from "@/types/database";
-import { nowIso } from "@/utils/date";
+import { addOneMonthIso, nowIso } from "@/utils/date";
 
 /** Input for plan selection (validated upstream by the Zod schema). */
 export interface CreateSubscriptionInput {
@@ -56,22 +56,6 @@ export interface CustomerSubscriptionService {
  * preserved — rows are never deleted or rewritten).
  */
 const BLOCKING_STATUSES = new Set(["pending", "active", "suspended"]);
-
-/** ISO timestamp one month after the given ISO time (UTC arithmetic). */
-function addOneMonthIso(iso: string): string {
-  const date = new Date(iso);
-  return new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth() + 1,
-      date.getUTCDate(),
-      date.getUTCHours(),
-      date.getUTCMinutes(),
-      date.getUTCSeconds(),
-      date.getUTCMilliseconds(),
-    ),
-  ).toISOString();
-}
 
 /**
  * Customer plan/subscription business logic (Phase 2C).

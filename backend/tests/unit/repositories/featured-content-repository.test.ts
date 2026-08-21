@@ -100,7 +100,7 @@ describe("FeaturedContentRepository base CRUD", () => {
 
 describe("FeaturedContentClicksRepository", () => {
   it("counts clicks per campaign and aggregates across campaigns", async () => {
-    const { clicksRepo, client } = makeRepos();
+    const { clicksRepo } = makeRepos();
     expect(await clicksRepo.countByContentId("fc-a")).toBe(2);
     expect(await clicksRepo.countByContentId("fc-b")).toBe(0);
     const counts = await clicksRepo.countByContentIds();

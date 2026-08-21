@@ -66,14 +66,14 @@ describe("resetPasswordBodySchema", () => {
   });
 
   it("rejects a password missing complexity", () => {
-    expect(resetPasswordBodySchema.safeParse({ token: "t", password: "alllowercase123" }).success).toBe(
-      false,
-    );
+    expect(
+      resetPasswordBodySchema.safeParse({ token: "t", password: "alllowercase123" }).success,
+    ).toBe(false);
   });
 
   it("rejects an empty token", () => {
-    expect(resetPasswordBodySchema.safeParse({ token: "", password: "LongPass-1234" }).success).toBe(
-      false,
-    );
+    expect(
+      resetPasswordBodySchema.safeParse({ token: "", password: "LongPass-1234" }).success,
+    ).toBe(false);
   });
 });

@@ -64,7 +64,9 @@ export const envSchema = z
     // fails fast at boot instead of silently running with placeholder values.
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-    JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters (use: openssl rand -base64 48)"),
+    JWT_SECRET: z
+      .string()
+      .min(32, "JWT_SECRET must be at least 32 characters (use: openssl rand -base64 48)"),
 
     // Tuning knobs — safe defaults.
     JWT_EXPIRES_IN: z.string().min(1).default("15m"),

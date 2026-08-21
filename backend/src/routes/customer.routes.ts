@@ -2,8 +2,11 @@ import { Router } from "express";
 
 import type { CustomerApiKeysController } from "@/controllers/CustomerApiKeysController";
 import type { CustomerSubscriptionController } from "@/controllers/CustomerSubscriptionController";
+import type { PaymentController } from "@/controllers/PaymentController";
+import { requireSingleUpload } from "@/middleware/upload";
 import { validateBody, validateParams } from "@/middleware/validation";
 import { createSubscriptionBodySchema } from "@/validators/customer-subscription";
+import { createPaymentBodySchema, paymentIdParamsSchema } from "@/validators/customer-payment";
 import { apiKeyIdParamsSchema, createApiKeyBodySchema } from "@/validators/customer-api-keys";
 
 /**
@@ -34,6 +37,23 @@ export function customerSubscriptionRouter(controller: CustomerSubscriptionContr
     "/subscription",
     validateBody(createSubscriptionBodySchema),
     controller.createSubscription,
+  );
+
+  return router;
+}
+
+/** Manual bank-transfer payments (Phase 3). */
+export function customerPaymentRouter(controller: PaymentController): Router {
+  const router = Router();
+
+  router.get("/payment-methods", controller.getPaymentMethods);
+  router.post("/payments", validateBody(createPaymentBodySchema), controller.submitPayment);
+  router.get("/payments", controller.listPayments);
+  router.post(
+    "/payments/:id/receipt",
+    validateParams(paymentIdParamsSchema),
+    requireSingleUpload("receipt"),
+    controller.uploadReceipt,
   );
 
   return router;

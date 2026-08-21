@@ -31,6 +31,18 @@ import {
   customerPlanSchema,
   customerSubscriptionSchema,
 } from "./schemas/subscription";
+import {
+  adminBankAccountSchema,
+  adminPaymentSchema,
+  bankAccountSchema,
+  createBankAccountInputSchema,
+  customerPaymentSchema,
+  receiptUploadResultSchema,
+  receiptUrlResponseSchema,
+  reviewPaymentInputSchema,
+  submitPaymentInputSchema,
+  updateBankAccountInputSchema,
+} from "./schemas/payment";
 import { contactMessageInputSchema, contactMessageSchema } from "./schemas/contact";
 import { exchangeRateSchema } from "./schemas/exchange-rate";
 import {
@@ -119,6 +131,16 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       CustomerPlan: customerPlanSchema,
       CustomerSubscription: customerSubscriptionSchema,
       CreateCustomerSubscriptionInput: createCustomerSubscriptionInputSchema,
+      BankAccount: bankAccountSchema,
+      CustomerPayment: customerPaymentSchema,
+      SubmitPaymentInput: submitPaymentInputSchema,
+      ReceiptUploadResult: receiptUploadResultSchema,
+      AdminPayment: adminPaymentSchema,
+      ReviewPaymentInput: reviewPaymentInputSchema,
+      ReceiptUrlResponse: receiptUrlResponseSchema,
+      AdminBankAccount: adminBankAccountSchema,
+      CreateBankAccountInput: createBankAccountInputSchema,
+      UpdateBankAccountInput: updateBankAccountInputSchema,
       ContactMessage: contactMessageSchema,
       ContactMessageInput: contactMessageInputSchema,
       ExchangeRate: exchangeRateSchema,
