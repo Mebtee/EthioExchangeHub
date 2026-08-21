@@ -92,6 +92,12 @@ function makeSubscription(overrides: Partial<SubscriptionRow> = {}): Subscriptio
   };
 }
 
+/** Active plan + subscription granting plenty of key slots for happy-path tests. */
+function activeQuota(maxApiKeys = 10): { plans: ApiPlanRow[]; subscriptions: SubscriptionRow[] } {
+  const plan = makePlan({ max_api_keys: maxApiKeys });
+  return { plans: [plan], subscriptions: [makeSubscription({ plan_id: plan.id })] };
+}
+
 interface SeedOptions {
   customers?: CustomerRow[];
   apiKeys?: ApiKeyRow[];
@@ -126,7 +132,7 @@ beforeEach(() => {
 
 describe("CustomerApiKeysServiceImpl.createKey", () => {
   it("creates a key and returns the full secret exactly once", async () => {
-    const { service, client } = makeService();
+    const { service, client } = makeService(activeQuota());
     const future = "2027-08-21T00:00:00.000Z";
 
     const created = await service.createKey(CUSTOMER_A_USER, {
@@ -146,7 +152,7 @@ describe("CustomerApiKeysServiceImpl.createKey", () => {
   });
 
   it("generates keys with the expected eeh_live_ prefix shape", async () => {
-    const { service } = makeService();
+    const { service } = makeService(activeQuota());
     const created = await service.createKey(CUSTOMER_A_USER, { name: "k" });
 
     // Scheme + 8 public chars; the prefix is a prefix of the full secret.
@@ -157,7 +163,7 @@ describe("CustomerApiKeysServiceImpl.createKey", () => {
   });
 
   it("produces distinct secrets across creations (no reuse)", async () => {
-    const { service } = makeService();
+    const { service } = makeService(activeQuota());
     const first = await service.createKey(CUSTOMER_A_USER, { name: "one" });
     const second = await service.createKey(CUSTOMER_A_USER, { name: "two" });
     expect(first.key).not.toBe(second.key);
@@ -165,7 +171,7 @@ describe("CustomerApiKeysServiceImpl.createKey", () => {
   });
 
   it("stores only key_prefix + SHA-256 hash — never the plaintext", async () => {
-    const { service, client } = makeService();
+    const { service, client } = makeService(activeQuota());
     const created = await service.createKey(CUSTOMER_A_USER, { name: "k" });
 
     const row = client.tables.get("api_keys")![0]!;
@@ -222,23 +228,59 @@ describe("CustomerApiKeysServiceImpl.createKey", () => {
     expect(client.tables.get("api_keys")).toHaveLength(2);
   });
 
-  it("allows unlimited keys while no active subscription exists (deferred to the subscription phase)", async () => {
-    const { service } = makeService();
-    for (let index = 0; index < 3; index += 1) {
-      await expect(
-        service.createKey(CUSTOMER_A_USER, { name: `key-${index}` }),
-      ).resolves.toMatchObject({ name: `key-${index}` });
-    }
+  it("refuses key creation without an active subscription (no record invented)", async () => {
+    const { service, client } = makeService();
+    await expect(service.createKey(CUSTOMER_A_USER, { name: "k" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    // Nothing was written.
+    expect(client.tables.get("api_keys")).toHaveLength(0);
   });
 
-  it("ignores non-active subscriptions for the plan limit", async () => {
-    const plan = makePlan({ max_api_keys: 0 }); // would block if consulted
+  const NON_ACTIVE_STATUSES = ["pending", "cancelled", "expired", "suspended"] as const;
+  for (const status of NON_ACTIVE_STATUSES) {
+    it(`treats a ${status} subscription as NOT active for key creation`, async () => {
+      const plan = makePlan({ max_api_keys: 5 });
+      const { service } = makeService({
+        plans: [plan],
+        subscriptions: [makeSubscription({ plan_id: plan.id, status })],
+      });
+      await expect(service.createKey(CUSTOMER_A_USER, { name: "k" })).rejects.toBeInstanceOf(
+        ConflictError,
+      );
+    });
+  }
+
+  it("enforces max_api_keys of the active plan (409 at the cap)", async () => {
+    const plan = makePlan({ max_api_keys: 1 });
+    const subscription = makeSubscription({ plan_id: plan.id });
     const { service } = makeService({
       plans: [plan],
-      subscriptions: [makeSubscription({ plan_id: plan.id, status: "pending" })],
+      subscriptions: [subscription],
     });
 
-    await expect(service.createKey(CUSTOMER_A_USER, { name: "k" })).resolves.toBeDefined();
+    await service.createKey(CUSTOMER_A_USER, { name: "first" });
+    await expect(service.createKey(CUSTOMER_A_USER, { name: "second" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
+
+  it("frees plan slots after revocation (only non-revoked keys count)", async () => {
+    const plan = makePlan({ max_api_keys: 1 });
+    const { service, client } = makeService({
+      plans: [plan],
+      subscriptions: [makeSubscription({ plan_id: plan.id })],
+      apiKeys: [
+        makeKeyRow({
+          revoked_at: "2026-08-11T00:00:00.000Z",
+          key_hash: hashApiKey("eeh_live_old"),
+        }),
+      ],
+    });
+
+    const created = await service.createKey(CUSTOMER_A_USER, { name: "fresh" });
+    expect(created.key).toMatch(/^eeh_live_/);
+    expect(client.tables.get("api_keys")).toHaveLength(2);
   });
 });
 
@@ -331,7 +373,7 @@ describe("CustomerApiKeysServiceImpl log hygiene", () => {
   it("never writes the full key (or its hash) to logs", async () => {
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => undefined);
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
-    const { service } = makeService({ apiKeys: [makeKeyRow()] });
+    const { service } = makeService({ ...activeQuota(), apiKeys: [makeKeyRow()] });
 
     const created = await service.createKey(CUSTOMER_A_USER, { name: "k" });
     await service.listKeys(CUSTOMER_A_USER);

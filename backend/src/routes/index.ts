@@ -5,6 +5,7 @@ import { AuthController } from "@/controllers/AuthController";
 import { BanksController } from "@/controllers/BanksController";
 import { ContactController } from "@/controllers/ContactController";
 import { CustomerApiKeysController } from "@/controllers/CustomerApiKeysController";
+import { CustomerSubscriptionController } from "@/controllers/CustomerSubscriptionController";
 import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
 import { FeaturedContentController } from "@/controllers/FeaturedContentController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
@@ -38,12 +39,13 @@ import { ScraperHealthServiceImpl } from "@/services/ScraperHealthService";
 import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { SettingsServiceImpl } from "@/services/SettingsService";
 import { CustomerApiKeysServiceImpl } from "@/services/CustomerApiKeysService";
+import { CustomerSubscriptionServiceImpl } from "@/services/CustomerSubscriptionService";
 import { ResendEmailService } from "@/services/EmailService";
 import { adminRouter } from "./admin.routes";
 import { authRouter } from "./auth.routes";
 import { banksRouter } from "./banks.routes";
 import { contactRouter } from "./contact.routes";
-import { customerApiKeysRouter } from "./customer.routes";
+import { customerApiKeysRouter, customerSubscriptionRouter } from "./customer.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { featuredAdminRouter, featuredRouter } from "./featured.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
@@ -150,19 +152,32 @@ const authController = new AuthController(authService);
 const requireAuth = createRequireAuth(usersRepository);
 const requireAdmin = requireRole("admin", "super_admin");
 
-// ---- Customer API-key management (Phase 2B) ----
+// ---- Customer self-service (Phase 2B/2C) ----
 // The SAME `requireAuth` guard protects this surface; the customer role check
 // is applied at the mount point so every `/customer/*` route is unreachable
 // for admins and anonymous callers alike. Isolation is enforced inside the
-// service: the owning `customers.id` is always resolved from the JWT subject,
-// never from client input.
+// services: the owning `customers.id` is always resolved from the JWT
+// subject, never from client input.
+const apiKeysRepository = new ApiKeysRepository();
+const subscriptionsRepository = new SubscriptionsRepository();
+const apiPlansRepository = new ApiPlansRepository();
+
 const customerApiKeysService = new CustomerApiKeysServiceImpl(
   customersRepository,
-  new ApiKeysRepository(),
-  new SubscriptionsRepository(),
-  new ApiPlansRepository(),
+  apiKeysRepository,
+  subscriptionsRepository,
+  apiPlansRepository,
 );
 const customerApiKeysController = new CustomerApiKeysController(customerApiKeysService);
+
+const customerSubscriptionService = new CustomerSubscriptionServiceImpl(
+  customersRepository,
+  subscriptionsRepository,
+  apiPlansRepository,
+);
+const customerSubscriptionController = new CustomerSubscriptionController(
+  customerSubscriptionService,
+);
 
 /** Versioned router exposed at `/api/v1`. */
 export const apiRouter = Router();
@@ -176,6 +191,7 @@ apiRouter.use(
   requireAuth,
   requireRole("customer"),
   customerApiKeysRouter(customerApiKeysController),
+  customerSubscriptionRouter(customerSubscriptionController),
 );
 apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));

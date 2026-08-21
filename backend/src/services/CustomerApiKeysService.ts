@@ -1,5 +1,5 @@
 import { generateApiKey, hashApiKey } from "@/lib/api-keys";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { ConflictError, DatabaseError, NotFoundError, ValidationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import type { ApiKeysRepository } from "@/repositories/ApiKeysRepository";
 import type { ApiPlansRepository } from "@/repositories/ApiPlansRepository";
@@ -57,13 +57,14 @@ export interface CustomerApiKeysService {
  * and logs never receive more than the key id. There is deliberately no
  * "show key again" path: revocation + re-creation is the recovery story.
  *
- * PLAN LIMIT DECISION: when the customer has an ACTIVE subscription, its
- * plan's `max_api_keys` caps the number of NON-REVOKED keys (revocation is
- * this phase's delete, so freed slots are immediately reusable). When no
- * active subscription exists — the state of every freshly registered
- * customer, since migration 0006 seeds no plans and billing is not wired —
- * creation is allowed WITHOUT a limit. Inventing billing behavior here would
- * overreach Phase 2B; enforcement completes in the subscription phase.
+ * PLAN LIMIT ENFORCEMENT (completed in Phase 2C): key creation REQUIRES an
+ * ACTIVE subscription. Pending/cancelled/expired/suspended subscriptions are
+ * not active and never grant quota; without an active subscription creation
+ * answers 409 — no subscription record is ever invented here. With an active
+ * subscription, the plan's `max_api_keys` caps the number of NON-REVOKED keys
+ * (revocation is this phase's delete, so freed slots are immediately
+ * reusable). Customers can always self-serve a free plan via the Phase 2C
+ * subscription endpoint to reach an active state legitimately.
  */
 export class CustomerApiKeysServiceImpl implements CustomerApiKeysService {
   constructor(
@@ -139,15 +140,24 @@ export class CustomerApiKeysServiceImpl implements CustomerApiKeysService {
   }
 
   /**
-   * Caps non-revoked keys at the active plan's `max_api_keys`. No active
-   * subscription (or unresolvable plan) means no enforceable limit yet — see
-   * the class-level PLAN LIMIT DECISION note.
+   * Caps non-revoked keys at the active plan's `max_api_keys`. An active
+   * subscription is REQUIRED (Phase 2C): any other state — none, pending,
+   * cancelled, expired, suspended — refuses creation without inventing
+   * records; see the class-level note.
    */
   private async enforcePlanLimit(customerId: string): Promise<void> {
     const subscription = await this.subscriptionsRepository.findLatestActiveByCustomer(customerId);
-    if (!subscription) return;
+    if (!subscription) {
+      throw new ConflictError(
+        "An active subscription is required to create API keys. Select a plan first.",
+      );
+    }
     const plan = await this.apiPlansRepository.findById(subscription.plan_id);
-    if (!plan) return;
+    if (!plan) {
+      // FK-integrity violation — a subscription pointing at a missing plan is
+      // a data problem, not a client problem.
+      throw new DatabaseError("The subscription plan could not be resolved.");
+    }
 
     const keys = await this.apiKeysRepository.findByCustomer(customerId);
     const activeCount = keys.filter((key) => key.revoked_at === null).length;

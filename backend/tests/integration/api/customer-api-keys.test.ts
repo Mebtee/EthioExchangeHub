@@ -1,10 +1,12 @@
 /**
- * Customer API-key integration tests (Phase 2B).
+ * Customer API-key integration tests (Phase 2B + Phase 2C gate).
  *
  * Full HTTP stack via Supertest against the in-memory fake Supabase client:
  * verifies route mounting behind `requireAuth` + `requireRole("customer")`,
  * the one-time-secret contract, customer isolation, secure revocation, and
- * validation error paths end-to-end.
+ * validation error paths end-to-end. Since Phase 2C, key creation REQUIRES an
+ * active subscription, so these flows activate the Free plan first via
+ * `POST /customer/subscription`.
  */
 
 import request from "supertest";
@@ -30,6 +32,24 @@ import {
 
 const app = createApp();
 
+/** Catalog fixture mirroring the documented Free plan (spec section J). */
+export const FREE_PLAN = {
+  id: "11111111-1111-4111-8111-000000000001",
+  name: "Free",
+  slug: "free",
+  description: "For evaluation and light integration work.",
+  price: 0,
+  currency: "ETB",
+  billing_interval: "monthly",
+  monthly_request_limit: 10000,
+  requests_per_minute: 60,
+  max_api_keys: 1,
+  is_active: true,
+  display_order: 1,
+  created_at: "2026-08-01T00:00:00.000Z",
+  updated_at: "2026-08-01T00:00:00.000Z",
+};
+
 beforeEach(() => {
   // The commercial tables must exist in the map (not just as defaults) so the
   // fake client's inserts persist across requests within a test.
@@ -37,7 +57,7 @@ beforeEach(() => {
     ...defaultSeed,
     customers: [],
     api_keys: [],
-    api_plans: [],
+    api_plans: [FREE_PLAN],
     subscriptions: [],
   });
   setDatabaseConnected(true);
@@ -57,8 +77,20 @@ async function customerAuth(email: string): Promise<{ Authorization: string }> {
     .send({ email, password: "StrongPassword123!" });
   expect(login.status).toBe(200);
 
-  const accessToken = (login.body.data.tokens as { accessToken: string }).accessToken;
+  const accessToken = (login.body.data as { tokens: { accessToken: string } }).tokens.accessToken;
   return { Authorization: `Bearer ${accessToken}` };
+}
+
+/**
+ * Activates the Free plan for the caller (free plans activate immediately —
+ * no payment step). Key creation requires an ACTIVE subscription since 2C.
+ */
+async function activateFreePlan(auth: { Authorization: string }): Promise<void> {
+  const res = await request(app)
+    .post("/api/v1/customer/subscription")
+    .set(auth)
+    .send({ plan_id: FREE_PLAN.id });
+  expect(res.status).toBe(201);
 }
 
 /** Logs in the bootstrap admin (provisioned on first login) and returns the bearer header. */
@@ -111,6 +143,7 @@ describe("Customer API-key guards", () => {
 describe("POST /customer/api-keys", () => {
   it("creates a key and returns the full secret exactly once", async () => {
     const auth = await customerAuth("creator@example.com");
+    await activateFreePlan(auth);
 
     const res = await request(app)
       .post("/api/v1/customer/api-keys")
@@ -161,11 +194,52 @@ describe("POST /customer/api-keys", () => {
       expect(res.body.success).toBe(false);
     }
   });
+
+  it("answers 409 when the caller has NO active subscription (Phase 2C gate)", async () => {
+    const auth = await customerAuth("nosubscription@example.com");
+    const res = await request(app)
+      .post("/api/v1/customer/api-keys")
+      .set(auth)
+      .send({ name: "Production API" });
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    // Nothing was written.
+    expect(getFakeClient().tables.get("api_keys")).toHaveLength(0);
+  });
+
+  it("enforces the plan's max_api_keys end-to-end (free plan allows one non-revoked key)", async () => {
+    const auth = await customerAuth("limited@example.com");
+    await activateFreePlan(auth);
+
+    const first = await request(app)
+      .post("/api/v1/customer/api-keys")
+      .set(auth)
+      .send({ name: "Only key" });
+    expect(first.status).toBe(201);
+
+    const second = await request(app)
+      .post("/api/v1/customer/api-keys")
+      .set(auth)
+      .send({ name: "Over quota" });
+    expect(second.status).toBe(409);
+    expect(second.body.success).toBe(false);
+
+    // Revoking frees the slot — only NON-revoked keys count against the cap.
+    const keyId = (first.body.data as { id: string }).id;
+    const revoke = await request(app).delete(`/api/v1/customer/api-keys/${keyId}`).set(auth);
+    expect(revoke.status).toBe(200);
+    const retry = await request(app)
+      .post("/api/v1/customer/api-keys")
+      .set(auth)
+      .send({ name: "Replacement" });
+    expect(retry.status).toBe(201);
+  });
 });
 
 describe("GET /customer/api-keys", () => {
   it("lists only the caller's keys — prefixes and statuses, never secrets or hashes", async () => {
     const auth = await customerAuth("lister@example.com");
+    await activateFreePlan(auth);
     const created = await request(app)
       .post("/api/v1/customer/api-keys")
       .set(auth)
@@ -191,6 +265,7 @@ describe("GET /customer/api-keys", () => {
 describe("DELETE /customer/api-keys/:id — secure revocation", () => {
   it("stamps revoked_at without deleting and keeps the key listed", async () => {
     const auth = await customerAuth("revoker@example.com");
+    await activateFreePlan(auth);
     const created = await request(app)
       .post("/api/v1/customer/api-keys")
       .set(auth)
@@ -213,6 +288,8 @@ describe("DELETE /customer/api-keys/:id — secure revocation", () => {
   it("answers 404 when revoking another customer's key (isolation)", async () => {
     const owner = await customerAuth("owner@example.com");
     const stranger = await customerAuth("stranger@example.com");
+    await activateFreePlan(owner);
+    await activateFreePlan(stranger);
 
     const created = await request(app)
       .post("/api/v1/customer/api-keys")

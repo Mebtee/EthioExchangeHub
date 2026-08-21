@@ -67,14 +67,56 @@ function makeKeyRow(overrides: Partial<ApiKeyRow> = {}): ApiKeyRow {
   };
 }
 
+const PLAN_ID = "44444444-4444-4444-8444-444444444444";
+const SUBSCRIPTION_ID = "55555555-5555-4555-8555-555555555555";
+
+/** Active plan + subscription so key creation passes the Phase 2C gate. */
+const DEFAULT_PLAN_ROW = {
+  id: PLAN_ID,
+  name: "Free",
+  slug: "free",
+  description: null,
+  price: 0,
+  currency: "ETB",
+  billing_interval: "monthly",
+  monthly_request_limit: 10_000,
+  requests_per_minute: 60,
+  max_api_keys: 5,
+  is_active: true,
+  display_order: 1,
+  created_at: "2026-08-01T00:00:00.000Z",
+  updated_at: "2026-08-01T00:00:00.000Z",
+};
+const DEFAULT_SUBSCRIPTION_ROW = {
+  id: SUBSCRIPTION_ID,
+  customer_id: CUSTOMER_ID,
+  plan_id: PLAN_ID,
+  status: "active",
+  starts_at: "2026-08-01T00:00:00.000Z",
+  ends_at: null,
+  current_period_start: "2026-08-01T00:00:00.000Z",
+  current_period_end: "2026-09-01T00:00:00.000Z",
+  cancelled_at: null,
+  cancellation_reason: null,
+  created_at: "2026-08-01T00:00:00.000Z",
+  updated_at: "2026-08-01T00:00:00.000Z",
+};
+
 /** Builds the real controller over the real service wired to a seeded client. */
-function makeController(seedRows: { users?: UserRow[]; apiKeys?: ApiKeyRow[] } = {}) {
+function makeController(
+  seedRows: {
+    users?: UserRow[];
+    apiKeys?: ApiKeyRow[];
+    apiPlans?: Record<string, unknown>[];
+    subscriptions?: Record<string, unknown>[];
+  } = {},
+) {
   const client = createFakeSupabaseClient({
     users: seedRows.users ?? [makeUser()],
     customers: [makeCustomer()],
     api_keys: seedRows.apiKeys ?? [],
-    api_plans: [],
-    subscriptions: [],
+    api_plans: seedRows.apiPlans ?? [DEFAULT_PLAN_ROW],
+    subscriptions: seedRows.subscriptions ?? [DEFAULT_SUBSCRIPTION_ROW],
   });
   const supabase = client as unknown as SupabaseClient<Database>;
   const service = new CustomerApiKeysServiceImpl(
