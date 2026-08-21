@@ -160,7 +160,10 @@ class FakeBuilder {
     }
 
     let selected = matched;
-    for (const [column, ascending] of state.orders) {
+    // PostgREST treats the FIRST `order` as primary and later ones as
+    // tie-breakers; emulate that by applying the orders in reverse with
+    // stable sorts, so earlier orders dominate.
+    for (const [column, ascending] of [...state.orders].reverse()) {
       selected = [...selected].sort((a, b) => {
         const left = a[column];
         const right = b[column];

@@ -11,6 +11,11 @@ export const apiTags: OpenAPIV3_1.TagObject[] = [
     description:
       "Customer API-key self-service (create/list/revoke). Requires a customer bearer token; the full key secret is shown exactly once at creation.",
   },
+  {
+    name: "Customer Subscription",
+    description:
+      "Customer plan catalog and subscription selection (Phase 2C). Free plans activate immediately; paid plans stay pending until bank-transfer approval.",
+  },
   { name: "Exchange Rates", description: "Latest and historical exchange rates." },
   { name: "Featured Content", description: "Homepage featured campaign and admin management." },
   { name: "Manual Rates", description: "Human-entered rate overrides." },

@@ -26,6 +26,11 @@ import {
   customerApiKeySchema,
   createCustomerApiKeyInputSchema,
 } from "./schemas/api-key";
+import {
+  createCustomerSubscriptionInputSchema,
+  customerPlanSchema,
+  customerSubscriptionSchema,
+} from "./schemas/subscription";
 import { contactMessageInputSchema, contactMessageSchema } from "./schemas/contact";
 import { exchangeRateSchema } from "./schemas/exchange-rate";
 import {
@@ -111,6 +116,9 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       CustomerApiKey: customerApiKeySchema,
       CustomerApiKeyCreated: customerApiKeyCreatedSchema,
       CreateCustomerApiKeyInput: createCustomerApiKeyInputSchema,
+      CustomerPlan: customerPlanSchema,
+      CustomerSubscription: customerSubscriptionSchema,
+      CreateCustomerSubscriptionInput: createCustomerSubscriptionInputSchema,
       ContactMessage: contactMessageSchema,
       ContactMessageInput: contactMessageInputSchema,
       ExchangeRate: exchangeRateSchema,
