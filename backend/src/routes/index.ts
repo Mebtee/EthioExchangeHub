@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { AdminController } from "@/controllers/AdminController";
+import { AdminPaymentController } from "@/controllers/AdminPaymentController";
 import { AuthController } from "@/controllers/AuthController";
 import { BanksController } from "@/controllers/BanksController";
 import { ContactController } from "@/controllers/ContactController";
@@ -10,6 +11,7 @@ import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
 import { FeaturedContentController } from "@/controllers/FeaturedContentController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
 import { NewsController } from "@/controllers/NewsController";
+import { PaymentController } from "@/controllers/PaymentController";
 import { ScraperHealthController } from "@/controllers/ScraperHealthController";
 import { ScrapeLogsController } from "@/controllers/ScrapeLogsController";
 import { createRequireAuth, requireRole } from "@/middleware/auth";
@@ -17,6 +19,9 @@ import { createAuthLimiter } from "@/middleware/rate-limit";
 import { BanksRepository } from "@/repositories/BanksRepository";
 import { ApiKeysRepository } from "@/repositories/ApiKeysRepository";
 import { ApiPlansRepository } from "@/repositories/ApiPlansRepository";
+import { BankPaymentConfigRepository } from "@/repositories/BankPaymentConfigRepository";
+import { PaymentReceiptsRepository } from "@/repositories/PaymentReceiptsRepository";
+import { PaymentsRepository } from "@/repositories/PaymentsRepository";
 import { ContactRepository } from "@/repositories/ContactRepository";
 import { CustomersRepository } from "@/repositories/CustomersRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
@@ -40,12 +45,19 @@ import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { SettingsServiceImpl } from "@/services/SettingsService";
 import { CustomerApiKeysServiceImpl } from "@/services/CustomerApiKeysService";
 import { CustomerSubscriptionServiceImpl } from "@/services/CustomerSubscriptionService";
+import { AdminPaymentServiceImpl } from "@/services/AdminPaymentService";
+import { PaymentServiceImpl } from "@/services/PaymentService";
+import { SupabaseReceiptStorage } from "@/lib/receipt-storage";
 import { ResendEmailService } from "@/services/EmailService";
-import { adminRouter } from "./admin.routes";
+import { adminRouter, adminPaymentRouter } from "./admin.routes";
 import { authRouter } from "./auth.routes";
 import { banksRouter } from "./banks.routes";
 import { contactRouter } from "./contact.routes";
-import { customerApiKeysRouter, customerSubscriptionRouter } from "./customer.routes";
+import {
+  customerApiKeysRouter,
+  customerPaymentRouter,
+  customerSubscriptionRouter,
+} from "./customer.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { featuredAdminRouter, featuredRouter } from "./featured.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
@@ -179,19 +191,56 @@ const customerSubscriptionController = new CustomerSubscriptionController(
   customerSubscriptionService,
 );
 
+// ---- Manual bank-transfer payments (Phase 3) ----
+// Same guards, same isolation rules. Money fields (amount/currency/status/
+// reference) are derived server-side in the services; receipts live in a
+// PRIVATE Supabase Storage bucket and are exposed only as short-lived signed
+// URLs to reviewing admins.
+const paymentsRepository = new PaymentsRepository();
+const paymentReceiptsRepository = new PaymentReceiptsRepository();
+const bankPaymentConfigRepository = new BankPaymentConfigRepository();
+const receiptStorage = new SupabaseReceiptStorage();
+
+const paymentService = new PaymentServiceImpl(
+  customersRepository,
+  subscriptionsRepository,
+  apiPlansRepository,
+  paymentsRepository,
+  paymentReceiptsRepository,
+  bankPaymentConfigRepository,
+  receiptStorage,
+);
+const paymentController = new PaymentController(paymentService);
+
+const adminPaymentService = new AdminPaymentServiceImpl(
+  paymentsRepository,
+  paymentReceiptsRepository,
+  subscriptionsRepository,
+  bankPaymentConfigRepository,
+  receiptStorage,
+);
+const adminPaymentController = new AdminPaymentController(adminPaymentService);
+
 /** Versioned router exposed at `/api/v1`. */
 export const apiRouter = Router();
 
 // The auth surface gets its own tighter rate limit (brute-force protection)
 // in addition to the general API limiter mounted in app.ts.
 apiRouter.use("/auth", createAuthLimiter(), authRouter(authController, requireAuth));
-apiRouter.use("/admin", requireAuth, requireAdmin, adminRouter(adminController));
+apiRouter.use(
+  "/admin",
+  requireAuth,
+  requireAdmin,
+  adminRouter(adminController),
+  adminPaymentRouter(adminPaymentController),
+);
 apiRouter.use(
   "/customer",
   requireAuth,
   requireRole("customer"),
   customerApiKeysRouter(customerApiKeysController),
   customerSubscriptionRouter(customerSubscriptionController),
+  customerPaymentRouter(paymentController),
 );
 apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));

@@ -115,3 +115,97 @@ export const customerApiKeysPaths: Record<string, DocPathItem> = {
     },
   },
 };
+
+/**
+ * Customer manual bank-transfer payment endpoints (Phase 3). Mounted under
+ * `/api/v1/customer`, behind `requireAuth` + `requireRole("customer")`.
+ */
+export const customerPaymentPaths: Record<string, DocPathItem> = {
+  "/customer/payment-methods": {
+    get: {
+      tags: ["Customer Payments"],
+      summary: "List active bank accounts",
+      description:
+        "Returns the ACTIVE bank accounts configured by admins, with transfer instructions. Inactive accounts are never exposed. Requires a customer bearer token.",
+      operationId: "listCustomerPaymentMethods",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        "200": successResponse("Payment methods retrieved.", arrayRef("BankAccount")),
+        "401": { $ref: "#/components/responses/AuthenticationError" },
+        "403": { $ref: "#/components/responses/AuthorizationError" },
+      },
+    },
+  },
+  "/customer/payments": {
+    post: {
+      tags: ["Customer Payments"],
+      summary: "Submit a bank-transfer payment",
+      description:
+        "Submits a manual bank-transfer payment for one of the caller's PENDING subscriptions. The request carries ONLY the subscription choice and the customer's bank transaction reference — amount and currency are copied server-side from the plan, status starts as `pending`, and the payment reference is system-generated. Duplicate protection: one open (pending/under_review/approved) payment per subscription and a transaction reference usable once per customer.",
+      operationId: "submitCustomerPayment",
+      security: [{ bearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: { "application/json": { schema: schemaRef("SubmitPaymentInput") } },
+      },
+      responses: {
+        "201": successResponse("Payment submitted.", schemaRef("CustomerPayment")),
+        "401": { $ref: "#/components/responses/AuthenticationError" },
+        "403": { $ref: "#/components/responses/AuthorizationError" },
+        "404": { $ref: "#/components/responses/NotFound" },
+        "409": { $ref: "#/components/responses/Conflict" },
+        "422": { $ref: "#/components/responses/ValidationError" },
+      },
+    },
+    get: {
+      tags: ["Customer Payments"],
+      summary: "List my payments",
+      description:
+        "Lists the authenticated customer's payments, newest first. Isolation is structural — query parameters cannot reference another customer.",
+      operationId: "listCustomerPayments",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        "200": successResponse("Payments retrieved.", arrayRef("CustomerPayment")),
+        "401": { $ref: "#/components/responses/AuthenticationError" },
+        "403": { $ref: "#/components/responses/AuthorizationError" },
+      },
+    },
+  },
+  "/customer/payments/{id}/receipt": {
+    post: {
+      tags: ["Customer Payments"],
+      summary: "Upload a payment receipt",
+      description:
+        "Uploads proof of payment (screenshot or PDF) for one of the caller's payments while review is still possible. Multipart field name: `receipt`. Accepts PNG/JPEG/WEBP images or PDF up to 5 MB; the file CONTENT must match its declared type (magic bytes are verified — extensions are not trusted). One receipt per payment; storage paths are generated server-side in a PRIVATE bucket and never exposed.",
+      operationId: "uploadCustomerReceipt",
+      security: [{ bearerAuth: [] }],
+      parameters: [pathParam("id", "Payment id.", "uuid")],
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              properties: {
+                receipt: {
+                  type: "string",
+                  format: "binary",
+                  description: "PNG, JPEG, WEBP or PDF, max 5 MB.",
+                },
+              },
+              required: ["receipt"],
+            },
+          },
+        },
+      },
+      responses: {
+        "201": successResponse("Receipt uploaded.", schemaRef("ReceiptUploadResult")),
+        "401": { $ref: "#/components/responses/AuthenticationError" },
+        "403": { $ref: "#/components/responses/AuthorizationError" },
+        "404": { $ref: "#/components/responses/NotFound" },
+        "409": { $ref: "#/components/responses/Conflict" },
+        "422": { $ref: "#/components/responses/ValidationError" },
+      },
+    },
+  },
+};

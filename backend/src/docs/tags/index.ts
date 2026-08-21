@@ -16,6 +16,21 @@ export const apiTags: OpenAPIV3_1.TagObject[] = [
     description:
       "Customer plan catalog and subscription selection (Phase 2C). Free plans activate immediately; paid plans stay pending until bank-transfer approval.",
   },
+  {
+    name: "Customer Payments",
+    description:
+      "Manual bank-transfer payments (Phase 3). Customers view active bank accounts, submit payments for pending subscriptions, track status, and upload one receipt per payment.",
+  },
+  {
+    name: "Admin Payments",
+    description:
+      "Payment review (admin/super_admin). Approving a payment activates its subscription with a fresh monthly period — exactly once.",
+  },
+  {
+    name: "Admin Bank Configuration",
+    description:
+      "Bank accounts used for manual transfers (admin/super_admin). Only active accounts are visible to customers.",
+  },
   { name: "Exchange Rates", description: "Latest and historical exchange rates." },
   { name: "Featured Content", description: "Homepage featured campaign and admin management." },
   { name: "Manual Rates", description: "Human-entered rate overrides." },

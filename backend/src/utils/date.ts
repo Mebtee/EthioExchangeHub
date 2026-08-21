@@ -5,6 +5,22 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
+/** ISO timestamp exactly one month after the given ISO time (UTC arithmetic). */
+export function addOneMonthIso(iso: string): string {
+  const date = new Date(iso);
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      date.getUTCMilliseconds(),
+    ),
+  ).toISOString();
+}
+
 /**
  * Today's date as "YYYY-MM-DD" in the SERVER'S LOCAL timezone.
  *

@@ -29,4 +29,12 @@ export class SubscriptionsRepository extends BaseRepository<"subscriptions"> {
   findLatestByCustomer(customerId: string): Promise<SubscriptionRow | null> {
     return this.findLatestBy({ customer_id: customerId }, "created_at", "id");
   }
+
+  /**
+   * Finds one subscription owned by exactly this customer (isolation filter
+   * for the Phase 3 payment flow), or null.
+   */
+  findByIdAndCustomer(id: string, customerId: string): Promise<SubscriptionRow | null> {
+    return this.findOneBy({ id, customer_id: customerId });
+  }
 }
