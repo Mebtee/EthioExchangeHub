@@ -5,6 +5,7 @@ import { AuthController } from "@/controllers/AuthController";
 import { AuthenticationError } from "@/lib/errors";
 import { hashPassword } from "@/lib/password";
 import { signToken } from "@/lib/tokens";
+import { CustomersRepository } from "@/repositories/CustomersRepository";
 import { UsersRepository } from "@/repositories/UsersRepository";
 import { AuthServiceImpl, type AuthServiceConfig } from "@/services/AuthService";
 import type { Database, UserRow } from "@/types/database";
@@ -37,9 +38,10 @@ function makeUser(overrides: Partial<UserRow> = {}): UserRow {
 
 /** Builds the real controller over the real service wired to a seeded client. */
 function makeController(seedUsers: UserRow[] = []) {
-  const client = createFakeSupabaseClient({ users: [...seedUsers] });
+  const client = createFakeSupabaseClient({ users: [...seedUsers], customers: [] });
   const service = new AuthServiceImpl(
     new UsersRepository(client as unknown as SupabaseClient<Database>),
+    new CustomersRepository(client as unknown as SupabaseClient<Database>),
     config,
   );
   const controller = new AuthController(service);

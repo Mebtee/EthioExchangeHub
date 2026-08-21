@@ -6,6 +6,7 @@ import {
   forgotPasswordBodySchema,
   loginBodySchema,
   refreshBodySchema,
+  registerBodySchema,
   resetPasswordBodySchema,
 } from "@/validators/auth";
 
@@ -21,6 +22,7 @@ export function authRouter(controller: AuthController, requireAuth: RequestHandl
   const router = Router();
 
   router.post("/login", validateBody(loginBodySchema), controller.login);
+  router.post("/register", validateBody(registerBodySchema), controller.register);
   router.post("/refresh", validateBody(refreshBodySchema), controller.refresh);
   router.post("/logout", controller.logout);
   router.get("/me", requireAuth, controller.me);

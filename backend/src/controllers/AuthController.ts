@@ -27,6 +27,23 @@ export class AuthController {
     successResponse(res, session, "Login successful.");
   });
 
+  /** Creates a customer account (Phase 2A). Returns the public user shape — never tokens or hashes. */
+  register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { email, password, company_name, phone } = req.body as {
+      email: string;
+      password: string;
+      company_name?: string;
+      phone?: string;
+    };
+    const user = await this.authService.register({
+      email,
+      password,
+      companyName: company_name,
+      phone,
+    });
+    successResponse(res, user, "Registration successful.", 201);
+  });
+
   /** Exchanges a refresh token for a fresh token pair. */
   refresh = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { refreshToken } = req.body as { refreshToken: string };

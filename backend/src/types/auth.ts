@@ -34,6 +34,16 @@ export interface AuthSession {
   user: AuthenticatedUser;
 }
 
+/** Validated payload for customer registration (`POST /auth/register`). */
+export interface RegisterInput {
+  email: string;
+  password: string;
+  /** Optional company name persisted to the `customers` profile row. */
+  companyName?: string;
+  /** Optional phone number persisted to the `customers` profile row. */
+  phone?: string;
+}
+
 /** JWT claims carried in the access token. */
 export interface AccessTokenClaims {
   /** User id. */
