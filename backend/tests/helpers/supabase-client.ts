@@ -125,8 +125,10 @@ class FakeBuilder {
 
     if (state.insertPayload) {
       const payload = { ...state.insertPayload };
-      const sample = rows[0];
-      if (payload.id === undefined && sample !== undefined && "id" in sample) {
+      // Every table in this schema has a UUID primary key with a database
+      // default — mirror that by generating an id whenever the payload omits
+      // one (including inserts into an empty table).
+      if (payload.id === undefined) {
         payload.id = randomUUID();
       }
       const created = { ...payload };

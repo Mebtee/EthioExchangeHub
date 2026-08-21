@@ -56,3 +56,29 @@ export const resetPasswordBodySchema = z
       .regex(/[^A-Za-z0-9]/, "must contain at least one special character"),
   })
   .strict();
+
+/**
+ * Body for `POST /auth/register` — customer sign-up (Phase 2A).
+ *
+ * The password rules mirror `resetPasswordBodySchema` exactly so a password
+ * accepted at registration is also accepted at reset. `company_name`/`phone`
+ * are optional customer-profile fields persisted to the `customers` table.
+ */
+export const registerBodySchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .email("must be a valid email address")
+      .max(254, "must be at most 254 characters"),
+    password: trimmedStringSchema
+      .min(12, "must be at least 12 characters")
+      .max(1024, "must be at most 1024 characters")
+      .regex(/[A-Z]/, "must contain at least one uppercase letter")
+      .regex(/[a-z]/, "must contain at least one lowercase letter")
+      .regex(/[0-9]/, "must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "must contain at least one special character"),
+    company_name: trimmedStringSchema.max(160, "must be at most 160 characters").optional(),
+    phone: trimmedStringSchema.max(32, "must be at most 32 characters").optional(),
+  })
+  .strict();

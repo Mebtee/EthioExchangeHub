@@ -61,6 +61,33 @@ export const loginRequestSchema: OpenAPIV3_1.SchemaObject = {
   required: ["email", "password"],
 };
 
+/** Request body for `POST /auth/register` (customer sign-up). */
+export const registerRequestSchema: OpenAPIV3_1.SchemaObject = {
+  type: "object",
+  description:
+    "Customer registration. The password must be at least 12 characters and contain an uppercase letter, a lowercase letter, a number, and a special character.",
+  properties: {
+    email: { type: "string", format: "email", maxLength: 254, description: "Login email." },
+    password: {
+      type: "string",
+      minLength: 12,
+      maxLength: 1024,
+      description: "Password (complexity rules apply).",
+    },
+    company_name: {
+      type: "string",
+      maxLength: 160,
+      description: "Optional company name stored on the customer profile.",
+    },
+    phone: {
+      type: "string",
+      maxLength: 32,
+      description: "Optional phone number stored on the customer profile.",
+    },
+  },
+  required: ["email", "password"],
+};
+
 /** Request body for `POST /auth/refresh`. */
 export const refreshRequestSchema: OpenAPIV3_1.SchemaObject = {
   type: "object",

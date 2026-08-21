@@ -17,9 +17,15 @@ import {
   forgotPasswordRequestSchema,
   loginRequestSchema,
   refreshRequestSchema,
+  registerRequestSchema,
   resetPasswordRequestSchema,
 } from "./schemas/auth";
 import { bankSchema } from "./schemas/bank";
+import {
+  customerApiKeyCreatedSchema,
+  customerApiKeySchema,
+  createCustomerApiKeyInputSchema,
+} from "./schemas/api-key";
 import { contactMessageInputSchema, contactMessageSchema } from "./schemas/contact";
 import { exchangeRateSchema } from "./schemas/exchange-rate";
 import {
@@ -97,10 +103,14 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       AuthTokens: authTokensSchema,
       AuthSession: authSessionSchema,
       LoginRequest: loginRequestSchema,
+      RegisterRequest: registerRequestSchema,
       RefreshRequest: refreshRequestSchema,
       ForgotPasswordRequest: forgotPasswordRequestSchema,
       ResetPasswordRequest: resetPasswordRequestSchema,
       Bank: bankSchema,
+      CustomerApiKey: customerApiKeySchema,
+      CustomerApiKeyCreated: customerApiKeyCreatedSchema,
+      CreateCustomerApiKeyInput: createCustomerApiKeyInputSchema,
       ContactMessage: contactMessageSchema,
       ContactMessageInput: contactMessageInputSchema,
       ExchangeRate: exchangeRateSchema,

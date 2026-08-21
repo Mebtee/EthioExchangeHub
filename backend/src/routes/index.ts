@@ -4,6 +4,7 @@ import { AdminController } from "@/controllers/AdminController";
 import { AuthController } from "@/controllers/AuthController";
 import { BanksController } from "@/controllers/BanksController";
 import { ContactController } from "@/controllers/ContactController";
+import { CustomerApiKeysController } from "@/controllers/CustomerApiKeysController";
 import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
 import { FeaturedContentController } from "@/controllers/FeaturedContentController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
@@ -13,7 +14,10 @@ import { ScrapeLogsController } from "@/controllers/ScrapeLogsController";
 import { createRequireAuth, requireRole } from "@/middleware/auth";
 import { createAuthLimiter } from "@/middleware/rate-limit";
 import { BanksRepository } from "@/repositories/BanksRepository";
+import { ApiKeysRepository } from "@/repositories/ApiKeysRepository";
+import { ApiPlansRepository } from "@/repositories/ApiPlansRepository";
 import { ContactRepository } from "@/repositories/ContactRepository";
+import { CustomersRepository } from "@/repositories/CustomersRepository";
 import { ExchangeRatesRepository } from "@/repositories/ExchangeRatesRepository";
 import { FeaturedContentClicksRepository } from "@/repositories/FeaturedContentClicksRepository";
 import { FeaturedContentRepository } from "@/repositories/FeaturedContentRepository";
@@ -21,6 +25,7 @@ import { ManualRatesRepository } from "@/repositories/ManualRatesRepository";
 import { NewsService } from "@/services/NewsService";
 import { ScrapeLogsRepository } from "@/repositories/ScrapeLogsRepository";
 import { SettingsRepository } from "@/repositories/SettingsRepository";
+import { SubscriptionsRepository } from "@/repositories/SubscriptionsRepository";
 import { UsersRepository } from "@/repositories/UsersRepository";
 import { env } from "@/utils/validate-env";
 import { AuthServiceImpl } from "@/services/AuthService";
@@ -32,11 +37,13 @@ import { ManualRatesServiceImpl } from "@/services/ManualRatesService";
 import { ScraperHealthServiceImpl } from "@/services/ScraperHealthService";
 import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { SettingsServiceImpl } from "@/services/SettingsService";
+import { CustomerApiKeysServiceImpl } from "@/services/CustomerApiKeysService";
 import { ResendEmailService } from "@/services/EmailService";
 import { adminRouter } from "./admin.routes";
 import { authRouter } from "./auth.routes";
 import { banksRouter } from "./banks.routes";
 import { contactRouter } from "./contact.routes";
+import { customerApiKeysRouter } from "./customer.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { featuredAdminRouter, featuredRouter } from "./featured.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
@@ -123,13 +130,15 @@ const usersRepository = new UsersRepository();
 const settingsService = new SettingsServiceImpl(settingsRepository, usersRepository);
 const adminController = new AdminController(settingsService, exchangeRatesService);
 
-// ---- Authentication (A1/A2) ----
-// The users repository backs both the auth service (login/refresh/me) and the
-// `requireAuth` guard that protects the admin surface. The bootstrap admin is
-// provisioned from server configuration on first login (never hardcoded in a
-// controller). Sensitive routers are mounted behind requireAuth + requireRole
-// so they are unreachable without a valid admin session.
-const authService = new AuthServiceImpl(usersRepository, {
+// ---- Authentication (A1/A2, customer registration in Phase 2A) ----
+// The users repository backs both the auth service (login/register/refresh/me)
+// and the `requireAuth` guard that protects the admin surface. The bootstrap
+// admin is provisioned from server configuration on first login (never
+// hardcoded in a controller). Registration additionally writes the one-to-one
+// `customers` profile row. Sensitive routers are mounted behind requireAuth +
+// requireRole so they are unreachable without a valid admin session.
+const customersRepository = new CustomersRepository();
+const authService = new AuthServiceImpl(usersRepository, customersRepository, {
   jwtSecret: env.JWT_SECRET,
   accessTokenExpiresIn: env.JWT_EXPIRES_IN,
   refreshTokenExpiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
@@ -141,6 +150,20 @@ const authController = new AuthController(authService);
 const requireAuth = createRequireAuth(usersRepository);
 const requireAdmin = requireRole("admin", "super_admin");
 
+// ---- Customer API-key management (Phase 2B) ----
+// The SAME `requireAuth` guard protects this surface; the customer role check
+// is applied at the mount point so every `/customer/*` route is unreachable
+// for admins and anonymous callers alike. Isolation is enforced inside the
+// service: the owning `customers.id` is always resolved from the JWT subject,
+// never from client input.
+const customerApiKeysService = new CustomerApiKeysServiceImpl(
+  customersRepository,
+  new ApiKeysRepository(),
+  new SubscriptionsRepository(),
+  new ApiPlansRepository(),
+);
+const customerApiKeysController = new CustomerApiKeysController(customerApiKeysService);
+
 /** Versioned router exposed at `/api/v1`. */
 export const apiRouter = Router();
 
@@ -148,6 +171,12 @@ export const apiRouter = Router();
 // in addition to the general API limiter mounted in app.ts.
 apiRouter.use("/auth", createAuthLimiter(), authRouter(authController, requireAuth));
 apiRouter.use("/admin", requireAuth, requireAdmin, adminRouter(adminController));
+apiRouter.use(
+  "/customer",
+  requireAuth,
+  requireRole("customer"),
+  customerApiKeysRouter(customerApiKeysController),
+);
 apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));
 apiRouter.use("/manual-rates", requireAuth, requireAdmin, manualRatesRouter(manualRatesController));
@@ -160,5 +189,10 @@ apiRouter.use(
   featuredAdminRouter(featuredContentController),
 );
 apiRouter.use("/contact", contactRouter(contactController));
-apiRouter.use("/scraper-health", requireAuth, requireAdmin, scraperHealthRouter(scraperHealthController));
+apiRouter.use(
+  "/scraper-health",
+  requireAuth,
+  requireAdmin,
+  scraperHealthRouter(scraperHealthController),
+);
 apiRouter.use("/scrape-logs", requireAuth, requireAdmin, scrapeLogsRouter(scrapeLogsController));

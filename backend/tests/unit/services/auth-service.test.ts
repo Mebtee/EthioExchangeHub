@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { AuthenticationError } from "@/lib/errors";
 import { hashPassword } from "@/lib/password";
 import { signToken, verifyToken } from "@/lib/tokens";
+import { CustomersRepository } from "@/repositories/CustomersRepository";
 import { UsersRepository } from "@/repositories/UsersRepository";
 import { AuthServiceImpl, type AuthServiceConfig } from "@/services/AuthService";
 import type { Database, UserRow } from "@/types/database";
@@ -38,9 +39,12 @@ function makeUser(overrides: Partial<UserRow> = {}): UserRow {
  * client. `seedUsers` controls what `findByEmail`/`findById` can resolve.
  */
 function makeService(seedUsers: UserRow[] = []) {
-  const client = createFakeSupabaseClient({ users: [...seedUsers] });
+  const client = createFakeSupabaseClient({ users: [...seedUsers], customers: [] });
   const repository = new UsersRepository(client as unknown as SupabaseClient<Database>);
-  const service = new AuthServiceImpl(repository, config);
+  const customersRepository = new CustomersRepository(
+    client as unknown as SupabaseClient<Database>,
+  );
+  const service = new AuthServiceImpl(repository, customersRepository, config);
   return { service, repository, client };
 }
 

@@ -189,10 +189,10 @@ export type FeaturedContentClickRow = {
 };
 
 /**
- * `users` — administrator accounts backing JWT authentication (A1). The
- * configured admin is provisioned from server config (`ADMIN_EMAIL` +
- * `ADMIN_PASSWORD`) on first login; `password_hash` is a scrypt-derived
- * hash, never the plaintext password.
+ * `users` — accounts backing JWT authentication. The configured admin is
+ * provisioned from server config (`ADMIN_EMAIL` + `ADMIN_PASSWORD`) on
+ * first login; `password_hash` is a scrypt-derived hash, never the
+ * plaintext password. Roles: `admin`, `super_admin`, `customer`.
  */
 export type UserRow = {
   id: string;
@@ -200,7 +200,7 @@ export type UserRow = {
   email: string;
   /** Display name (e.g. "Root Admin"). */
   name: string;
-  /** Authorization role (e.g. "admin" / "super_admin"). */
+  /** Authorization role: "admin" | "super_admin" | "customer". */
   role: string;
   /** scrypt password hash (format `salt:hash` hex). */
   password_hash: string;
@@ -208,6 +208,197 @@ export type UserRow = {
   created_at: string | null;
   /** Stamped on every successful login. */
   last_login_at: string | null;
+};
+
+/**
+ * `api_plans` — available commercial API plans with pricing and quota limits.
+ */
+export type ApiPlanRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  /** Stored as numeric(10,2) — never use floating point for money. */
+  price: number;
+  /** ISO 4217 currency code (default "ETB"). */
+  currency: string;
+  /** Billing cycle (currently only "monthly"). */
+  billing_interval: string;
+  /** Max requests per billing period. */
+  monthly_request_limit: number;
+  /** Max requests per minute (rate limit). */
+  requests_per_minute: number;
+  /** Max API keys allowed for this plan. */
+  max_api_keys: number;
+  /** Whether this plan is available for purchase. */
+  is_active: boolean;
+  /** Sort order for display. */
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `customers` — profile table extending `users` for commercial API customers.
+ * One-to-one relationship via unique `user_id` FK.
+ */
+export type CustomerRow = {
+  id: string;
+  /** FK → users(id), unique (one profile per user). */
+  user_id: string;
+  company_name: string | null;
+  phone: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `api_keys` — API access keys for programmatic access. The full secret is
+ * only returned at creation time; the database stores only `key_prefix`
+ * (public identifier) and `key_hash` (SHA-256 of the full secret).
+ */
+export type ApiKeyRow = {
+  id: string;
+  /** FK → customers(id). */
+  customer_id: string;
+  /** Human-readable label for this key. */
+  name: string;
+  /** Public identifier: the "eeh_live_" scheme plus the first secret characters. */
+  key_prefix: string;
+  /** SHA-256 hash of the full API key secret — never plaintext. */
+  key_hash: string;
+  /** Timestamp of last successful API call using this key. */
+  last_used_at: string | null;
+  /** Optional expiration date. Null = never expires. */
+  expires_at: string | null;
+  /** Timestamp when the key was revoked. Null = not revoked. */
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `subscriptions` — customer subscriptions to API plans. Free plan
+ * subscriptions are created with status `active` and price 0.
+ * Paid plans start as `pending` until payment is approved.
+ */
+export type SubscriptionRow = {
+  id: string;
+  /** FK → customers(id). */
+  customer_id: string;
+  /** FK → api_plans(id). */
+  plan_id: string;
+  /** Status: "pending" | "active" | "expired" | "cancelled" | "suspended". */
+  status: string;
+  /** When the subscription becomes/was active. */
+  starts_at: string | null;
+  /** When the subscription ends/ended. */
+  ends_at: string | null;
+  /** Start of the current billing period. */
+  current_period_start: string | null;
+  /** End of the current billing period. */
+  current_period_end: string | null;
+  /** When the subscription was cancelled (if applicable). */
+  cancelled_at: string | null;
+  /** Reason for cancellation (if applicable). */
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `payments` — manual bank-transfer payment records. Each payment is
+ * generated with a unique `payment_reference` for tracking. Workflow:
+ * pending → under_review → approved | rejected.
+ */
+export type PaymentRow = {
+  id: string;
+  /** FK → customers(id). */
+  customer_id: string;
+  /** FK → subscriptions(id). Null for one-time payments. */
+  subscription_id: string | null;
+  /** FK → api_plans(id). The plan this payment is for. */
+  plan_id: string;
+  /** Payment amount stored as numeric(10,2). */
+  amount: number;
+  /** ISO 4217 currency code (default "ETB"). */
+  currency: string;
+  /** System-generated unique payment reference. */
+  payment_reference: string;
+  /** Customer's bank transaction/reference number. */
+  customer_transaction_ref: string | null;
+  /** Payment method (currently only "bank_transfer"). */
+  payment_method: string;
+  /** Status: "pending" | "under_review" | "approved" | "rejected" | "cancelled". */
+  status: string;
+  /** When the customer submitted the payment. */
+  submitted_at: string | null;
+  /** When an admin reviewed the payment. */
+  reviewed_at: string | null;
+  /** FK → users(id). Admin who reviewed the payment. */
+  reviewed_by: string | null;
+  /** Reason if the payment was rejected. */
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `payment_receipts` — file references for uploaded payment receipts/screenshots.
+ * Actual files are stored in Supabase Storage; only the path is recorded here.
+ */
+export type PaymentReceiptRow = {
+  id: string;
+  /** FK → payments(id). */
+  payment_id: string;
+  /** Supabase Storage path to the receipt file. */
+  storage_path: string;
+  /** Original filename uploaded by the customer. */
+  original_filename: string | null;
+  /** MIME type of the uploaded file. */
+  mime_type: string;
+  uploaded_at: string;
+};
+
+/**
+ * `api_usage` — aggregated request counts per API key per billing period.
+ * One row per (api_key_id, period_start). The `request_count` is
+ * incremented atomically by the backend — no per-request rows.
+ */
+export type ApiUsageRow = {
+  id: string;
+  /** FK → api_keys(id). */
+  api_key_id: string;
+  /** FK → subscriptions(id). Null for free-tier keys. */
+  subscription_id: string | null;
+  /** Start of the billing period (typically the 1st of the month). */
+  period_start: string;
+  /** Number of requests made using this key in this period. */
+  request_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * `bank_payment_config` — configurable bank account details for manual
+ * transfers. Supports multiple bank accounts. Managed by admins.
+ */
+export type BankPaymentConfigRow = {
+  id: string;
+  /** Bank name (e.g. "Commercial Bank of Ethiopia"). */
+  bank_name: string;
+  /** Account holder name. */
+  account_name: string;
+  /** Bank account number. */
+  account_number: string;
+  /** Branch name (optional). */
+  branch_name: string | null;
+  /** Free-form payment instructions for customers. */
+  instructions: string | null;
+  /** Whether this bank account is currently shown to customers. */
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 /**
@@ -271,6 +462,54 @@ export type DatabaseTables = {
     Row: UserRow;
     Insert: Partial<UserRow>;
     Update: Partial<UserRow>;
+    Relationships: [];
+  };
+  api_plans: {
+    Row: ApiPlanRow;
+    Insert: Partial<ApiPlanRow>;
+    Update: Partial<ApiPlanRow>;
+    Relationships: [];
+  };
+  customers: {
+    Row: CustomerRow;
+    Insert: Partial<CustomerRow>;
+    Update: Partial<CustomerRow>;
+    Relationships: [];
+  };
+  api_keys: {
+    Row: ApiKeyRow;
+    Insert: Partial<ApiKeyRow>;
+    Update: Partial<ApiKeyRow>;
+    Relationships: [];
+  };
+  subscriptions: {
+    Row: SubscriptionRow;
+    Insert: Partial<SubscriptionRow>;
+    Update: Partial<SubscriptionRow>;
+    Relationships: [];
+  };
+  payments: {
+    Row: PaymentRow;
+    Insert: Partial<PaymentRow>;
+    Update: Partial<PaymentRow>;
+    Relationships: [];
+  };
+  payment_receipts: {
+    Row: PaymentReceiptRow;
+    Insert: Partial<PaymentReceiptRow>;
+    Update: Partial<PaymentReceiptRow>;
+    Relationships: [];
+  };
+  api_usage: {
+    Row: ApiUsageRow;
+    Insert: Partial<ApiUsageRow>;
+    Update: Partial<ApiUsageRow>;
+    Relationships: [];
+  };
+  bank_payment_config: {
+    Row: BankPaymentConfigRow;
+    Insert: Partial<BankPaymentConfigRow>;
+    Update: Partial<BankPaymentConfigRow>;
     Relationships: [];
   };
 };

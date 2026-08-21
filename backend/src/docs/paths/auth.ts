@@ -20,6 +20,24 @@ export const authPaths: Record<string, DocPathItem> = {
       },
     },
   },
+  "/auth/register": {
+    post: {
+      tags: ["Auth"],
+      summary: "Register customer",
+      description:
+        "Creates a customer account: a `users` row with role `customer` plus its one-to-one `customers` profile. The password is stored hashed and never returned; no tokens are issued here — sign in via `/auth/login` afterwards.",
+      operationId: "registerCustomer",
+      requestBody: {
+        required: true,
+        content: { "application/json": { schema: schemaRef("RegisterRequest") } },
+      },
+      responses: {
+        "201": successResponse("Registration successful.", schemaRef("AuthUser")),
+        "409": { $ref: "#/components/responses/Conflict" },
+        "422": { $ref: "#/components/responses/ValidationError" },
+      },
+    },
+  },
   "/auth/refresh": {
     post: {
       tags: ["Auth"],

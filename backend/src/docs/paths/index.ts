@@ -4,6 +4,7 @@ import { adminPaths } from "./admin";
 import { authPaths } from "./auth";
 import { banksPaths } from "./banks";
 import { contactPaths } from "./contact";
+import { customerApiKeysPaths } from "./customer";
 import { exchangeRatesPaths } from "./exchange-rates";
 import { featuredPaths } from "./featured";
 import { manualRatesPaths } from "./manual-rates";
@@ -22,6 +23,7 @@ export const apiPaths: Record<string, DocPathItem> = {
   ...authPaths,
   ...banksPaths,
   ...contactPaths,
+  ...customerApiKeysPaths,
   ...exchangeRatesPaths,
   ...featuredPaths,
   ...manualRatesPaths,

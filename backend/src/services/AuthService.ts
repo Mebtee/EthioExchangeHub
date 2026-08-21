@@ -1,11 +1,12 @@
 import { toAuthenticatedUser } from "@/lib/auth-user";
-import { AuthenticationError } from "@/lib/errors";
+import { AuthenticationError, ConflictError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { signToken, verifyToken } from "@/lib/tokens";
+import type { CustomersRepository } from "@/repositories/CustomersRepository";
 import type { UsersRepository } from "@/repositories/UsersRepository";
 import type { UserRow } from "@/types/database";
-import type { AuthSession, AuthTokens, AuthenticatedUser } from "@/types/auth";
+import type { AuthSession, AuthTokens, AuthenticatedUser, RegisterInput } from "@/types/auth";
 
 /** Runtime values the auth service needs — injected by the composition root. */
 export interface AuthServiceConfig {
@@ -27,6 +28,8 @@ export interface AuthServiceConfig {
 export interface AuthService {
   /** Exchanges credentials for a token pair + user; provisions the bootstrap admin on first login. */
   login(email: string, password: string): Promise<AuthSession>;
+  /** Creates a customer account (users row with role "customer" + customers profile). */
+  register(input: RegisterInput): Promise<AuthenticatedUser>;
   /** Exchanges a valid refresh token for a fresh token pair. */
   refresh(refreshToken: string): Promise<AuthTokens>;
   /** Resolves the authenticated user by id. */
@@ -38,13 +41,17 @@ export interface AuthService {
 }
 
 /**
- * Authentication business logic (A1).
+ * Authentication business logic (A1, customer registration in Phase 2A).
  *
  * Credentials are never fabricated: login verifies against the persisted
  * `users` row (scrypt, constant-time), and the bootstrap admin is provisioned
  * from server configuration (`ADMIN_EMAIL` + `ADMIN_PASSWORD`) ONLY on first
  * login — the plaintext password is hashed and never stored or returned.
  * Token payloads come from the persisted row; nothing is invented.
+ *
+ * Registration creates a `users` row with role "customer" plus its one-to-one
+ * `customers` profile; the password is hashed with the same scrypt helper and
+ * never persisted or returned in plaintext.
  *
  * The reset flow deliberately never reveals whether an email exists: unknown
  * emails yield the same null result as a known email, and the controller
@@ -54,6 +61,7 @@ export interface AuthService {
 export class AuthServiceImpl implements AuthService {
   constructor(
     private readonly usersRepository: UsersRepository,
+    private readonly customersRepository: CustomersRepository,
     private readonly config: AuthServiceConfig,
   ) {}
 
@@ -89,6 +97,53 @@ export class AuthServiceImpl implements AuthService {
       { last_login_at: new Date().toISOString() },
     );
     return { tokens: this.signTokens(user), user: toAuthenticatedUser(user) };
+  }
+
+  async register(input: RegisterInput): Promise<AuthenticatedUser> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+
+    // Friendly duplicate rejection BEFORE any write. The message reveals no
+    // account details. A concurrent-registration race still hits the unique
+    // email constraint and surfaces as a DatabaseError — the same accepted
+    // trade-off documented for bootstrap-admin provisioning in `login`.
+    const existing = await this.usersRepository.findByEmail(normalizedEmail);
+    if (existing) throw new ConflictError("An account with this email already exists.");
+
+    // `users.name` is NOT NULL; customers are displayed by their company when
+    // given, otherwise by the email local part.
+    const name = input.companyName?.trim() || normalizedEmail.split("@")[0]!;
+
+    // PostgREST offers no client-side multi-table transactions, so the pair
+    // (users row + customers profile) is created sequentially with a
+    // compensating delete: if the profile insert fails, the just-created user
+    // row is removed again — no orphaned users row is knowingly left behind.
+    const user = await this.usersRepository.insert({
+      email: normalizedEmail,
+      name,
+      role: "customer",
+      password_hash: hashPassword(input.password),
+    });
+
+    try {
+      await this.customersRepository.insert({
+        user_id: user.id,
+        company_name: input.companyName ?? null,
+        phone: input.phone ?? null,
+      });
+    } catch (error) {
+      try {
+        await this.usersRepository.deleteBy({ id: user.id });
+      } catch (cleanupError) {
+        logger.error("Failed to remove the user row after customer-profile creation failed", {
+          userId: user.id,
+        });
+        throw cleanupError;
+      }
+      throw error;
+    }
+
+    logger.info("Registered a new customer account", { userId: user.id });
+    return toAuthenticatedUser(user);
   }
 
   async refresh(refreshToken: string): Promise<AuthTokens> {
