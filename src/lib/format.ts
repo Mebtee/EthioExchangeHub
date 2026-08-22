@@ -108,3 +108,23 @@ export function formatPercent(value: number | undefined | null): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return `${(value * 100).toFixed(2)}%`;
 }
+
+/**
+ * Formats an ISO timestamp for portal display — e.g. "Aug 5, 2026, 14:30".
+ * Deterministic UTC rendering so billing periods never shift with the
+ * viewer's timezone. Em-dash for missing/invalid values.
+ */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  const time = date.toISOString().slice(11, 16);
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}, ${time} UTC`;
+}
+
+/** Thousands-separated integer for quota/request counts — em-dash when invalid. */
+export function formatInt(value: number | null | undefined): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.round(value).toLocaleString(undefined, { maximumFractionDigits: 0 })
+    : "—";
+}

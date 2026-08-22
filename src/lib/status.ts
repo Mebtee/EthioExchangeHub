@@ -21,3 +21,35 @@ export function scraperStatusTone(status: ScraperStatus): StatusTone {
       return "neutral";
   }
 }
+
+/** Maps a customer subscription status to its badge tone (Phase 6). */
+export function subscriptionStatusTone(status: string): StatusTone {
+  switch (status) {
+    case "active":
+      return "success";
+    case "pending":
+      return "warning";
+    case "suspended":
+    case "expired":
+    case "cancelled":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+/** Maps a manual bank-transfer payment status to its badge tone (Phase 6). */
+export function paymentStatusTone(status: string): StatusTone {
+  switch (status) {
+    case "approved":
+      return "success";
+    case "pending":
+    case "under_review":
+      return "warning";
+    case "rejected":
+    case "cancelled":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}

@@ -138,3 +138,56 @@ export interface AdminSettings {
 
 /** Payload for `PUT /api/v1/admin/settings` — any subset, at least one field. */
 export type AdminSettingsUpdate = Partial<AdminSettings>;
+
+/** Payment row as served by `GET /api/v1/admin/payments`. */
+export interface AdminPaymentView {
+  id: string;
+  customerId: string;
+  subscriptionId: string | null;
+  planId: string;
+  amount: number;
+  currency: string;
+  paymentReference: string;
+  customerTransactionRef: string | null;
+  paymentMethod: string;
+  status: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Review decision for `POST /api/v1/admin/payments/:id/review`. */
+export type AdminReviewAction = "under_review" | "approve" | "reject";
+
+/** Bank account as served by `GET /api/v1/admin/payment-methods` (all, incl. inactive). */
+export interface AdminBankAccountView {
+  id: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  branchName: string | null;
+  instructions: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Payload for `POST /api/v1/admin/payment-methods`. */
+export interface AdminBankAccountPayload {
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  branch_name?: string;
+  instructions?: string;
+}
+
+/** Payload for `PATCH /api/v1/admin/payment-methods/:id` (any subset). */
+export type AdminBankAccountUpdate = Partial<
+  Pick<
+    AdminBankAccountPayload,
+    "bank_name" | "account_name" | "account_number" | "branch_name" | "instructions"
+  >
+> & { is_active?: boolean };

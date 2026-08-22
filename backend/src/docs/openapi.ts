@@ -155,8 +155,18 @@ export const openApiDocument: OpenAPIV3_1.Document = {
   },
   servers: [
     {
-      url: env.OPENAPI_SERVER_URL || `http://localhost:${env.PORT}/api/v1`,
-      description: env.OPENAPI_SERVER_URL ? "Configured server" : "Local development server",
+      // Production deployments MUST set OPENAPI_SERVER_URL — a localhost URL
+      // rendered into live docs would hand integrators a broken base path.
+      url:
+        env.OPENAPI_SERVER_URL ??
+        (env.NODE_ENV === "production"
+          ? "https://ethioexchangehub.onrender.com/api/v1"
+          : `http://localhost:${env.PORT}/api/v1`),
+      description: env.OPENAPI_SERVER_URL
+        ? "Configured server"
+        : env.NODE_ENV === "production"
+          ? "Production default — set OPENAPI_SERVER_URL to override"
+          : "Local development server",
     },
   ],
   security: [],

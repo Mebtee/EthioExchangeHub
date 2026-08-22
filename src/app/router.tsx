@@ -29,11 +29,25 @@ const AdminForgotPasswordPage = lazy(() => import("@/routes/admin/forgot-passwor
 const AdminResetPasswordPage = lazy(() => import("@/routes/admin/reset-password"));
 const AdminDashboardPage = lazy(() => import("@/routes/admin/dashboard"));
 const AdminManualRatesPage = lazy(() => import("@/routes/admin/manual-rates"));
+const AdminPaymentsPage = lazy(() => import("@/routes/admin/payments"));
 const AdminFeaturedPage = lazy(() => import("@/routes/admin/featured"));
 const AdminScraperHealthPage = lazy(() => import("@/routes/admin/scraper-health"));
 const AdminScrapeLogsPage = lazy(() => import("@/routes/admin/scrape-logs"));
 const AdminProfilePage = lazy(() => import("@/routes/admin/profile"));
 const AdminSettingsPage = lazy(() => import("@/routes/admin/settings"));
+
+// Customer portal (Phase 6) — commercial API self-service area.
+const CustomerRegisterPage = lazy(() => import("@/routes/customer/register"));
+const CustomerLayout = lazy(() =>
+  import("@/components/customer/customer-layout").then((m) => ({ default: m.CustomerLayout })),
+);
+const CustomerDashboardPage = lazy(() => import("@/routes/customer/dashboard"));
+const CustomerPlansPage = lazy(() => import("@/routes/customer/plans"));
+const CustomerSubscriptionPage = lazy(() => import("@/routes/customer/subscription"));
+const CustomerApiKeysPage = lazy(() => import("@/routes/customer/api-keys"));
+const CustomerPaymentsPage = lazy(() => import("@/routes/customer/payments"));
+const CustomerUsagePage = lazy(() => import("@/routes/customer/usage"));
+const CustomerDeveloperPage = lazy(() => import("@/routes/customer/developer"));
 
 /** Per-locale font that is injected only while that locale is active. */
 const LOCALE_FONTS: Partial<Record<Locale, { href: string }>> = {
@@ -109,6 +123,7 @@ const LEGACY_ROOTS = new Set([
   "about",
   "contact",
   "admin",
+  "customer",
 ]);
 
 function LegacyRedirect() {
@@ -145,6 +160,7 @@ export function AppRoutes() {
           <Route path="admin/login" element={<AdminLoginPage />} />
           <Route path="admin/forgot-password" element={<AdminForgotPasswordPage />} />
           <Route path="admin/reset-password" element={<AdminResetPasswordPage />} />
+          <Route path="customer/register" element={<CustomerRegisterPage />} />
 
           {/* Protected admin area — authentication + role-based authorization */}
           <Route element={<RequireAuth />}>
@@ -152,11 +168,25 @@ export function AppRoutes() {
               <Route path="admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="manual-rates" element={<AdminManualRatesPage />} />
+                <Route path="payments" element={<AdminPaymentsPage />} />
                 <Route path="featured" element={<AdminFeaturedPage />} />
                 <Route path="scraper-health" element={<AdminScraperHealthPage />} />
                 <Route path="scrape-logs" element={<AdminScrapeLogsPage />} />
                 <Route path="profile" element={<AdminProfilePage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
+              </Route>
+            </Route>
+
+            {/* Protected customer portal (Phase 6) — role "customer" only */}
+            <Route element={<RequireRole roles={["customer"]} />}>
+              <Route path="customer" element={<CustomerLayout />}>
+                <Route index element={<CustomerDashboardPage />} />
+                <Route path="plans" element={<CustomerPlansPage />} />
+                <Route path="subscription" element={<CustomerSubscriptionPage />} />
+                <Route path="api-keys" element={<CustomerApiKeysPage />} />
+                <Route path="payments" element={<CustomerPaymentsPage />} />
+                <Route path="usage" element={<CustomerUsagePage />} />
+                <Route path="developer" element={<CustomerDeveloperPage />} />
               </Route>
             </Route>
           </Route>

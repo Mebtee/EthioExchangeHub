@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import {
   Activity,
+  CreditCard,
   ExternalLink,
   LayoutDashboard,
   Megaphone,
@@ -20,6 +21,7 @@ const NAV_ITEMS: Array<{
   labelKey:
     | "admin.nav.dashboard"
     | "admin.nav.manualRates"
+    | "admin.nav.payments"
     | "admin.nav.featured"
     | "admin.nav.scraperHealth"
     | "admin.nav.scrapeLogs"
@@ -30,6 +32,7 @@ const NAV_ITEMS: Array<{
 }> = [
   { to: "/admin", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/manual-rates", labelKey: "admin.nav.manualRates", icon: PencilLine },
+  { to: "/admin/payments", labelKey: "admin.nav.payments", icon: CreditCard },
   { to: "/admin/featured", labelKey: "admin.nav.featured", icon: Megaphone },
   { to: "/admin/scraper-health", labelKey: "admin.nav.scraperHealth", icon: Activity },
   { to: "/admin/scrape-logs", labelKey: "admin.nav.scrapeLogs", icon: ScrollText },

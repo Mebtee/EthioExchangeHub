@@ -12,7 +12,7 @@ interface AuthContextValue {
   isLoading: boolean;
   /** True when a valid session exists. */
   isAuthenticated: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
   /** Role-based authorization helper. */
   hasRole: (...roles: string[]) => boolean;
@@ -67,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await loginRequest(payload);
     setTokens(session.tokens);
     setUser(session.user);
+    return session.user;
   }, []);
 
   const logout = useCallback(async () => {

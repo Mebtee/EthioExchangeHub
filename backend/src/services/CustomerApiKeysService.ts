@@ -81,6 +81,19 @@ export class CustomerApiKeysServiceImpl implements CustomerApiKeysService {
     if (expiresAt !== undefined && new Date(expiresAt).getTime() <= Date.now()) {
       throw new ValidationError("expires_at: must be a timestamp in the future.");
     }
+    // Normalize to a canonical UTC ISO string BEFORE persisting: expiry is
+    // enforced by string comparison against nowIso() in the commercial auth
+    // middleware, so date-only or timezone-offset inputs ("2027-01-01",
+    // "…+03:00") would compare incorrectly. Invalid timestamps are rejected
+    // here rather than poisoning the stored row.
+    let normalizedExpiresAt: string | null = null;
+    if (expiresAt !== undefined) {
+      const parsed = new Date(expiresAt);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new ValidationError("expires_at: must be a valid ISO 8601 timestamp.");
+      }
+      normalizedExpiresAt = parsed.toISOString();
+    }
 
     await this.enforcePlanLimit(customer.id);
 
@@ -93,7 +106,7 @@ export class CustomerApiKeysServiceImpl implements CustomerApiKeysService {
       name: input.name.trim(),
       key_prefix: keyPrefix,
       key_hash: hashApiKey(key),
-      expires_at: expiresAt ?? null,
+      expires_at: normalizedExpiresAt,
       // No database trigger maintains these columns, so both are stamped
       // here (same convention as settings/manual-rates updates).
       revoked_at: null,

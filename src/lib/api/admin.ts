@@ -14,8 +14,13 @@ import {
   type BackendScraperHealthSummary,
 } from "./adapters";
 import type {
+  AdminBankAccountPayload,
+  AdminBankAccountUpdate,
+  AdminBankAccountView,
+  AdminPaymentView,
   AdminProfile,
   AdminProfileUpdate,
+  AdminReviewAction,
   AdminSettings,
   AdminSettingsUpdate,
   DashboardStat,
@@ -27,6 +32,10 @@ import type {
   ScraperHealthRow,
   ScraperHealthSummary,
 } from "@/types/admin";
+
+/** Payment status filter accepted by `GET /admin/payments`. */
+export type AdminPaymentStatusFilter =
+  "pending" | "under_review" | "approved" | "rejected" | "cancelled";
 
 /**
  * Admin API service.
@@ -183,5 +192,71 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
 /** Persists the provided settings fields and returns the stored settings. */
 export async function updateAdminSettings(payload: AdminSettingsUpdate): Promise<AdminSettings> {
   const { data } = await apiClient.put<AdminSettings>("/admin/settings", payload);
+  return data;
+}
+
+// ---- Payment review + bank-account management (manual bank transfer) ----
+
+/** Lists payments, newest first, optionally filtered by review status. */
+export async function fetchAdminPayments(
+  status?: AdminPaymentStatusFilter,
+): Promise<AdminPaymentView[]> {
+  const { data } = await apiClient.get<AdminPaymentView[]>("/admin/payments", {
+    params: status ? { status } : undefined,
+  });
+  return data;
+}
+
+/**
+ * Applies a review transition. Approving activates the payment's
+ * subscription server-side; re-reviewing a terminal payment answers 409.
+ */
+export async function reviewAdminPayment(
+  paymentId: string,
+  action: AdminReviewAction,
+  rejectionReason?: string,
+): Promise<AdminPaymentView> {
+  const { data } = await apiClient.post<AdminPaymentView>(
+    `/admin/payments/${paymentId}/review`,
+    rejectionReason !== undefined && action === "reject"
+      ? { action, rejection_reason: rejectionReason }
+      : { action },
+  );
+  return data;
+}
+
+/** Opens a short-lived signed URL for the payment's uploaded receipt. */
+export async function fetchAdminReceiptUrl(
+  paymentId: string,
+): Promise<{ url: string; expiresInSeconds: number }> {
+  const { data } = await apiClient.get<{ url: string; expiresInSeconds: number }>(
+    `/admin/payments/${paymentId}/receipt`,
+  );
+  return data;
+}
+
+/** All configured bank accounts, including inactive ones. */
+export async function fetchAdminBankAccounts(): Promise<AdminBankAccountView[]> {
+  const { data } = await apiClient.get<AdminBankAccountView[]>("/admin/payment-methods");
+  return data;
+}
+
+/** Creates a bank account (active by default). */
+export async function createAdminBankAccount(
+  payload: AdminBankAccountPayload,
+): Promise<AdminBankAccountView> {
+  const { data } = await apiClient.post<AdminBankAccountView>("/admin/payment-methods", payload);
+  return data;
+}
+
+/** Updates bank-account fields and/or the active flag. */
+export async function updateAdminBankAccount(
+  id: string,
+  payload: AdminBankAccountUpdate,
+): Promise<AdminBankAccountView> {
+  const { data } = await apiClient.patch<AdminBankAccountView>(
+    `/admin/payment-methods/${id}`,
+    payload,
+  );
   return data;
 }

@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  createAdminBankAccount,
   createManualRate,
   deleteManualRate,
+  fetchAdminBankAccounts,
   fetchAdminDashboard,
+  fetchAdminPayments,
   fetchAdminProfile,
   fetchAdminSettings,
   fetchManualRates,
@@ -11,12 +14,15 @@ import {
   fetchScrapeLogs,
   fetchScraperHealth,
   fetchScraperHealthList,
+  reviewAdminPayment,
+  updateAdminBankAccount,
   updateAdminProfile,
   updateAdminSettings,
   updateManualRate,
 } from "@/lib/api/admin";
+import type { AdminPaymentStatusFilter } from "@/lib/api/admin";
 import { adminKeys } from "@/lib/query-keys";
-import type { ManualRateUpdate } from "@/types/admin";
+import type { AdminBankAccountUpdate, AdminReviewAction, ManualRateUpdate } from "@/types/admin";
 
 /**
  * Admin data hooks — every hook calls the real backend through the matching
@@ -127,6 +133,67 @@ export function useDeleteManualRate() {
     mutationFn: deleteManualRate,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.manualRates() });
+    },
+  });
+}
+
+// ---- Payment review + bank-account management ----
+
+export function useAdminPayments(status?: AdminPaymentStatusFilter) {
+  return useQuery({
+    queryKey: adminKeys.payments(status),
+    queryFn: () => fetchAdminPayments(status),
+  });
+}
+
+/** Review transitions invalidate every status slice (the row moves between them). */
+function useInvalidatePayments() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "payments"] });
+  };
+}
+
+export function useReviewAdminPayment() {
+  const invalidatePayments = useInvalidatePayments();
+  return useMutation({
+    mutationFn: ({
+      paymentId,
+      action,
+      rejectionReason,
+    }: {
+      paymentId: string;
+      action: AdminReviewAction;
+      rejectionReason?: string;
+    }) => reviewAdminPayment(paymentId, action, rejectionReason),
+    onSuccess: invalidatePayments,
+  });
+}
+
+export function useAdminBankAccounts() {
+  return useQuery({
+    queryKey: adminKeys.bankAccounts(),
+    queryFn: fetchAdminBankAccounts,
+  });
+}
+
+export function useCreateAdminBankAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createAdminBankAccount,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.bankAccounts() });
+    },
+  });
+}
+
+export function useUpdateAdminBankAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: AdminBankAccountUpdate }) =>
+      updateAdminBankAccount(id, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.bankAccounts() });
     },
   });
 }
