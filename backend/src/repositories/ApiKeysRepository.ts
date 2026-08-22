@@ -37,6 +37,28 @@ export class ApiKeysRepository extends BaseRepository<"api_keys"> {
   }
 
   /**
+   * Commercial-API lookup (Phase 4): all non-revoked-candidate rows sharing a
+   * key prefix. Prefix collisions are expected to be rare (8 secret chars of
+   * base64url), so callers verify the full hash with `verifyApiKey` — the
+   * digest never appears in a WHERE clause, and verification is constant
+   * time. Returns every match; an empty array when none.
+   */
+  findAllByPrefix(keyPrefix: string): Promise<ApiKeyRow[]> {
+    return this.findManyBy({ key_prefix: keyPrefix });
+  }
+
+  /**
+   * Best-effort `last_used_at` stamp for successful commercial requests.
+   * Returns the updated row, or null when the key vanished mid-request.
+   */
+  touchLastUsed(id: string, timestamp: string): Promise<ApiKeyRow | null> {
+    return this.updateBy({ id }, {
+      last_used_at: timestamp,
+      updated_at: timestamp,
+    } as UpdateOf<"api_keys">);
+  }
+
+  /**
    * Secure revocation: stamps `revoked_at`/`updated_at` on the key only when
    * it belongs to the given customer. Returns the updated row, or null when
    * no matching owned key exists.

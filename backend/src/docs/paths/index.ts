@@ -3,8 +3,9 @@ import { type DocPathItem } from "../helpers";
 import { adminPaths, adminPaymentPaths } from "./admin";
 import { authPaths } from "./auth";
 import { banksPaths } from "./banks";
+import { commercialPaths } from "./commercial";
 import { contactPaths } from "./contact";
-import { customerApiKeysPaths, customerPaymentPaths } from "./customer";
+import { customerApiKeysPaths, customerPaymentPaths, customerUsagePaths } from "./customer";
 import { exchangeRatesPaths } from "./exchange-rates";
 import { featuredPaths } from "./featured";
 import { manualRatesPaths } from "./manual-rates";
@@ -23,9 +24,11 @@ export const apiPaths: Record<string, DocPathItem> = {
   ...adminPaymentPaths,
   ...authPaths,
   ...banksPaths,
+  ...commercialPaths,
   ...contactPaths,
   ...customerApiKeysPaths,
   ...customerPaymentPaths,
+  ...customerUsagePaths,
   ...exchangeRatesPaths,
   ...featuredPaths,
   ...manualRatesPaths,

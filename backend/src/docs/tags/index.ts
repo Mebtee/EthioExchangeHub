@@ -3,6 +3,16 @@ import type { OpenAPIV3_1 } from "openapi-types";
 /** API tags shown in Swagger UI, grouped by domain. */
 export const apiTags: OpenAPIV3_1.TagObject[] = [
   { name: "Admin", description: "Administrator profile, settings, and dashboard." },
+  {
+    name: "Commercial API",
+    description:
+      "Phase 4 paid data API at `/public/*`. Authentication uses `Authorization: Bearer eeh_live_…` (an API key, NOT a login token). Every request must resolve to an ACTIVE subscription within its billing period; plan RPM and monthly quotas are enforced with 429 responses.",
+  },
+  {
+    name: "Customer Usage",
+    description:
+      "Customer usage analytics for the commercial API (plan limits, per-period consumption, per-key breakdowns). Requires a customer bearer token.",
+  },
   { name: "Auth", description: "Administrator authentication (login, tokens, password reset)." },
   { name: "Banks", description: "Bank directory: listing and lookup." },
   { name: "Contact", description: "Public contact-message submissions." },

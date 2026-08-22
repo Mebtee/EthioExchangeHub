@@ -25,6 +25,11 @@ export class BanksRepository extends BaseRepository<"banks"> {
     return super.findOneBy({ bank_code: bankCode });
   }
 
+  /** Finds an ACTIVE bank by its natural key (commercial directory). */
+  findActiveByBankCode(bankCode: string): Promise<BankRow | null> {
+    return super.findOneBy({ bank_code: bankCode, is_active: true });
+  }
+
   /** Lists banks currently flagged active, sorted by name. */
   async listActive(): Promise<BankRow[]> {
     const rows = await super.findManyBy({ is_active: true });

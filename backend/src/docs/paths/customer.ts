@@ -209,3 +209,40 @@ export const customerPaymentPaths: Record<string, DocPathItem> = {
     },
   },
 };
+
+/** Customer usage analytics (Phase 4, Part K). */
+export const customerUsagePaths: Record<string, DocPathItem> = {
+  "/customer/usage": {
+    get: {
+      tags: ["Customer Usage"],
+      summary: "My commercial API usage",
+      description:
+        "Plan limits and current-period consumption for the authenticated customer: monthly quota, requests used/remaining across ALL their keys, and a per-key breakdown (prefix only — the secret and its hash are never retrievable). Without an active subscription the payload reports null limits and zeroed usage.",
+      operationId: "getCustomerUsage",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        "200": successResponse("Usage retrieved.", schemaRef("CustomerUsage")),
+        "401": { $ref: "#/components/responses/AuthenticationError" },
+        "403": { $ref: "#/components/responses/AuthorizationError" },
+        "404": { $ref: "#/components/responses/NotFound" },
+      },
+    },
+  },
+  "/customer/usage/{id}": {
+    get: {
+      tags: ["Customer Usage"],
+      summary: "One API key's usage",
+      description:
+        "Consumption for ONE of the caller's API keys in the current billing period. Ownership is enforced in the query itself — another customer's key id answers 404.",
+      operationId: "getCustomerKeyUsage",
+      security: [{ bearerAuth: [] }],
+      parameters: [pathParam("id", "API key id.", "uuid")],
+      responses: {
+        "200": successResponse("Key usage retrieved.", schemaRef("KeyUsage")),
+        "401": { $ref: "#/components/responses/AuthenticationError" },
+        "403": { $ref: "#/components/responses/AuthorizationError" },
+        "404": { $ref: "#/components/responses/NotFound" },
+      },
+    },
+  },
+};

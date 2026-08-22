@@ -50,7 +50,7 @@ function makePlan(overrides: Partial<ApiPlanRow> = {}): ApiPlanRow {
     name: `Plan ${planSeq}`,
     slug: `plan-${planSeq}`,
     description: null,
-    price: 900,
+    price: 499,
     currency: "ETB",
     billing_interval: "monthly",
     monthly_request_limit: 25_000,

@@ -53,8 +53,8 @@ function makePlan(overrides: Partial<ApiPlanRow> = {}): ApiPlanRow {
     price: 0,
     currency: "ETB",
     billing_interval: "monthly",
-    monthly_request_limit: 10_000,
-    requests_per_minute: 60,
+    monthly_request_limit: 2_000,
+    requests_per_minute: 30,
     max_api_keys: 1,
     is_active: true,
     display_order: planSeq,
@@ -135,7 +135,7 @@ describe("CustomerSubscriptionServiceImpl.getPlans", () => {
   });
 
   it("maps rows into camelCase views without internal fields", async () => {
-    const { service } = makeService({ plans: [makePlan({ price: 900 })] });
+    const { service } = makeService({ plans: [makePlan({ price: 499 })] });
 
     const [view] = await service.getPlans();
 
@@ -144,11 +144,11 @@ describe("CustomerSubscriptionServiceImpl.getPlans", () => {
       name: expect.any(String),
       slug: expect.any(String),
       description: null,
-      price: 900,
+      price: 499,
       currency: "ETB",
       billingInterval: "monthly",
-      monthlyRequestLimit: 10_000,
-      requestsPerMinute: 60,
+      monthlyRequestLimit: 2_000,
+      requestsPerMinute: 30,
       maxApiKeys: 1,
       displayOrder: expect.any(Number),
     });
