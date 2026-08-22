@@ -14,6 +14,7 @@ import { useTranslation, Trans } from "react-i18next";
 
 import { SiteShell, PageContainer } from "@/components/layout/site-shell";
 import { useLocale } from "@/hooks";
+import { config } from "@/lib/config";
 import { Pill } from "@/components/shared/pill";
 import { Seo } from "@/components/shared/seo";
 
@@ -132,7 +133,9 @@ function AboutPage() {
               {t("about.exploreBanks")}
             </a>
             <a
-              href="#"
+              href={config.docsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-xl border border-primary-foreground/40 px-6 py-3 text-sm font-semibold hover:bg-primary-foreground/10 inline-flex items-center gap-2"
             >
               {t("about.viewApiDocs")} <ArrowRight className="size-4" />

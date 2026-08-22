@@ -10,7 +10,12 @@ if (!apiBaseUrl) {
   );
 }
 
+// Swagger UI is served on the backend root (/docs), not under /api/v1 —
+// derive it from the same base URL so docs never drift from the deployment.
+const docsUrl = `${apiBaseUrl.replace(/\/api\/v\d+\/?$/, "")}/docs`;
+
 export const config = {
   apiBaseUrl,
+  docsUrl,
   apiTimeoutMs: Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 15_000),
 } as const;

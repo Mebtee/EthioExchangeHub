@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRegisterCustomer } from "@/hooks/use-customer";
+import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/hooks";
 
 /**
@@ -20,12 +21,21 @@ export default function CustomerRegisterPage() {
   const navigate = useNavigate();
   const { localize } = useLocale();
   const { t } = useTranslation();
+  const { isAuthenticated, user } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Already signed in? Route by role instead of showing the form again —
+  // admins keep their existing admin flow (same convention as route guards).
+  // This also makes the site-wide "API Access" CTA correct for every visitor:
+  // it always points here, and signed-in users are forwarded to their area.
+  if (isAuthenticated && user) {
+    return <Navigate to={localize(user.role === "customer" ? "/customer" : "/admin")} replace />;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
