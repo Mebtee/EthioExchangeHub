@@ -650,7 +650,7 @@
     },
     "login": {
       "title": "登录",
-      "subtitle": "访问 Ethio Exchange 管理控制台。",
+      "subtitle": "登录您的账户。",
       "errorFallback": "无法登录。请重试。",
       "email": "邮箱",
       "password": "密码",
@@ -658,7 +658,9 @@
       "hidePassword": "隐藏密码",
       "showPassword": "显示密码",
       "signingIn": "正在登录…",
-      "signIn": "登录"
+      "signIn": "登录",
+      "noAccount": "还没有账户？",
+      "createAccount": "立即注册"
     },
     "forgotPassword": {
       "inboxTitle": "请检查您的收件箱",

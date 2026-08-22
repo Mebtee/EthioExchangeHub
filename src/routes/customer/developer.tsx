@@ -177,7 +177,7 @@ X-Quota-Reset: 2026-08-01T00:00:00.000Z`}
             {t("customer.developer.freshnessBody")}
           </p>
           <a
-            href="https://ethioexchangehub.onrender.com/docs"
+            href={config.docsUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"

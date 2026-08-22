@@ -650,7 +650,7 @@
     },
     "login": {
       "title": "Sign in",
-      "subtitle": "Access the Ethio Exchange admin console.",
+      "subtitle": "Sign in to your account.",
       "errorFallback": "Unable to sign in. Please try again.",
       "email": "Email",
       "password": "Password",
@@ -658,7 +658,9 @@
       "hidePassword": "Hide password",
       "showPassword": "Show password",
       "signingIn": "Signing in…",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "noAccount": "No account yet?",
+      "createAccount": "Create one"
     },
     "forgotPassword": {
       "inboxTitle": "Check your inbox",

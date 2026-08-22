@@ -650,7 +650,7 @@
     },
     "login": {
       "title": "ይግቡ",
-      "subtitle": "የኢትዮ ኤክስቸንጅ አስተዳደር ኮንሶል ያግኙ።",
+      "subtitle": "ወደ መለያዎ ይግቡ።",
       "errorFallback": "መግባት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
       "email": "ኢሜል",
       "password": "የይለፍ ቃል",
@@ -658,7 +658,9 @@
       "hidePassword": "የይለፍ ቃል ደብቅ",
       "showPassword": "የይለፍ ቃል አሳይ",
       "signingIn": "በመግባት ላይ…",
-      "signIn": "ይግቡ"
+      "signIn": "ይግቡ",
+      "noAccount": "መለያ የለዎትም?",
+      "createAccount": "ይፍጠሩት"
     },
     "forgotPassword": {
       "inboxTitle": "የመልእክት ሳጥንዎን ያረጋግጡ",

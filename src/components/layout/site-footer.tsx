@@ -6,7 +6,6 @@ import { useLocale } from "@/hooks";
 
 export function SiteFooter() {
   const { t } = useTranslation();
-  const { localize } = useLocale();
 
   return (
     <footer className="mt-16 border-t border-border/60 bg-surface-low">
@@ -69,7 +68,9 @@ export function SiteFooter() {
           title={t("footer.contact")}
           links={[
             { to: "/contact", label: t("footer.support") },
-            { to: "/contact", label: t("footer.apiAccess") },
+            // Commercial CTA — the register page routes signed-in users to
+            // their area by role, so this static target serves every visitor.
+            { to: "/customer/register", label: t("footer.apiAccess") },
             { to: "/contact", label: t("footer.feedback") },
           ]}
         />

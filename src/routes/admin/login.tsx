@@ -102,6 +102,16 @@ export default function AdminLoginPage() {
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           {isSubmitting ? t("auth.login.signingIn") : t("auth.login.signIn")}
         </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {t("auth.login.noAccount")}{" "}
+          <Link
+            to={localize("/customer/register")}
+            className="font-semibold text-primary hover:underline"
+          >
+            {t("auth.login.createAccount")}
+          </Link>
+        </p>
       </form>
     </AuthShell>
   );
