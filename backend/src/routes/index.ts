@@ -4,9 +4,11 @@ import { AdminController } from "@/controllers/AdminController";
 import { AdminPaymentController } from "@/controllers/AdminPaymentController";
 import { AuthController } from "@/controllers/AuthController";
 import { BanksController } from "@/controllers/BanksController";
+import { CommercialApiController } from "@/controllers/CommercialApiController";
 import { ContactController } from "@/controllers/ContactController";
 import { CustomerApiKeysController } from "@/controllers/CustomerApiKeysController";
 import { CustomerSubscriptionController } from "@/controllers/CustomerSubscriptionController";
+import { CustomerUsageController } from "@/controllers/CustomerUsageController";
 import { ExchangeRatesController } from "@/controllers/ExchangeRatesController";
 import { FeaturedContentController } from "@/controllers/FeaturedContentController";
 import { ManualRatesController } from "@/controllers/ManualRatesController";
@@ -19,6 +21,7 @@ import { createAuthLimiter } from "@/middleware/rate-limit";
 import { BanksRepository } from "@/repositories/BanksRepository";
 import { ApiKeysRepository } from "@/repositories/ApiKeysRepository";
 import { ApiPlansRepository } from "@/repositories/ApiPlansRepository";
+import { ApiUsageRepository } from "@/repositories/ApiUsageRepository";
 import { BankPaymentConfigRepository } from "@/repositories/BankPaymentConfigRepository";
 import { PaymentReceiptsRepository } from "@/repositories/PaymentReceiptsRepository";
 import { PaymentsRepository } from "@/repositories/PaymentsRepository";
@@ -45,6 +48,7 @@ import { ScrapeLogsServiceImpl } from "@/services/ScrapeLogsService";
 import { SettingsServiceImpl } from "@/services/SettingsService";
 import { CustomerApiKeysServiceImpl } from "@/services/CustomerApiKeysService";
 import { CustomerSubscriptionServiceImpl } from "@/services/CustomerSubscriptionService";
+import { CustomerUsageServiceImpl } from "@/services/CustomerUsageService";
 import { AdminPaymentServiceImpl } from "@/services/AdminPaymentService";
 import { PaymentServiceImpl } from "@/services/PaymentService";
 import { SupabaseReceiptStorage } from "@/lib/receipt-storage";
@@ -57,11 +61,13 @@ import {
   customerApiKeysRouter,
   customerPaymentRouter,
   customerSubscriptionRouter,
+  customerUsageRouter,
 } from "./customer.routes";
 import { exchangeRatesRouter } from "./exchange-rates.routes";
 import { featuredAdminRouter, featuredRouter } from "./featured.routes";
 import { manualRatesRouter } from "./manual-rates.routes";
 import { newsRouter } from "./news.routes";
+import { commercialPublicRouter } from "./public.routes";
 import { scraperHealthRouter } from "./scraper-health.routes";
 import { scrapeLogsRouter } from "./scrape-logs.routes";
 
@@ -221,6 +227,23 @@ const adminPaymentService = new AdminPaymentServiceImpl(
 );
 const adminPaymentController = new AdminPaymentController(adminPaymentService);
 
+// ---- Public commercial API (Phase 4) ----
+// `PAID SUBSCRIPTION → API KEY → AUTHENTICATED API ACCESS → RATE LIMIT →
+// MONTHLY QUOTA → USAGE`. The commercial surface is a GATED VIEW over the
+// same exchange-rate/banks services the free website uses — one data model,
+// no duplicated business logic. The middleware chain (auth → RPM → quota →
+// meter) is assembled inside `commercialPublicRouter`.
+const apiUsageRepository = new ApiUsageRepository();
+const customerUsageService = new CustomerUsageServiceImpl(
+  customersRepository,
+  apiKeysRepository,
+  subscriptionsRepository,
+  apiPlansRepository,
+  apiUsageRepository,
+);
+const customerUsageController = new CustomerUsageController(customerUsageService);
+const commercialApiController = new CommercialApiController(exchangeRatesService, banksService);
+
 /** Versioned router exposed at `/api/v1`. */
 export const apiRouter = Router();
 
@@ -241,6 +264,18 @@ apiRouter.use(
   customerApiKeysRouter(customerApiKeysController),
   customerSubscriptionRouter(customerSubscriptionController),
   customerPaymentRouter(paymentController),
+  customerUsageRouter(customerUsageController),
+);
+apiRouter.use(
+  "/public",
+  commercialPublicRouter({
+    apiKeysRepository,
+    customersRepository,
+    subscriptionsRepository,
+    apiPlansRepository,
+    apiUsageRepository,
+    controller: commercialApiController,
+  }),
 );
 apiRouter.use("/banks", banksRouter(banksController));
 apiRouter.use("/rates", exchangeRatesRouter(exchangeRatesController));

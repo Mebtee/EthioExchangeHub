@@ -21,4 +21,9 @@ export class CustomersRepository extends BaseRepository<"customers"> {
   findByUserId(userId: string): Promise<CustomerRow | null> {
     return this.findOneBy({ user_id: userId });
   }
+
+  /** Resolves a profile by primary key (commercial API auth path), or null. */
+  findById(id: string): Promise<CustomerRow | null> {
+    return this.findOneBy({ id });
+  }
 }

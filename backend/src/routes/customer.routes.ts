@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import type { CustomerApiKeysController } from "@/controllers/CustomerApiKeysController";
 import type { CustomerSubscriptionController } from "@/controllers/CustomerSubscriptionController";
+import type { CustomerUsageController } from "@/controllers/CustomerUsageController";
 import type { PaymentController } from "@/controllers/PaymentController";
 import { requireSingleUpload } from "@/middleware/upload";
 import { validateBody, validateParams } from "@/middleware/validation";
@@ -55,6 +56,16 @@ export function customerPaymentRouter(controller: PaymentController): Router {
     requireSingleUpload("receipt"),
     controller.uploadReceipt,
   );
+
+  return router;
+}
+
+/** Customer usage analytics (Phase 4, Part K). */
+export function customerUsageRouter(controller: CustomerUsageController): Router {
+  const router = Router();
+
+  router.get("/usage", controller.getUsage);
+  router.get("/usage/:id", validateParams(apiKeyIdParamsSchema), controller.getKeyUsage);
 
   return router;
 }

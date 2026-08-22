@@ -32,7 +32,7 @@ import {
 
 const app = createApp();
 
-/** Catalog fixture mirroring the documented Free plan (spec section J). */
+/** Catalog fixture mirroring the documented Free plan (0 ETB / 2,000 req/mo / 30 RPM / 1 key). */
 export const FREE_PLAN = {
   id: "11111111-1111-4111-8111-000000000001",
   name: "Free",
@@ -41,8 +41,8 @@ export const FREE_PLAN = {
   price: 0,
   currency: "ETB",
   billing_interval: "monthly",
-  monthly_request_limit: 10000,
-  requests_per_minute: 60,
+  monthly_request_limit: 2000,
+  requests_per_minute: 30,
   max_api_keys: 1,
   is_active: true,
   display_order: 1,

@@ -28,15 +28,17 @@ import {
 const app = createApp();
 
 const NOW_STAMP = "2026-08-01T00:00:00.000Z";
+// Plan fixtures mirror the production catalog exactly (spec P):
+// Free 0 ETB / 2,000 req/mo / 30 RPM / 1 key; Starter 499 / 25,000 / 60 / 2.
 const FREE_PLAN = { ...basePlan(1), name: "Free", slug: "free", price: 0 };
 const STARTER_PLAN = {
   ...basePlan(2),
   name: "Starter",
   slug: "starter",
-  price: 900,
+  price: 499,
   monthly_request_limit: 25000,
-  requests_per_minute: 120,
-  max_api_keys: 3,
+  requests_per_minute: 60,
+  max_api_keys: 2,
 };
 const RETIRED_PLAN = { ...basePlan(3), name: "Retired", slug: "retired", is_active: false };
 
@@ -46,8 +48,8 @@ function basePlan(displayOrder: number) {
     description: null,
     currency: "ETB",
     billing_interval: "monthly",
-    monthly_request_limit: 10000,
-    requests_per_minute: 60,
+    monthly_request_limit: 2000,
+    requests_per_minute: 30,
     max_api_keys: 1,
     is_active: true,
     display_order: displayOrder,

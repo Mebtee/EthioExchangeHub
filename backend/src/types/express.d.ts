@@ -1,4 +1,5 @@
 import type { AuthenticatedUser } from "./auth";
+import type { CommercialApiContext } from "./commercial-api";
 
 /**
  * Express request augmentation: `requireAuth` attaches the authenticated user
@@ -10,6 +11,12 @@ declare global {
     interface Request {
       /** Authenticated user attached by the `createRequireAuth` middleware. */
       user?: AuthenticatedUser;
+      /**
+       * Commercial API context attached by `createCommercialApiAuth` (Phase 4)
+       * — present ONLY on `/public/*` routes after successful API-key
+       * authentication. Never exposed in responses.
+       */
+      commercialApi?: CommercialApiContext;
     }
   }
 }

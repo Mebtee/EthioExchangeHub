@@ -203,6 +203,60 @@ export class FakeSupabaseClient {
   from(table: string): FakeBuilder {
     return new FakeBuilder(this, { table, filters: [], orders: [] });
   }
+
+  /**
+   * Mimics `supabase.rpc(fn, args)` for migration 0007's atomic usage
+   * upsert-and-increment. Mirrors the SQL: insert-or-update on
+   * (api_key_id, period_start) and return the NEW request_count.
+   *
+   * Bound arrow property: repositories may detach the method
+   * (`const rpc = client.rpc`) exactly as they do with supabase-js, which
+   * never relies on call-site `this`.
+   */
+  readonly rpc = (
+    fn: string,
+    args: {
+      p_api_key_id?: string;
+      p_subscription_id?: string;
+      p_period_start?: string;
+      p_increment?: number;
+    },
+  ): PromiseLike<{ data: unknown; error: FakePostgrestError | null }> => {
+    if (this.nextError) {
+      const error = this.nextError;
+      this.nextError = null;
+      return Promise.resolve({ data: null, error });
+    }
+    if (fn !== "increment_api_usage") {
+      throw new Error(`FakeSupabaseClient.rpc: unsupported function "${fn}"`);
+    }
+    const apiKeyId = args.p_api_key_id!;
+    const periodStart = args.p_period_start!;
+    const step = args.p_increment ?? 1;
+    const rows = this.tables.get("api_usage") ?? [];
+    this.tables.set("api_usage", rows);
+    const existing = rows.find(
+      (row) => row.api_key_id === apiKeyId && row.period_start === periodStart,
+    );
+    let count: number;
+    if (existing) {
+      count = ((existing.request_count as number) ?? 0) + step;
+      existing.request_count = count;
+      existing.subscription_id = args.p_subscription_id ?? existing.subscription_id;
+    } else {
+      count = step;
+      rows.push({
+        id: randomUUID(),
+        api_key_id: apiKeyId,
+        subscription_id: args.p_subscription_id ?? null,
+        period_start: periodStart,
+        request_count: count,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+    return Promise.resolve({ data: count, error: null });
+  };
 }
 
 /** Deep-copy helper so seeds are never mutated across tests. */

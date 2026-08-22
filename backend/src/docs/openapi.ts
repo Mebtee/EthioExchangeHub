@@ -31,6 +31,7 @@ import {
   customerPlanSchema,
   customerSubscriptionSchema,
 } from "./schemas/subscription";
+import { customerUsageSchema, keyUsageSchema, usageKeySchema } from "./schemas/commercial";
 import {
   adminBankAccountSchema,
   adminPaymentSchema,
@@ -87,6 +88,8 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       "**Operations (Phase 2K)**: unversioned infrastructure endpoints — `GET /live` (liveness, no DB call), `GET /ready` (readiness), and `GET /metrics` (Prometheus) — are also outside `/api/v1` and not listed above.",
       "",
       "**Authentication**: the admin surface (`/admin`, `/manual-rates`, `/auth/me`, `/scraper-health`, `/scrape-logs`) requires a `bearerAuth` (JWT) access token obtained from `POST /auth/login`. Public endpoints (`/banks`, `/rates`, `/news`, `/featured`, `/contact`) remain open. Protected operations declare `security: [{ bearerAuth: [] }]`.",
+      "",
+      "**Commercial API (Phase 4)**: the paid data API at `/public/*` uses a DIFFERENT credential — an API key (`commercialApiKey` scheme, `Authorization: Bearer eeh_live_…`) created via the customer dashboard endpoints. Every commercial request must resolve to an ACTIVE subscription within its billing period; the plan's requests-per-minute and monthly request quota are enforced (HTTP 429 with distinct messages). Customers inspect their consumption at `GET /customer/usage`.",
     ].join("\n"),
   },
   servers: [
@@ -108,6 +111,13 @@ export const openApiDocument: OpenAPIV3_1.Document = {
         bearerFormat: "JWT",
         description:
           "Access token from `POST /auth/login` (or the refreshed pair). Required on the admin surface.",
+      },
+      commercialApiKey: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "eeh_live_…",
+        description:
+          "Commercial API key (Phase 4) created at `POST /customer/api-keys`. The full secret `eeh_live_…` is shown exactly once at creation; send it as `Authorization: Bearer eeh_live_YOUR_API_KEY`. NEVER a customer login token — JWTs are rejected on `/public/*`.",
       },
     },
     schemas: {
@@ -131,6 +141,9 @@ export const openApiDocument: OpenAPIV3_1.Document = {
       CustomerPlan: customerPlanSchema,
       CustomerSubscription: customerSubscriptionSchema,
       CreateCustomerSubscriptionInput: createCustomerSubscriptionInputSchema,
+      UsageKey: usageKeySchema,
+      CustomerUsage: customerUsageSchema,
+      KeyUsage: keyUsageSchema,
       BankAccount: bankAccountSchema,
       CustomerPayment: customerPaymentSchema,
       SubmitPaymentInput: submitPaymentInputSchema,

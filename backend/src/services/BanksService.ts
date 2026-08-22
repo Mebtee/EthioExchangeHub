@@ -16,6 +16,8 @@ export interface BanksService {
   listBanks(filter?: BanksFilter): Promise<BankRow[]>;
   listActiveBanks(): Promise<BankRow[]>;
   findByBankCode(bankCode: string): Promise<BankRow>;
+  /** Like findByBankCode but INACTIVE banks answer NotFound (commercial directory). */
+  findActiveByBankCode(bankCode: string): Promise<BankRow>;
   validateBankExists(bankCode: string): Promise<void>;
   validateBankActive(bankCode: string): Promise<void>;
 }
@@ -48,6 +50,15 @@ export class BanksServiceImpl implements BanksService {
   /** Returns the bank or throws NotFoundError. */
   async findByBankCode(bankCode: string): Promise<BankRow> {
     const bank = await this.banksRepository.findByBankCode(bankCode);
+    if (bank === null) {
+      throw new NotFoundError(`Bank "${bankCode}" not found.`);
+    }
+    return bank;
+  }
+
+  /** Returns the ACTIVE bank or throws NotFoundError (inactive = not found). */
+  async findActiveByBankCode(bankCode: string): Promise<BankRow> {
+    const bank = await this.banksRepository.findActiveByBankCode(bankCode);
     if (bank === null) {
       throw new NotFoundError(`Bank "${bankCode}" not found.`);
     }
