@@ -151,11 +151,17 @@ export class AdminPaymentServiceImpl implements AdminPaymentService {
       if (payment.status !== "pending") {
         throw new ConflictError("Only pending payments can be moved under review.");
       }
+      // CAS: the WHERE clause carries the expected prior status, so a racing
+      // admin request that flips the row first makes this update match 0 rows.
       const updated = await this.paymentsRepository.updateBy(
-        { id: payment.id },
+        { id: payment.id, status: "pending" },
         { status: "under_review", updated_at: timestamp },
       );
-      if (!updated) throw new DatabaseError("The payment could not be updated.");
+      if (!updated) {
+        throw new ConflictError(
+          "This payment was just reviewed by someone else. Refresh and try again.",
+        );
+      }
       logger.info("Admin moved payment under review", {
         paymentId: payment.id,
         reviewedBy: adminUserId,
@@ -163,9 +169,11 @@ export class AdminPaymentServiceImpl implements AdminPaymentService {
       return AdminPaymentServiceImpl.toView(updated);
     }
 
-    // approve / reject share the same review stamping…
+    // approve / reject share the same review stamping; the CAS guard pins the
+    // status observed above so only ONE of two concurrent reviews can commit.
+    const expectedStatus = payment.status;
     const updated = await this.paymentsRepository.updateBy(
-      { id: payment.id },
+      { id: payment.id, status: expectedStatus },
       input.action === "approve"
         ? {
             status: "approved",
@@ -181,7 +189,11 @@ export class AdminPaymentServiceImpl implements AdminPaymentService {
             updated_at: timestamp,
           },
     );
-    if (!updated) throw new DatabaseError("The payment could not be updated.");
+    if (!updated) {
+      throw new ConflictError(
+        "This payment was just reviewed by someone else. Refresh and try again.",
+      );
+    }
 
     if (input.action === "reject") {
       logger.info("Admin rejected a payment", {

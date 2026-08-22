@@ -43,4 +43,21 @@ export const adminKeys = {
   scraperHealthList: () => [...adminKeys.all, "scraper-health-list"] as const,
   profile: () => [...adminKeys.all, "profile"] as const,
   settings: () => [...adminKeys.all, "settings"] as const,
+  payments: (status?: string) =>
+    status === undefined
+      ? ([...adminKeys.all, "payments"] as const)
+      : ([...adminKeys.all, "payments", { status }] as const),
+  bankAccounts: () => [...adminKeys.all, "bank-accounts"] as const,
+};
+
+/** Customer developer-portal queries (Phase 6). */
+export const customerKeys = {
+  all: ["customer"] as const,
+  plans: () => [...customerKeys.all, "plans"] as const,
+  subscription: () => [...customerKeys.all, "subscription"] as const,
+  apiKeys: () => [...customerKeys.all, "api-keys"] as const,
+  payments: () => [...customerKeys.all, "payments"] as const,
+  paymentMethods: () => [...customerKeys.all, "payment-methods"] as const,
+  usage: () => [...customerKeys.all, "usage"] as const,
+  keyUsage: (keyId: string) => [...customerKeys.all, "usage", keyId] as const,
 };

@@ -1,48 +1,48 @@
 import { Link, NavLink } from "react-router-dom";
 import {
-  Activity,
+  BarChart3,
   CreditCard,
   ExternalLink,
+  KeyRound,
   LayoutDashboard,
-  Megaphone,
-  PencilLine,
-  ScrollText,
-  Settings,
-  User,
+  Layers,
+  ReceiptText,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useLocale } from "@/hooks";
+import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 
+/** Sidebar entries for the customer developer portal (Phase 6). */
 const NAV_ITEMS: Array<{
   to: string;
   labelKey:
-    | "admin.nav.dashboard"
-    | "admin.nav.manualRates"
-    | "admin.nav.payments"
-    | "admin.nav.featured"
-    | "admin.nav.scraperHealth"
-    | "admin.nav.scrapeLogs"
-    | "admin.nav.profile"
-    | "admin.nav.settings";
+    | "customer.nav.dashboard"
+    | "customer.nav.apiKeys"
+    | "customer.nav.plans"
+    | "customer.nav.subscription"
+    | "customer.nav.payments"
+    | "customer.nav.usage"
+    | "customer.nav.developer";
   icon: LucideIcon;
   end?: boolean;
 }> = [
-  { to: "/admin", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
-  { to: "/admin/manual-rates", labelKey: "admin.nav.manualRates", icon: PencilLine },
-  { to: "/admin/payments", labelKey: "admin.nav.payments", icon: CreditCard },
-  { to: "/admin/featured", labelKey: "admin.nav.featured", icon: Megaphone },
-  { to: "/admin/scraper-health", labelKey: "admin.nav.scraperHealth", icon: Activity },
-  { to: "/admin/scrape-logs", labelKey: "admin.nav.scrapeLogs", icon: ScrollText },
-  { to: "/admin/profile", labelKey: "admin.nav.profile", icon: User },
-  { to: "/admin/settings", labelKey: "admin.nav.settings", icon: Settings },
+  { to: "/customer", labelKey: "customer.nav.dashboard", icon: LayoutDashboard, end: true },
+  { to: "/customer/api-keys", labelKey: "customer.nav.apiKeys", icon: KeyRound },
+  { to: "/customer/plans", labelKey: "customer.nav.plans", icon: Layers },
+  { to: "/customer/subscription", labelKey: "customer.nav.subscription", icon: ReceiptText },
+  { to: "/customer/payments", labelKey: "customer.nav.payments", icon: CreditCard },
+  { to: "/customer/usage", labelKey: "customer.nav.usage", icon: BarChart3 },
+  { to: "/customer/developer", labelKey: "customer.nav.developer", icon: BookOpen },
 ];
 
-export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function CustomerSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const { localize } = useLocale();
+  const { user } = useAuth();
 
   return (
     <div className="flex h-full flex-col">
@@ -50,10 +50,10 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
           E
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-bold leading-tight">Ethio Exchange</p>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t("admin.console")}
+          <p className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+            {t("customer.portalName")}
           </p>
         </div>
       </div>
@@ -69,7 +69,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
               cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary font-semibold"
+                  ? "bg-primary/10 font-semibold text-primary"
                   : "text-muted-foreground hover:bg-surface-low hover:text-foreground",
               )
             }
@@ -88,6 +88,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           <ExternalLink className="size-4" />
           {t("admin.viewPublicSite")}
         </Link>
+        {user && <p className="mt-2 truncate px-3 text-xs text-muted-foreground">{user.email}</p>}
       </div>
     </div>
   );

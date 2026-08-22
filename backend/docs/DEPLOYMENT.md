@@ -35,17 +35,20 @@ This guide covers deploying the Ethio Exchange Hub backend API to production.
 
 | Variable                                      | Required | Notes                                                                                    |
 | --------------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
-| `NODE_ENV`                                    | no       | `production` recommended                                                                 |
+| `NODE_ENV`                                    | no       | Set to `production` in deployed environments (also fixes the docs server URL fallback)   |
 | `PORT`                                        | no       | Default `5000`                                                                           |
 | `ALLOWED_ORIGINS`                             | yes*     | Comma-separated CORS allow-list — must include the deployed frontend origin              |
 | `FRONTEND_URL`                                | no       | Legacy fallback origin when `ALLOWED_ORIGINS` is empty (default `http://localhost:8080`) |
 | `SUPABASE_URL`                                | **yes**  | Fail-fast at boot                                                                        |
 | `SUPABASE_SERVICE_ROLE_KEY`                   | **yes**  | Fail-fast at boot — treat as a secret                                                    |
-| `JWT_SECRET`                                  | **yes**  | ≥ 8 chars — treat as a secret                                                            |
-| `JWT_EXPIRES_IN` / `REFRESH_TOKEN_EXPIRES_IN` | no       | Token lifetimes                                                                          |
+| `JWT_SECRET`                                  | **yes**  | ≥ 32 chars, e.g. `openssl rand -base64 48` — treat as a secret                           |
+| `ADMIN_EMAIL`                                 | no       | Default `admin@ethioexchange.dev`                                                        |
+| `ADMIN_PASSWORD`                              | **yes**  | ≥ 12 chars with upper + lower + digit + special — fail-fast at boot                      |
+| `OPENAPI_SERVER_URL`                          | no       | Public API base URL shown in `/docs`; production falls back to the Render URL            |
+| `JWT_EXPIRES_IN` / `REFRESH_TOKEN_EXPIRES_IN` | no       | Token lifetimes (`15m` / `30d`)                                                          |
 | `LOG_LEVEL`                                   | no       | `info` recommended in production                                                         |
 
-\* `ALLOWED_ORIGINS` has no default when unset it falls back to `FRONTEND_URL` (default `http://localhost:8080`); override in production.
+\* `ALLOWED_ORIGINS` has no default; when unset it falls back to `FRONTEND_URL` (default `http://localhost:8080`). In production set it to your deployed frontend origin, e.g. `https://ethioexchangehub.vercel.app`.
 
 ## Build & run
 
@@ -60,7 +63,9 @@ docker run -d --name ethio-exchange-backend \
   -e NODE_ENV=production \
   -e SUPABASE_URL=https://your-project.supabase.co \
   -e SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
-  -e JWT_SECRET='a-long-random-secret' \
+  -e JWT_SECRET='a-long-random-secret-at-least-32-chars' \
+  -e ADMIN_PASSWORD='change-me-Str0ng!' \
+  -e ALLOWED_ORIGINS='https://ethioexchangehub.vercel.app' \
   ethio-exchange-backend:latest
 ```
 

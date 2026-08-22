@@ -24,15 +24,17 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const from = (location.state as { from?: string } | null)?.from ?? "/admin";
+  // Post-login destination: an explicit "from" path wins; otherwise route by
+  // role so customers land in their portal instead of the admin dead end.
+  const from = (location.state as { from?: string } | null)?.from;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
     try {
-      await login({ email, password });
-      navigate(from, { replace: true });
+      const user = await login({ email, password });
+      navigate(from ?? (user.role === "customer" ? "/customer" : "/admin"), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.login.errorFallback"));
     } finally {
