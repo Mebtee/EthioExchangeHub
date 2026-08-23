@@ -56,7 +56,11 @@ export default function CustomerRegisterPage() {
   }
 
   return (
-    <AuthShell title={t("customer.register.title")} subtitle={t("customer.register.subtitle")}>
+    <AuthShell
+      title={t("customer.register.title")}
+      subtitle={t("customer.register.subtitle")}
+      badge={t("customer.register.portalBadge")}
+    >
       <form onSubmit={(e) => void handleSubmit(e)} className="grid gap-5" noValidate>
         {error && (
           <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">

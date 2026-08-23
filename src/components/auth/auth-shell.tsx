@@ -5,10 +5,13 @@ import { useTranslation } from "react-i18next";
 export function AuthShell({
   title,
   subtitle,
+  badge,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** Brand line under the logo; defaults to the admin console label. */
+  badge?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -23,7 +26,7 @@ export function AuthShell({
             <div className="text-left">
               <p className="text-lg font-bold tracking-tight">Ethio Exchange</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {t("auth.shell.console")}
+                {badge ?? t("auth.shell.console")}
               </p>
             </div>
           </Link>

@@ -55,6 +55,17 @@ describe("CustomerRegisterPage entry routing", () => {
     expect(screen.queryByText("ADMIN_AREA")).not.toBeInTheDocument();
   });
 
+  it("never brands the CUSTOMER registration page as the admin console", () => {
+    // Production bug: the page rendered inside AuthShell with the hardcoded
+    // "Admin Console" badge, so visitors believed API Access had taken them
+    // to /admin even though the URL was /en/customer/register.
+    mockAuth(false);
+    renderPage();
+
+    expect(screen.getByText("Developer Portal")).toBeInTheDocument();
+    expect(screen.queryByText(/admin console/i)).not.toBeInTheDocument();
+  });
+
   it("shows the registration form to signed-out visitors", () => {
     mockAuth(false);
     renderPage();
