@@ -49,6 +49,19 @@ describe("planSelectionState", () => {
     }
   });
 
+  it("blocks everything while an upgrade is pending behind the ACTIVE plan", () => {
+    const activeWithPendingUpgrade = {
+      ...sub(FREE.id, "active"),
+      pendingUpgrade: sub(STARTER.id, "pending"),
+    };
+    for (const plan of CATALOG) {
+      expect(planSelectionState(activeWithPendingUpgrade, CATALOG, plan.id)).toEqual({
+        selectable: false,
+        block: "blocked",
+      });
+    }
+  });
+
   it("allows strictly pricier UPGRADES from the active plan", () => {
     expect(planSelectionState(sub(FREE.id, "active"), CATALOG, STARTER.id)).toEqual({
       selectable: true,

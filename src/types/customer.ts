@@ -26,7 +26,7 @@ export interface CustomerPlan {
 export type CustomerSubscriptionStatus =
   "pending" | "active" | "suspended" | "expired" | "cancelled";
 
-/** `GET /customer/subscription` — the latest subscription of any status. */
+/** `GET /customer/subscription` — the effective subscription (latest ACTIVE row, else latest). */
 export interface CustomerSubscription {
   id: string;
   planId: string;
@@ -37,6 +37,11 @@ export interface CustomerSubscription {
   currentPeriodEnd: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * The unpaid upgrade awaiting payment while this ACTIVE subscription stays
+   * effective — absent/null when no upgrade is pending.
+   */
+  pendingUpgrade?: CustomerSubscription | null;
 }
 
 /** `GET /customer/api-keys` item — prefix only, never the secret or hash. */

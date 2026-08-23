@@ -23,12 +23,23 @@ export interface PlanSelectionState {
  * compared server-side too, so this is a UX mirror, not the enforcement.
  */
 export function planSelectionState(
-  subscription: Pick<CustomerSubscription, "planId" | "status"> | null,
+  subscription:
+    | (Pick<CustomerSubscription, "planId" | "status"> & {
+        /** Only `planId`/`status` are read from an attached pending upgrade. */
+        pendingUpgrade?: Pick<CustomerSubscription, "planId" | "status"> | null;
+      })
+    | null,
   plans: CustomerPlan[],
   planId: string,
 ): PlanSelectionState {
   if (!subscription) return { selectable: true, block: null };
-  if (subscription.status === "pending" || subscription.status === "suspended") {
+  // A pending upgrade behind an ACTIVE subscription blocks selection exactly
+  // like a pending subscription — only one unpaid selection may exist.
+  if (
+    subscription.status === "pending" ||
+    subscription.status === "suspended" ||
+    Boolean(subscription.pendingUpgrade)
+  ) {
     return { selectable: false, block: "blocked" };
   }
   if (subscription.status !== "active") return { selectable: true, block: null };

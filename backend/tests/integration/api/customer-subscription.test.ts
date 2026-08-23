@@ -227,11 +227,16 @@ describe("POST /customer/subscription", () => {
     expect(getFakeClient().tables.get("subscriptions")).toHaveLength(2); // INSERT, history kept
 
     // The effective subscription view still answers with the ACTIVE Free row
-    // until the upgrade payment is approved.
+    // until the upgrade payment is approved — and attaches the pending
+    // upgrade so the Payments page can render the payable item.
     const view = await request(app).get("/api/v1/customer/subscription").set(auth);
     expect(view.status).toBe(200);
-    expect((view.body.data as Record<string, unknown>).planId).toBe(FREE_PLAN.id);
-    expect((view.body.data as Record<string, unknown>).status).toBe("active");
+    const data = view.body.data as Record<string, unknown>;
+    expect(data.planId).toBe(FREE_PLAN.id);
+    expect(data.status).toBe("active");
+    const pendingUpgrade = data.pendingUpgrade as Record<string, unknown> | undefined;
+    expect(pendingUpgrade?.planId).toBe(STARTER_PLAN.id);
+    expect(pendingUpgrade?.status).toBe("pending");
   });
 
   it("answers 409 for same-plan re-selection and downgrades while a plan is active", async () => {
