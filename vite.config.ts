@@ -11,6 +11,11 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Tests must not depend on a local .env (absent in CI); config.ts throws
+    // without this, so pin the same value .env.example documents for local dev.
+    env: {
+      VITE_API_BASE_URL: "http://localhost:5000/api/v1",
+    },
   },
   server: {
     host: "::",
