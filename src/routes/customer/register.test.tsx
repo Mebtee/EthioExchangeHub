@@ -6,14 +6,18 @@ import CustomerRegisterPage from "./register";
 
 import type { AuthUser } from "@/types/auth";
 
-function mockAuth(isAuthenticated: boolean, role?: AuthUser["role"]) {
+function mockAuth(
+  isAuthenticated: boolean,
+  role?: AuthUser["role"],
+  { isLoading = false }: { isLoading?: boolean } = {},
+) {
   vi.mocked(useAuthMock).mockReturnValue({
     user:
       isAuthenticated && role
         ? ({ id: "u-1", name: "Test", email: "t@example.com", role } as AuthUser)
         : null,
     isAuthenticated,
-    isLoading: false,
+    isLoading,
     login: vi.fn(async () => ({}) as never),
     logout: vi.fn(async () => {}),
     hasRole: (...roles: string[]) => isAuthenticated && !!role && roles.includes(role),
@@ -39,6 +43,18 @@ function renderPage() {
 }
 
 describe("CustomerRegisterPage entry routing", () => {
+  it("shows the form to guests while session restore is still loading", () => {
+    // Regression: the page must never redirect or throw while AuthContext is
+    // initializing (isLoading=true, no user yet) — this is the exact state a
+    // guest with stale tokens passes through on the public CTA landing.
+    mockAuth(false, undefined, { isLoading: true });
+    renderPage();
+
+    expect(screen.getByText("Create your developer account")).toBeInTheDocument();
+    expect(screen.queryByText("CUSTOMER_PORTAL")).not.toBeInTheDocument();
+    expect(screen.queryByText("ADMIN_AREA")).not.toBeInTheDocument();
+  });
+
   it("shows the registration form to signed-out visitors", () => {
     mockAuth(false);
     renderPage();
