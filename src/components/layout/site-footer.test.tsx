@@ -19,8 +19,8 @@ describe("SiteFooter API Access CTA", () => {
   it("points the commercial entry point at customer registration", () => {
     renderFooter();
 
-    // The register page forwards signed-in visitors to their area by role,
-    // so this single static target serves customers, admins, and guests.
+    // The CTA is public: it must always land on the registration form, even
+    // for signed-in staff (only customers are forwarded to their portal).
     expect(screen.getByRole("link", { name: "API Access" })).toHaveAttribute(
       "href",
       "/en/customer/register",
