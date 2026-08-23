@@ -804,10 +804,12 @@
       "currentBadge": "当前套餐",
       "subscribePaid": "订阅",
       "subscribeFree": "免费开始",
+      "upgrade": "升级套餐",
+      "downgradeNote": "暂不支持降级。",
       "pendingToast": "套餐已选择！请前往“支付”页面完成银行转账。",
       "freeActivatedToast": "免费套餐已激活。",
       "manualPaymentNote": "付费套餐通过手动银行转账结算；核实后激活。",
-      "blockedNote": "您已有生效中或等待付款的订阅。订阅过期或取消后可重新选择套餐。",
+      "blockedNote": "您的账户有一笔付款正在等待核实，或账户已被暂停。解决后即可重新选择套餐。",
       "billingExplainer": "价格以埃塞俄比亚比尔（ETB）按月计费。我们的团队核实您的银行转账后，订阅才会激活。"
     },
     "subscription": {

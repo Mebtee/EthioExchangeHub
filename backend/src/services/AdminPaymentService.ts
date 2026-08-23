@@ -268,8 +268,10 @@ export class AdminPaymentServiceImpl implements AdminPaymentService {
 
   /**
    * Stamps the payment's subscription active with a one-month period starting
-   * NOW (server time). Called only on the approved transition — never on
-   * resubmission, rejection, or repeated approval.
+   * NOW (server time), then supersedes every OTHER active subscription of the
+   * same customer so plan upgrades leave exactly one active row. Called only
+   * on the approved transition — never on resubmission, rejection, or
+   * repeated approval.
    */
   private async activateSubscriptionForPayment(
     approvedPayment: PaymentRow,
@@ -295,6 +297,30 @@ export class AdminPaymentServiceImpl implements AdminPaymentService {
     );
     if (!updated) {
       throw new DatabaseError("The associated subscription could not be activated.");
+    }
+
+    // Upgrade handover: older ACTIVE subscriptions are cancelled with an
+    // explicit reason and their billing period closed — never deleted, so
+    // full history stays intact for audits and support.
+    const history = await this.subscriptionsRepository.listByCustomer(approvedPayment.customer_id);
+    for (const previous of history) {
+      if (previous.status !== "active" || previous.id === approvedPayment.subscription_id) {
+        continue;
+      }
+      await this.subscriptionsRepository.updateBy(
+        { id: previous.id },
+        {
+          status: "cancelled",
+          ends_at: timestamp,
+          cancelled_at: timestamp,
+          cancellation_reason: `Superseded by upgrade (payment ${approvedPayment.id}).`,
+          updated_at: timestamp,
+        },
+      );
+      logger.info("Previous subscription superseded by upgrade", {
+        subscriptionId: previous.id,
+        paymentId: approvedPayment.id,
+      });
     }
   }
 

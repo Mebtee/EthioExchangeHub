@@ -180,6 +180,25 @@ describe("CustomerSubscriptionServiceImpl.getSubscription", () => {
     expect(view.status).toBe("active");
   });
 
+  it("prefers the ACTIVE subscription over a newer PENDING upgrade", async () => {
+    // While an upgrade awaits payment approval the customer's effective plan
+    // is still the ACTIVE one (it governs limits and billing).
+    const activeFree = makeSubscription({
+      status: "active",
+      created_at: "2026-07-01T00:00:00.000Z",
+    });
+    const pendingUpgrade = makeSubscription({
+      status: "pending",
+      created_at: "2026-08-01T00:00:00.000Z",
+    });
+    const { service } = makeService({ subscriptions: [activeFree, pendingUpgrade] });
+
+    const view = await service.getSubscription(CUSTOMER_A_USER);
+
+    expect(view.id).toBe(activeFree.id);
+    expect(view.status).toBe("active");
+  });
+
   it("never exposes another customer's subscription", async () => {
     const foreign = makeSubscription({ customer_id: CUSTOMER_B });
     const { service } = makeService({ subscriptions: [foreign] });
@@ -246,24 +265,127 @@ describe("CustomerSubscriptionServiceImpl.createSubscription", () => {
     expect(client.tables.get("subscriptions")).toHaveLength(0);
   });
 
-  const BLOCKING_STATUSES = ["pending", "active", "suspended"] as const;
-  for (const status of BLOCKING_STATUSES) {
-    it(`refuses a second selection while the current one is ${status}`, async () => {
-      const free = makePlan({ name: "Free", price: 0 });
-      const starter = makePlan({ name: "Starter", price: 900 });
-      const existing = makeSubscription({ plan_id: free.id, status });
-      const { service, client } = makeService({
-        plans: [free, starter],
-        subscriptions: [existing],
-      });
+  // ---- Upgrade rules (price-based tiering) -----------------------------------
 
-      await expect(
-        service.createSubscription(CUSTOMER_A_USER, { planId: starter.id }),
-      ).rejects.toBeInstanceOf(ConflictError);
-      // No extra row was written.
-      expect(client.tables.get("subscriptions")).toHaveLength(1);
+  it("allows an upgrade from an ACTIVE plan to a strictly pricier one", async () => {
+    const free = makePlan({ name: "Free", price: 0 });
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const activeFree = makeSubscription({ plan_id: free.id, status: "active" });
+    const { service, client } = makeService({
+      plans: [free, starter],
+      subscriptions: [activeFree],
     });
-  }
+
+    const view = await service.createSubscription(CUSTOMER_A_USER, { planId: starter.id });
+
+    // The upgrade is a PAID selection → pending until the transfer is verified.
+    expect(view.status).toBe("pending");
+    const rows = client.tables.get("subscriptions")!;
+    expect(rows).toHaveLength(2); // INSERT — the active Free row is untouched
+    expect(rows[0]).toEqual(activeFree);
+    expect(rows[1]!.plan_id).toBe(starter.id);
+    expect(rows[1]!.customer_id).toBe(CUSTOMER_A);
+  });
+
+  it("allows multi-step upgrades (Starter → Business) while Starter is active", async () => {
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const business = makePlan({ name: "Business", price: 1499 });
+    const activeStarter = makeSubscription({ plan_id: starter.id, status: "active" });
+    const { service } = makeService({
+      plans: [starter, business],
+      subscriptions: [activeStarter],
+    });
+
+    const view = await service.createSubscription(CUSTOMER_A_USER, { planId: business.id });
+    expect(view.status).toBe("pending");
+  });
+
+  it("refuses SAME-PLAN re-selection while that plan is active", async () => {
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const { service, client } = makeService({
+      plans: [starter],
+      subscriptions: [makeSubscription({ plan_id: starter.id, status: "active" })],
+    });
+
+    await expect(
+      service.createSubscription(CUSTOMER_A_USER, { planId: starter.id }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(client.tables.get("subscriptions")).toHaveLength(1);
+  });
+
+  it("refuses DOWNGRADES (and equal-priced lateral switches) with 409", async () => {
+    const business = makePlan({ name: "Business", price: 1499 });
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const cheap = makePlan({ name: "Cheap", price: 499 });
+    const { service, client } = makeService({
+      plans: [business, starter, cheap],
+      subscriptions: [makeSubscription({ plan_id: business.id, status: "active" })],
+    });
+
+    for (const target of [starter, cheap]) {
+      await expect(
+        service.createSubscription(CUSTOMER_A_USER, { planId: target.id }),
+      ).rejects.toBeInstanceOf(ConflictError);
+    }
+    expect(client.tables.get("subscriptions")).toHaveLength(1);
+  });
+
+  it("refuses a SECOND pending upgrade while one already awaits payment", async () => {
+    const free = makePlan({ name: "Free", price: 0 });
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const business = makePlan({ name: "Business", price: 1499 });
+    const { service, client } = makeService({
+      plans: [free, starter, business],
+      subscriptions: [
+        makeSubscription({ plan_id: free.id, status: "active" }),
+        makeSubscription({ plan_id: starter.id, status: "pending" }),
+      ],
+    });
+
+    await expect(
+      service.createSubscription(CUSTOMER_A_USER, { planId: business.id }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(client.tables.get("subscriptions")).toHaveLength(2);
+  });
+
+  it("still refuses any selection while SUSPENDED", async () => {
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const { service, client } = makeService({
+      plans: [starter],
+      subscriptions: [makeSubscription({ status: "suspended" })],
+    });
+
+    await expect(
+      service.createSubscription(CUSTOMER_A_USER, { planId: starter.id }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(client.tables.get("subscriptions")).toHaveLength(1);
+  });
+
+  it("still refuses a second PENDING selection when nothing is active yet", async () => {
+    const starter = makePlan({ name: "Starter", price: 499 });
+    const { service, client } = makeService({
+      plans: [starter],
+      subscriptions: [makeSubscription({ plan_id: starter.id, status: "pending" })],
+    });
+
+    await expect(
+      service.createSubscription(CUSTOMER_A_USER, { planId: starter.id }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(client.tables.get("subscriptions")).toHaveLength(1);
+  });
+
+  it("prices upgrades against the CURRENT plan even if it was retired from the catalog", async () => {
+    // A deactivated plan keeps governing existing subscribers' tier.
+    const retiredStarter = makePlan({ name: "Old Starter", price: 499, is_active: false });
+    const business = makePlan({ name: "Business", price: 1499 });
+    const { service } = makeService({
+      plans: [retiredStarter, business],
+      subscriptions: [makeSubscription({ plan_id: retiredStarter.id, status: "active" })],
+    });
+
+    const view = await service.createSubscription(CUSTOMER_A_USER, { planId: business.id });
+    expect(view.status).toBe("pending");
+  });
 
   it("allows re-selection after EXPIRED or CANCELLED — history preserved via INSERT", async () => {
     const starter = makePlan({ name: "Starter", price: 900 });

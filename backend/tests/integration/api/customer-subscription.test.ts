@@ -65,6 +65,9 @@ beforeEach(() => {
     api_keys: [],
     api_plans: [FREE_PLAN, STARTER_PLAN, RETIRED_PLAN],
     subscriptions: [],
+    // Payment-review flows write here; the fake client only persists into
+    // tables present in the seed.
+    payments: [],
   });
   setDatabaseConnected(true);
 });
@@ -204,8 +207,8 @@ describe("POST /customer/subscription", () => {
     expect(getFakeClient().tables.get("subscriptions")).toHaveLength(0);
   });
 
-  it("refuses switching while an active subscription exists (409), then allows it after expiry simulation", async () => {
-    const auth = await customerAuth("switcher@example.com");
+  it("allows UPGRADES from an active plan and preserves history", async () => {
+    const auth = await customerAuth("upgrader@example.com");
 
     const first = await request(app)
       .post("/api/v1/customer/subscription")
@@ -213,12 +216,112 @@ describe("POST /customer/subscription", () => {
       .send({ plan_id: FREE_PLAN.id });
     expect(first.status).toBe(201);
 
-    const blocked = await request(app)
+    // Free → Starter is allowed while Free is ACTIVE; it becomes a pending
+    // paid selection instead of being blocked.
+    const upgrade = await request(app)
       .post("/api/v1/customer/subscription")
       .set(auth)
       .send({ plan_id: STARTER_PLAN.id });
-    expect(blocked.status).toBe(409);
+    expect(upgrade.status).toBe(201);
+    expect((upgrade.body.data as Record<string, unknown>).status).toBe("pending");
+    expect(getFakeClient().tables.get("subscriptions")).toHaveLength(2); // INSERT, history kept
+
+    // The effective subscription view still answers with the ACTIVE Free row
+    // until the upgrade payment is approved.
+    const view = await request(app).get("/api/v1/customer/subscription").set(auth);
+    expect(view.status).toBe(200);
+    expect((view.body.data as Record<string, unknown>).planId).toBe(FREE_PLAN.id);
+    expect((view.body.data as Record<string, unknown>).status).toBe("active");
+  });
+
+  it("answers 409 for same-plan re-selection and downgrades while a plan is active", async () => {
+    const businessPlan = {
+      ...STARTER_PLAN,
+      id: "11111111-1111-4111-8111-000000000009",
+      name: "Business",
+      price: 1499,
+      monthly_request_limit: 100000,
+      requests_per_minute: 120,
+      max_api_keys: 5,
+    };
+    seedFakeClient({
+      ...defaultSeed,
+      customers: [],
+      api_keys: [],
+      api_plans: [FREE_PLAN, STARTER_PLAN, businessPlan],
+      subscriptions: [],
+      payments: [],
+    });
+    const auth = await customerAuth("downgrader@example.com");
+
+    const start = await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: STARTER_PLAN.id });
+    expect(start.status).toBe(201); // pending
+
+    // Approve via admin so Starter becomes ACTIVE, then try every downgrade.
+    const admin = await adminAuth();
+    const bank = await request(app)
+      .post("/api/v1/admin/payment-methods")
+      .set(admin)
+      .send({ bank_name: "CBE", account_name: "Tigray", account_number: "1000" });
+    expect(bank.status).toBe(201);
+
+    const pay = await request(app)
+      .post("/api/v1/customer/payments")
+      .set(auth)
+      .send({
+        subscription_id: (start.body.data as Record<string, unknown>).id,
+        customer_transaction_ref: "ref-1",
+      });
+    expect(pay.status).toBe(201);
+    const approve = await request(app)
+      .post(`/api/v1/admin/payments/${(pay.body.data as Record<string, unknown>).id}/review`)
+      .set(admin)
+      .send({ action: "approve" });
+    expect(approve.status).toBe(200);
+
+    const same = await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: STARTER_PLAN.id });
+    expect(same.status).toBe(409);
+    expect(same.body.success).toBe(false);
+
+    const downgradeToFree = await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: FREE_PLAN.id });
+    expect(downgradeToFree.status).toBe(409);
+
+    // Neither refused selection wrote a row.
     expect(getFakeClient().tables.get("subscriptions")).toHaveLength(1);
+  });
+
+  it("answers 409 for a second pending selection while one awaits payment", async () => {
+    const auth = await customerAuth("doublepending@example.com");
+    const first = await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: STARTER_PLAN.id });
+    expect(first.status).toBe(201);
+
+    const again = await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: STARTER_PLAN.id });
+    expect(again.status).toBe(409);
+    expect(getFakeClient().tables.get("subscriptions")).toHaveLength(1);
+  });
+
+  it("still allows re-selection after EXPIRY simulation — history preserved via INSERT", async () => {
+    const auth = await customerAuth("switcher@example.com");
+    const first = await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: STARTER_PLAN.id });
+    expect(first.status).toBe(201);
 
     // Simulate expiry by stamping the row terminal, then re-select.
     const row = getFakeClient().tables.get("subscriptions")![0]!;

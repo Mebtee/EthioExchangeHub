@@ -31,6 +31,18 @@ export class SubscriptionsRepository extends BaseRepository<"subscriptions"> {
   }
 
   /**
+   * Full subscription history for a customer, oldest first (ties broken by
+   * id). One query lets services derive active/pending/suspended state for
+   * the plan-upgrade rules without N round-trips.
+   */
+  async listByCustomer(customerId: string): Promise<SubscriptionRow[]> {
+    const rows = await this.findManyBy({ customer_id: customerId });
+    return rows.sort(
+      (a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+    );
+  }
+
+  /**
    * Finds one subscription owned by exactly this customer (isolation filter
    * for the Phase 3 payment flow), or null.
    */
