@@ -112,6 +112,15 @@ const SUB_PENDING: CustomerSubscription = {
   updatedAt: ISO,
 };
 
+const SUB_ACTIVE_PRO: CustomerSubscription = {
+  ...SUB_PENDING,
+  id: "sub-2",
+  status: "active",
+  startsAt: ISO,
+  currentPeriodStart: ISO,
+  currentPeriodEnd: "2026-09-01T09:00:00.000Z",
+};
+
 const KEY_ACTIVE: CustomerApiKey = {
   id: "key-1",
   name: "Production server",
@@ -230,9 +239,40 @@ describe("CustomerPlansPage - selection leads to pending payment state", () => {
 
     expect(screen.queryByRole("button", { name: /subscribe/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /start for free/i })).not.toBeInTheDocument();
-    expect(
-      screen.getAllByText(/already have an active or awaiting-payment subscription/i),
-    ).toHaveLength(1);
+    expect(screen.getAllByText(/awaiting verification/i)).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
+  });
+
+  it("enables UPGRADES from an active plan and pins the current one", async () => {
+    mocks.fetchPlans.mockResolvedValue([PLAN_FREE, PLAN_PRO]);
+    mocks.fetchSubscription.mockResolvedValue({
+      ...SUB_PENDING,
+      planId: PLAN_FREE.id,
+      status: "active",
+    });
+
+    renderPage(<CustomerPlansPage />);
+    await screen.findByText("Pro");
+
+    const upgrade = screen.getByRole("button", { name: /upgrade/i });
+    expect(upgrade).toBeEnabled();
+
+    // The active Free plan is pinned; selecting it again is impossible.
+    const currentButtons = screen.getAllByRole("button", { name: "Current plan" });
+    expect(currentButtons).toHaveLength(1);
+    expect(currentButtons[0]).toBeDisabled();
+  });
+
+  it("keeps downgrade buttons disabled with an explanation", async () => {
+    mocks.fetchPlans.mockResolvedValue([PLAN_FREE, PLAN_PRO]);
+    mocks.fetchSubscription.mockResolvedValue(SUB_ACTIVE_PRO);
+
+    renderPage(<CustomerPlansPage />);
+    await screen.findByText("Pro");
+
+    // The only other plan (Free) is a downgrade → disabled with a note.
+    expect(screen.getByRole("button", { name: /subscribe/i })).toBeDisabled();
+    expect(screen.getAllByText(/downgrades aren't supported yet/i)).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
   });
 });

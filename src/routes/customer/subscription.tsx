@@ -16,13 +16,14 @@ import {
 } from "@/hooks/use-customer";
 import { useLocale } from "@/hooks";
 import { formatDateTime, formatInt } from "@/lib/format";
+import { planSelectionState } from "@/lib/plans";
 import { subscriptionStatusTone } from "@/lib/status";
 
 /**
  * Subscription page (Phase 6) — shows the authoritative backend subscription
- * and lets the customer select a plan when allowed (no pending/active/
- * suspended subscription). Paid plans route the customer to the manual
- * bank-transfer payment flow.
+ * and lets the customer select a plan. An active subscription upgrades to
+ * any strictly pricier plan; pending/suspended block selection and paid
+ * plans route the customer to the manual bank-transfer payment flow.
  */
 export default function CustomerSubscriptionPage() {
   const { t } = useTranslation();
@@ -32,12 +33,13 @@ export default function CustomerSubscriptionPage() {
   const selectPlan = useCreateCustomerSubscription();
 
   const sub = subscription.data ?? null;
-  const plan = plans.data?.find((p) => p.id === sub?.planId) ?? null;
-
-  /** Backend rule: pending/active/suspended block re-selection. */
-  const canSelectPlan =
-    !subscription.isLoading &&
-    (sub === null || ["expired", "cancelled"].includes(String(sub.status)));
+  const catalog = plans.data ?? [];
+  /** The ACTIVE plan is the effective one while an upgrade awaits payment. */
+  const isActiveSub = sub?.status === "active";
+  /** Highlighted plan: the effective one, or the selection awaiting payment. */
+  const highlightedPlanId =
+    sub && ["active", "pending", "suspended"].includes(String(sub.status)) ? sub.planId : null;
+  const plan = catalog.find((p) => p.id === sub?.planId) ?? null;
 
   async function handleSubscribe(planId: string) {
     try {
@@ -146,7 +148,8 @@ export default function CustomerSubscriptionPage() {
           <>
             <ul className="mt-4 divide-y divide-border/60">
               {(plans.data ?? []).map((p) => {
-                const isCurrent = p.id === sub?.planId;
+                const state = planSelectionState(sub, catalog, p.id);
+                const isCurrent = p.id === highlightedPlanId;
                 return (
                   <li key={p.id} className="flex flex-wrap items-center gap-4 py-3">
                     <div className="min-w-0 flex-1">
@@ -165,20 +168,25 @@ export default function CustomerSubscriptionPage() {
                     </div>
                     <Button
                       size="sm"
-                      disabled={!canSelectPlan || isCurrent || selectPlan.isPending}
+                      variant={isCurrent || state.block === "downgrade" ? "outline" : "default"}
+                      disabled={!state.selectable || selectPlan.isPending}
                       onClick={() => void handleSubscribe(p.id)}
                     >
                       {isCurrent
                         ? t("customer.plans.currentBadge")
-                        : p.price > 0
+                        : state.block === "downgrade"
                           ? t("customer.plans.subscribePaid")
-                          : t("customer.plans.subscribeFree")}
+                          : isActiveSub
+                            ? t("customer.plans.upgrade")
+                            : p.price > 0
+                              ? t("customer.plans.subscribePaid")
+                              : t("customer.plans.subscribeFree")}
                     </Button>
                   </li>
                 );
               })}
             </ul>
-            {!canSelectPlan && (
+            {sub && ["pending", "suspended"].includes(String(sub.status)) && (
               <p className="mt-3 rounded-xl bg-surface-low px-4 py-3 text-xs text-muted-foreground">
                 {t("customer.plans.blockedNote")}
               </p>

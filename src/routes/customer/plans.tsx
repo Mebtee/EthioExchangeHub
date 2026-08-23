@@ -14,11 +14,14 @@ import {
   useCustomerSubscription,
 } from "@/hooks/use-customer";
 import { formatInt } from "@/lib/format";
+import { planSelectionState } from "@/lib/plans";
 import type { CustomerPlan } from "@/types/customer";
 
 /**
  * Plans & pricing (Phase 6) — the backend catalog is the single source of
- * truth; no prices or limits are hardcoded here.
+ * truth; no prices or limits are hardcoded here. An active subscription
+ * upgrades to any strictly pricier plan (Free → Starter → Business);
+ * same-plan and downgrade buttons stay disabled.
  */
 export default function CustomerPlansPage() {
   const { t } = useTranslation();
@@ -27,9 +30,13 @@ export default function CustomerPlansPage() {
   const selectPlan = useCreateCustomerSubscription();
 
   const current = subscription.data ?? null;
-  /** A blocking subscription (pending/active/suspended) hides subscribe buttons. */
-  const canSelectPlan =
-    current === null || ["expired", "cancelled"].includes(String(current.status));
+  const catalog = plans.data ?? [];
+  /** Highlighted plan: the effective (active) one, or the awaited selection. */
+  const highlightedPlanId =
+    current && ["active", "pending", "suspended"].includes(String(current.status))
+      ? current.planId
+      : null;
+  const isActiveSub = current?.status === "active";
 
   async function handleSubscribe(plan: CustomerPlan) {
     try {
@@ -58,7 +65,8 @@ export default function CustomerPlansPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {(plans.data ?? []).map((plan) => {
-            const isCurrent = current?.planId === plan.id;
+            const state = planSelectionState(current, catalog, plan.id);
+            const isCurrent = plan.id === highlightedPlanId;
             return (
               <SurfaceCard
                 key={plan.id}
@@ -103,26 +111,39 @@ export default function CustomerPlansPage() {
                     <Button variant="outline" className="w-full" disabled>
                       {t("customer.plans.currentBadge")}
                     </Button>
-                  ) : canSelectPlan ? (
-                    <Button
-                      className="w-full"
-                      disabled={!canSelectPlan || selectPlan.isPending}
-                      onClick={() => void handleSubscribe(plan)}
-                    >
-                      {selectPlan.isPending
-                        ? t("common.loading")
-                        : plan.price > 0
-                          ? t("customer.plans.subscribePaid")
-                          : t("customer.plans.subscribeFree")}
-                    </Button>
+                  ) : state.selectable ? (
+                    <>
+                      <Button
+                        className="w-full"
+                        disabled={selectPlan.isPending}
+                        onClick={() => void handleSubscribe(plan)}
+                      >
+                        {selectPlan.isPending
+                          ? t("common.loading")
+                          : isActiveSub
+                            ? t("customer.plans.upgrade")
+                            : plan.price > 0
+                              ? t("customer.plans.subscribePaid")
+                              : t("customer.plans.subscribeFree")}
+                      </Button>
+                      {plan.price > 0 && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {t("customer.plans.manualPaymentNote")}
+                        </p>
+                      )}
+                    </>
+                  ) : state.block === "downgrade" ? (
+                    <>
+                      <Button variant="outline" className="w-full" disabled>
+                        {t("customer.plans.subscribePaid")}
+                      </Button>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t("customer.plans.downgradeNote")}
+                      </p>
+                    </>
                   ) : (
                     <p className="rounded-xl bg-surface-low px-4 py-3 text-xs text-muted-foreground">
                       {t("customer.plans.blockedNote")}
-                    </p>
-                  )}
-                  {plan.price > 0 && !isCurrent && canSelectPlan && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {t("customer.plans.manualPaymentNote")}
                     </p>
                   )}
                 </div>

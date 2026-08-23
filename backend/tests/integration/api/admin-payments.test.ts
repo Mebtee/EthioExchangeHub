@@ -256,6 +256,56 @@ describe("POST /admin/payments/:id/review — approval activates the subscriptio
     expect(subscription.currentPeriodStart).toBeNull();
   });
 
+  it("approving a plan UPGRADE supersedes the previous ACTIVE subscription", async () => {
+    const freePlanId = basePlan("1").id as string;
+    const auth = await customerAuth("upgradee@example.com");
+
+    // Active Free, then select Starter → pending paid upgrade.
+    await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: freePlanId });
+    await request(app)
+      .post("/api/v1/customer/subscription")
+      .set(auth)
+      .send({ plan_id: STARTER_PLAN_ID });
+
+    const seeded = getFakeClient().tables.get("subscriptions")!;
+    expect(seeded).toHaveLength(2);
+    const freeRow = seeded.find((row) => row.plan_id === freePlanId)!;
+    const starterRow = seeded.find((row) => row.plan_id === STARTER_PLAN_ID)!;
+    expect(freeRow.status).toBe("active");
+    expect(starterRow.status).toBe("pending");
+
+    const submit = await request(app)
+      .post("/api/v1/customer/payments")
+      .set(auth)
+      .send({
+        subscription_id: starterRow.id as string,
+        customer_transaction_ref: "UPGRADE-REF-1",
+      });
+    expect(submit.status).toBe(201);
+
+    const review = await request(app)
+      .post(`/api/v1/admin/payments/${(submit.body.data as { id: string }).id}/review`)
+      .set(await adminAuth())
+      .send({ action: "approve" });
+    expect(review.status).toBe(200);
+
+    // History preserved — the old tier is cancelled, never deleted.
+    const rows = getFakeClient().tables.get("subscriptions")!;
+    expect(rows).toHaveLength(2);
+    expect(starterRow.status).toBe("active"); // the new tier governs
+    expect(freeRow.status).toBe("cancelled");
+    expect(freeRow.cancelled_at).not.toBeNull();
+    expect(String(freeRow.cancellation_reason)).toContain("Superseded by upgrade");
+
+    // The effective subscription view answers with the NEW active row.
+    const effective = await currentSubscription(auth);
+    expect(effective.id).toBe(starterRow.id);
+    expect(effective.status).toBe("active");
+  });
+
   it("REJECTED payments do not activate; reason is required and recorded", async () => {
     const { auth, paymentId } = await customerWithOpenPayment("rejectee@example.com");
     const admin = await adminAuth();

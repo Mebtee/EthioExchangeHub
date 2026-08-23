@@ -804,10 +804,12 @@
       "currentBadge": "Current plan",
       "subscribePaid": "Subscribe",
       "subscribeFree": "Start for free",
+      "upgrade": "Upgrade",
+      "downgradeNote": "Downgrades aren't supported yet.",
       "pendingToast": "Plan selected! Complete the bank transfer from the Payments page.",
       "freeActivatedToast": "Free plan activated.",
       "manualPaymentNote": "Paid plans are settled by manual bank transfer; activation follows verification.",
-      "blockedNote": "You already have an active or awaiting-payment subscription. Plan selection reopens when it expires or is cancelled.",
+      "blockedNote": "A payment on your account is awaiting verification, or the account is suspended. Plan selection reopens once this is resolved.",
       "billingExplainer": "Prices are in Ethiopian birr (ETB) per monthly billing period. Subscriptions activate once your bank transfer has been verified."
     },
     "subscription": {
