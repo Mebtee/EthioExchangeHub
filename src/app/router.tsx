@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 
 import i18n from "@/i18n";
@@ -8,6 +8,7 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { RequireAuth, RequireRole } from "@/components/auth/route-guards";
 import { NotFoundPage } from "@/components/shared/not-found";
 import { RouteFallback } from "@/components/shared/route-fallback";
+import { lazyRoute } from "@/lib/lazy-retry";
 import { ADMIN_ROLES } from "@/types/auth";
 
 /**
@@ -15,39 +16,73 @@ import { ADMIN_ROLES } from "@/types/auth";
  * bundle stays small. <Suspense> shows the skeleton fallback while chunks load.
  */
 
-const HomePage = lazy(() => import("@/routes/index"));
-const BanksPage = lazy(() => import("@/routes/banks"));
-const BankDetailsPage = lazy(() => import("@/routes/banks.$slug"));
-const RankingsPage = lazy(() => import("@/routes/rankings"));
-const NewsPage = lazy(() => import("@/routes/news"));
-const AboutPage = lazy(() => import("@/routes/about"));
-const ContactPage = lazy(() => import("@/routes/contact"));
-const CurrencyToEtbPage = lazy(() => import("@/routes/currency-to-etb"));
+const HomePage = lazyRoute("home", () => import("@/routes/index"));
+const BanksPage = lazyRoute("banks", () => import("@/routes/banks"));
+const BankDetailsPage = lazyRoute("bank-details", () => import("@/routes/banks.$slug"));
+const RankingsPage = lazyRoute("rankings", () => import("@/routes/rankings"));
+const NewsPage = lazyRoute("news", () => import("@/routes/news"));
+const AboutPage = lazyRoute("about", () => import("@/routes/about"));
+const ContactPage = lazyRoute("contact", () => import("@/routes/contact"));
+const CurrencyToEtbPage = lazyRoute("currency-to-etb", () => import("@/routes/currency-to-etb"));
 
-const AdminLoginPage = lazy(() => import("@/routes/admin/login"));
-const AdminForgotPasswordPage = lazy(() => import("@/routes/admin/forgot-password"));
-const AdminResetPasswordPage = lazy(() => import("@/routes/admin/reset-password"));
-const AdminDashboardPage = lazy(() => import("@/routes/admin/dashboard"));
-const AdminManualRatesPage = lazy(() => import("@/routes/admin/manual-rates"));
-const AdminPaymentsPage = lazy(() => import("@/routes/admin/payments"));
-const AdminFeaturedPage = lazy(() => import("@/routes/admin/featured"));
-const AdminScraperHealthPage = lazy(() => import("@/routes/admin/scraper-health"));
-const AdminScrapeLogsPage = lazy(() => import("@/routes/admin/scrape-logs"));
-const AdminProfilePage = lazy(() => import("@/routes/admin/profile"));
-const AdminSettingsPage = lazy(() => import("@/routes/admin/settings"));
+const AdminLoginPage = lazyRoute("admin-login", () => import("@/routes/admin/login"));
+const AdminForgotPasswordPage = lazyRoute(
+  "admin-forgot-password",
+  () => import("@/routes/admin/forgot-password"),
+);
+const AdminResetPasswordPage = lazyRoute(
+  "admin-reset-password",
+  () => import("@/routes/admin/reset-password"),
+);
+const AdminDashboardPage = lazyRoute("admin-dashboard", () => import("@/routes/admin/dashboard"));
+const AdminManualRatesPage = lazyRoute(
+  "admin-manual-rates",
+  () => import("@/routes/admin/manual-rates"),
+);
+const AdminPaymentsPage = lazyRoute("admin-payments", () => import("@/routes/admin/payments"));
+const AdminFeaturedPage = lazyRoute("admin-featured", () => import("@/routes/admin/featured"));
+const AdminScraperHealthPage = lazyRoute(
+  "admin-scraper-health",
+  () => import("@/routes/admin/scraper-health"),
+);
+const AdminScrapeLogsPage = lazyRoute(
+  "admin-scrape-logs",
+  () => import("@/routes/admin/scrape-logs"),
+);
+const AdminProfilePage = lazyRoute("admin-profile", () => import("@/routes/admin/profile"));
+const AdminSettingsPage = lazyRoute("admin-settings", () => import("@/routes/admin/settings"));
 
 // Customer portal (Phase 6) — commercial API self-service area.
-const CustomerRegisterPage = lazy(() => import("@/routes/customer/register"));
-const CustomerLayout = lazy(() =>
-  import("@/components/customer/customer-layout").then((m) => ({ default: m.CustomerLayout })),
+const CustomerRegisterPage = lazyRoute(
+  "customer-register",
+  () => import("@/routes/customer/register"),
 );
-const CustomerDashboardPage = lazy(() => import("@/routes/customer/dashboard"));
-const CustomerPlansPage = lazy(() => import("@/routes/customer/plans"));
-const CustomerSubscriptionPage = lazy(() => import("@/routes/customer/subscription"));
-const CustomerApiKeysPage = lazy(() => import("@/routes/customer/api-keys"));
-const CustomerPaymentsPage = lazy(() => import("@/routes/customer/payments"));
-const CustomerUsagePage = lazy(() => import("@/routes/customer/usage"));
-const CustomerDeveloperPage = lazy(() => import("@/routes/customer/developer"));
+const CustomerLayout = lazyRoute("customer-layout", async () => {
+  const mod = await import("@/components/customer/customer-layout");
+  return { default: mod.CustomerLayout };
+});
+const CustomerDashboardPage = lazyRoute(
+  "customer-dashboard",
+  () => import("@/routes/customer/dashboard"),
+);
+const CustomerPlansPage = lazyRoute("customer-plans", () => import("@/routes/customer/plans"));
+const CustomerSubscriptionPage = lazyRoute(
+  "customer-subscription",
+  () => import("@/routes/customer/subscription"),
+);
+const CustomerApiKeysPage = lazyRoute(
+  "customer-api-keys",
+  () => import("@/routes/customer/api-keys"),
+);
+const CustomerPaymentsPage = lazyRoute(
+  "customer-payments",
+  () => import("@/routes/customer/payments"),
+);
+const CustomerUsagePage = lazyRoute("customer-usage", () => import("@/routes/customer/usage"));
+const CustomerDeveloperPage = lazyRoute(
+  "customer-developer",
+  () => import("@/routes/customer/developer"),
+);
 
 /** Per-locale font that is injected only while that locale is active. */
 const LOCALE_FONTS: Partial<Record<Locale, { href: string }>> = {
