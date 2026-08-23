@@ -737,6 +737,7 @@
     "register": {
       "title": "创建开发者账户",
       "subtitle": "注册以订阅汇率 API 套餐。",
+      "portalBadge": "开发者门户",
       "email": "电子邮箱",
       "password": "密码",
       "passwordHint": "至少 12 个字符，包含大小写字母、数字和特殊字符。",

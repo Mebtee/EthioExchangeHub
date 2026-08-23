@@ -30,9 +30,19 @@ describe("SiteFooter API Access CTA", () => {
   it("localizes the CTA target for non-default locales", () => {
     renderFooter("/am/rankings");
 
+    // Labels stay in the default test language; the :locale segment drives href.
     expect(screen.getByRole("link", { name: "API Access" })).toHaveAttribute(
       "href",
       "/am/customer/register",
+    );
+  });
+
+  it("localizes the CTA target for Chinese", () => {
+    renderFooter("/zh/rankings");
+
+    expect(screen.getByRole("link", { name: "API Access" })).toHaveAttribute(
+      "href",
+      "/zh/customer/register",
     );
   });
 });
