@@ -22,6 +22,7 @@ import {
 import {
   useCustomerPaymentMethods,
   useCustomerPayments,
+  useCustomerPlans,
   useCustomerSubscription,
   useSubmitCustomerPayment,
   useUploadCustomerReceipt,
@@ -47,11 +48,20 @@ export default function CustomerPaymentsPage() {
   const subscription = useCustomerSubscription();
   const methods = useCustomerPaymentMethods();
   const payments = useCustomerPayments();
+  const plans = useCustomerPlans();
   const submitPayment = useSubmitCustomerPayment();
   const uploadReceipt = useUploadCustomerReceipt();
 
-  /** Only a PENDING subscription can be paid for (backend re-checks anyway). */
-  const pendingSubscription = subscription.data?.status === "pending" ? subscription.data : null;
+  /**
+   * Only a PENDING subscription can be paid for (backend re-checks anyway).
+   * An ACTIVE subscription can carry a `pendingUpgrade` — the unpaid plan
+   * selection the backend keeps blocking other selections against.
+   */
+  const sub = subscription.data ?? null;
+  const pendingSubscription = sub?.pendingUpgrade ?? (sub?.status === "pending" ? sub : null);
+
+  /** Resolve the payable plan for display; catalog lookups stay read-only. */
+  const pendingPlan = plans.data?.find((p) => p.id === pendingSubscription?.planId) ?? null;
 
   const [transactionRef, setTransactionRef] = useState("");
   const [receiptTargetId, setReceiptTargetId] = useState<string | null>(null);
@@ -115,7 +125,11 @@ export default function CustomerPaymentsPage() {
         {pendingSubscription ? (
           <p className="mt-2 text-sm">
             {t("customer.payments.pendingPlanNote")}{" "}
-            <span className="font-semibold">{t("customer.nav.payments")}</span>
+            <span className="font-semibold">
+              {pendingPlan
+                ? `${pendingPlan.name} — ${formatInt(pendingPlan.price)} ${pendingPlan.currency}/${t("customer.plans.perMonth")}`
+                : t("customer.subscription.planFallback")}
+            </span>
           </p>
         ) : (
           <EmptyState

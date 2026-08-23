@@ -197,6 +197,27 @@ describe("CustomerSubscriptionServiceImpl.getSubscription", () => {
 
     expect(view.id).toBe(activeFree.id);
     expect(view.status).toBe("active");
+    // The pending upgrade is attached so clients can render/pay for it —
+    // otherwise it would be invisible AND block every further selection.
+    expect(view.pendingUpgrade?.id).toBe(pendingUpgrade.id);
+    expect(view.pendingUpgrade?.status).toBe("pending");
+  });
+
+  it("omits pendingUpgrade when no unpaid selection exists", async () => {
+    const active = makeSubscription({
+      status: "active",
+      created_at: "2026-08-01T00:00:00.000Z",
+    });
+    const expired = makeSubscription({
+      status: "expired",
+      created_at: "2026-07-01T00:00:00.000Z",
+    });
+    const { service } = makeService({ subscriptions: [expired, active] });
+
+    const view = await service.getSubscription(CUSTOMER_A_USER);
+
+    expect(view.id).toBe(active.id);
+    expect(view.pendingUpgrade ?? null).toBeNull();
   });
 
   it("never exposes another customer's subscription", async () => {

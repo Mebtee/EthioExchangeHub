@@ -38,7 +38,8 @@ export default function CustomerSubscriptionPage() {
   const isActiveSub = sub?.status === "active";
   /** Highlighted plan: the effective one, or the selection awaiting payment. */
   const highlightedPlanId =
-    sub && ["active", "pending", "suspended"].includes(String(sub.status)) ? sub.planId : null;
+    sub?.pendingUpgrade?.planId ??
+    (sub && ["active", "pending", "suspended"].includes(String(sub.status)) ? sub.planId : null);
   const plan = catalog.find((p) => p.id === sub?.planId) ?? null;
 
   async function handleSubscribe(planId: string) {
@@ -114,8 +115,9 @@ export default function CustomerSubscriptionPage() {
             </div>
           </dl>
 
-          {/* Manual payment guidance for pending paid selections */}
-          {sub.status === "pending" && (
+          {/* Manual payment guidance for pending paid selections — both the
+              no-active-row case and an upgrade pending behind an ACTIVE one. */}
+          {(sub.status === "pending" || sub.pendingUpgrade) && (
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gold-soft px-4 py-3 text-sm text-gold-foreground">
               <p>{t("customer.subscription.pendingPaymentNote")}</p>
               <Button asChild variant="outline" size="sm">
@@ -186,11 +188,14 @@ export default function CustomerSubscriptionPage() {
                 );
               })}
             </ul>
-            {sub && ["pending", "suspended"].includes(String(sub.status)) && (
-              <p className="mt-3 rounded-xl bg-surface-low px-4 py-3 text-xs text-muted-foreground">
-                {t("customer.plans.blockedNote")}
-              </p>
-            )}
+            {sub &&
+              (sub.status === "pending" ||
+                sub.status === "suspended" ||
+                Boolean(sub.pendingUpgrade)) && (
+                <p className="mt-3 rounded-xl bg-surface-low px-4 py-3 text-xs text-muted-foreground">
+                  {t("customer.plans.blockedNote")}
+                </p>
+              )}
           </>
         )}
       </SurfaceCard>

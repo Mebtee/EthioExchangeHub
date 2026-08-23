@@ -23,6 +23,15 @@ export class SubscriptionsRepository extends BaseRepository<"subscriptions"> {
   }
 
   /**
+   * Latest PENDING subscription for a customer, or null — the unpaid upgrade
+   * that must surface on the Payments page even while an ACTIVE row answers
+   * as the effective subscription.
+   */
+  findLatestPendingByCustomer(customerId: string): Promise<SubscriptionRow | null> {
+    return this.findLatestBy({ customer_id: customerId, status: "pending" }, "created_at", "id");
+  }
+
+  /**
    * Latest subscription of ANY status for a customer, or null — the
    * customer's "current" subscription view and duplicate-creation guard.
    */

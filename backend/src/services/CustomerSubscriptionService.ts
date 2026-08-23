@@ -38,13 +38,23 @@ export interface SubscriptionView {
   currentPeriodEnd: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * The unpaid upgrade awaiting bank-transfer approval while THIS row stays
+   * the effective (active) subscription. Null unless one actually exists —
+   * without it the Payments page could never render the payable item.
+   */
+  pendingUpgrade?: SubscriptionView | null;
 }
 
 /** Public contract of the customer subscription service. */
 export interface CustomerSubscriptionService {
   /** Active plans in catalog order. */
   getPlans(): Promise<PlanView[]>;
-  /** The customer's effective subscription — latest ACTIVE row, else latest overall; 404 when none. */
+  /**
+   * The customer's effective subscription — latest ACTIVE row, else latest
+   * overall; 404 when none. A pending upgrade behind an ACTIVE row is
+   * attached as `pendingUpgrade` so it stays payable.
+   */
   getSubscription(userId: string): Promise<SubscriptionView>;
   /**
    * Selects a plan. Free selections with no active subscription activate
@@ -100,7 +110,18 @@ export class CustomerSubscriptionServiceImpl implements CustomerSubscriptionServ
     if (!subscription) {
       throw new NotFoundError("No subscription found. Select a plan to get started.");
     }
-    return CustomerSubscriptionServiceImpl.toView(subscription);
+
+    const view = CustomerSubscriptionServiceImpl.toView(subscription);
+    // When an ACTIVE row answers, any pending upgrade is invisible through
+    // `status` alone — attach it so clients (Payments page) can render and
+    // settle it instead of deadlocking against "upgrade awaiting payment".
+    if (subscription.status === "active") {
+      const pending = await this.subscriptionsRepository.findLatestPendingByCustomer(customer.id);
+      if (pending && pending.id !== subscription.id) {
+        view.pendingUpgrade = CustomerSubscriptionServiceImpl.toView(pending);
+      }
+    }
+    return view;
   }
 
   async createSubscription(
