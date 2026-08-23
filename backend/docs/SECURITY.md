@@ -30,11 +30,11 @@ notFound → errorHandler  → standardized envelopes, no leaks
 
 JWT-based authentication with three token types:
 
-| Token Type | Purpose | Lifetime | Claim |
-|---|---|---|---|
-| Access | API authorization | 15 minutes (configurable) | `{ sub, role, type: "access" }` |
-| Refresh | Token renewal | 30 days (configurable) | `{ sub, type: "refresh" }` |
-| Password Reset | Password change | 30 minutes (configurable) | `{ sub, purpose: "password-reset" }` |
+| Token Type     | Purpose           | Lifetime                  | Claim                                |
+| -------------- | ----------------- | ------------------------- | ------------------------------------ |
+| Access         | API authorization | 15 minutes (configurable) | `{ sub, role, type: "access" }`      |
+| Refresh        | Token renewal     | 30 days (configurable)    | `{ sub, type: "refresh" }`           |
+| Password Reset | Password change   | 30 minutes (configurable) | `{ sub, purpose: "password-reset" }` |
 
 ### Token properties
 
@@ -73,20 +73,20 @@ the JWT access token.
 The composition root (`src/routes/index.ts`) applies middleware at mount
 level:
 
-| Mount path | Middleware | Effect |
-|---|---|---|
-| `/auth` | `createAuthLimiter()` | Rate-limited; individual routes handle auth |
-| `/auth/me` | `requireAuth` | Requires valid access token |
-| `/admin` | `requireAuth` + `requireAdmin` | Admin-only |
-| `/manual-rates` | `requireAuth` + `requireAdmin` | Admin-only |
-| `/admin/featured` | `requireAuth` + `requireAdmin` | Admin-only |
-| `/scraper-health` | `requireAuth` + `requireAdmin` | Admin-only |
-| `/scrape-logs` | `requireAuth` + `requireAdmin` | Admin-only |
-| `/banks` | None | Public |
-| `/rates` | None | Public |
-| `/news` | None | Public |
-| `/featured` | None | Public (read-only) |
-| `/contact` | None | Public (write-only) |
+| Mount path        | Middleware                     | Effect                                      |
+| ----------------- | ------------------------------ | ------------------------------------------- |
+| `/auth`           | `createAuthLimiter()`          | Rate-limited; individual routes handle auth |
+| `/auth/me`        | `requireAuth`                  | Requires valid access token                 |
+| `/admin`          | `requireAuth` + `requireAdmin` | Admin-only                                  |
+| `/manual-rates`   | `requireAuth` + `requireAdmin` | Admin-only                                  |
+| `/admin/featured` | `requireAuth` + `requireAdmin` | Admin-only                                  |
+| `/scraper-health` | `requireAuth` + `requireAdmin` | Admin-only                                  |
+| `/scrape-logs`    | `requireAuth` + `requireAdmin` | Admin-only                                  |
+| `/banks`          | None                           | Public                                      |
+| `/rates`          | None                           | Public                                      |
+| `/news`           | None                           | Public                                      |
+| `/featured`       | None                           | Public (read-only)                          |
+| `/contact`        | None                           | Public (write-only)                         |
 
 ### `requireAuth` behavior
 
@@ -130,11 +130,11 @@ The following endpoints are intentionally public (no authentication required):
 Three tiers of rate limiting, all using standard `RateLimit-*` draft-8
 headers:
 
-| Limiter | Applied to | Default | Env vars |
-|---|---|---|---|
-| General | `/api/v1/*` | 100 req/15min/IP | `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` |
-| Strict | `/docs`, `/docs.json`, `/metrics` | 30 req/15min/IP | `RATE_LIMIT_STRICT_MAX` |
-| Auth | `/auth/*` | 10 req/15min/IP | `AUTH_RATE_LIMIT_MAX` |
+| Limiter | Applied to                        | Default          | Env vars                                 |
+| ------- | --------------------------------- | ---------------- | ---------------------------------------- |
+| General | `/api/v1/*`                       | 100 req/15min/IP | `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` |
+| Strict  | `/docs`, `/docs.json`, `/metrics` | 30 req/15min/IP  | `RATE_LIMIT_STRICT_MAX`                  |
+| Auth    | `/auth/*`                         | 10 req/15min/IP  | `AUTH_RATE_LIMIT_MAX`                    |
 
 ### Slow-down
 
@@ -197,16 +197,16 @@ Stack traces, SQL queries, Supabase URLs/keys, and internal file paths are
 All secrets are validated at boot via Zod schemas. The server refuses to start
 when required values are missing or invalid.
 
-| Variable | Required | Description |
-|---|---|---|
-| `SUPABASE_URL` | Yes | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service-role key (full DB access) |
-| `JWT_SECRET` | Yes | JWT signing secret (min 32 chars) |
-| `ADMIN_EMAIL` | Yes | Bootstrap admin email |
-| `ADMIN_PASSWORD` | Yes | Bootstrap admin password (min 12 chars, complexity enforced) |
-| `ALLOWED_ORIGINS` | Yes* | Comma-separated CORS allow-list |
-| `RESEND_API_KEY` | No | Email service API key |
-| `OPENAPI_SERVER_URL` | No | Override for Swagger UI server URL |
+| Variable                    | Required | Description                                                  |
+| --------------------------- | -------- | ------------------------------------------------------------ |
+| `SUPABASE_URL`              | Yes      | Supabase project URL                                         |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Supabase service-role key (full DB access)                   |
+| `JWT_SECRET`                | Yes      | JWT signing secret (min 32 chars)                            |
+| `ADMIN_EMAIL`               | Yes      | Bootstrap admin email                                        |
+| `ADMIN_PASSWORD`            | Yes      | Bootstrap admin password (min 12 chars, complexity enforced) |
+| `ALLOWED_ORIGINS`           | Yes*     | Comma-separated CORS allow-list                              |
+| `RESEND_API_KEY`            | No       | Email service API key                                        |
+| `OPENAPI_SERVER_URL`        | No       | Override for Swagger UI server URL                           |
 
 ### Secret handling
 
@@ -222,6 +222,7 @@ Production values must be injected by the deployment platform or secrets
 manager. **Never commit real secrets to version control.**
 
 Generate strong secrets:
+
 ```bash
 # JWT secret
 openssl rand -base64 48
@@ -231,26 +232,26 @@ openssl rand -base64 48
 
 ## Security headers (Helmet)
 
-| Header | Status | Effect |
-|---|---|---|
-| `Content-Security-Policy` | Disabled (API-only; frontend uses Vercel headers) | No user HTML served |
-| `X-Content-Type-Options: nosniff` | Enabled | Prevents MIME-sniffing |
-| `X-Frame-Options: SAMEORIGIN` | Enabled (frameguard) | Blocks clickjacking |
-| `Referrer-Policy: no-referrer` | Enabled | No referrer leakage |
-| `Strict-Transport-Security` | Production only | HSTS (max-age 1y) |
-| `X-DNS-Prefetch-Control: off` | Enabled | Disables DNS prefetching |
-| `Cross-Origin-Resource-Policy: cross-origin` | Enabled | Lets SPA read API responses |
-| `X-Powered-By` | Removed | No framework fingerprint |
+| Header                                       | Status                                            | Effect                      |
+| -------------------------------------------- | ------------------------------------------------- | --------------------------- |
+| `Content-Security-Policy`                    | Disabled (API-only; frontend uses Vercel headers) | No user HTML served         |
+| `X-Content-Type-Options: nosniff`            | Enabled                                           | Prevents MIME-sniffing      |
+| `X-Frame-Options: SAMEORIGIN`                | Enabled (frameguard)                              | Blocks clickjacking         |
+| `Referrer-Policy: no-referrer`               | Enabled                                           | No referrer leakage         |
+| `Strict-Transport-Security`                  | Production only                                   | HSTS (max-age 1y)           |
+| `X-DNS-Prefetch-Control: off`                | Enabled                                           | Disables DNS prefetching    |
+| `Cross-Origin-Resource-Policy: cross-origin` | Enabled                                           | Lets SPA read API responses |
+| `X-Powered-By`                               | Removed                                           | No framework fingerprint    |
 
 `X-XSS-Protection` is disabled — modern browsers removed support; CSP +
 `nosniff` is the effective control.
 
 ## Input size limits
 
-| Parser | Limit | Env var | Oversize response |
-|---|---|---|---|
-| `express.json` | 1 MB | `BODY_LIMIT` | 413 |
-| `express.urlencoded` | 1 MB | `BODY_LIMIT` | 413 |
+| Parser               | Limit | Env var      | Oversize response |
+| -------------------- | ----- | ------------ | ----------------- |
+| `express.json`       | 1 MB  | `BODY_LIMIT` | 413               |
+| `express.urlencoded` | 1 MB  | `BODY_LIMIT` | 413               |
 
 ## Deployment security
 
