@@ -29,12 +29,12 @@ export default function CustomerRegisterPage() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Already signed in? Route by role instead of showing the form again —
-  // admins keep their existing admin flow (same convention as route guards).
-  // This also makes the site-wide "API Access" CTA correct for every visitor:
-  // it always points here, and signed-in users are forwarded to their area.
-  if (isAuthenticated && user) {
-    return <Navigate to={localize(user.role === "customer" ? "/customer" : "/admin")} replace />;
+  // Already signed in as a customer? Route them into the portal instead of
+  // showing the registration form again. Admins/super_admins still see the
+  // form — "API Access" is a public CTA and staff may need to register a
+  // customer account without signing out of their session.
+  if (isAuthenticated && user?.role === "customer") {
+    return <Navigate to={localize("/customer")} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {

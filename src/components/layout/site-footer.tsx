@@ -68,8 +68,7 @@ export function SiteFooter() {
           title={t("footer.contact")}
           links={[
             { to: "/contact", label: t("footer.support") },
-            // Commercial CTA — the register page routes signed-in users to
-            // their area by role, so this static target serves every visitor.
+            // Commercial CTA — always lands on the public registration page.
             { to: "/customer/register", label: t("footer.apiAccess") },
             { to: "/contact", label: t("footer.feedback") },
           ]}

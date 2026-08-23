@@ -85,19 +85,21 @@ describe("CustomerRegisterPage entry routing", () => {
     expect(screen.queryByText("Create your developer account")).not.toBeInTheDocument();
   });
 
-  it("keeps authenticated admins on their admin flow", () => {
+  it("shows the registration form to signed-in admins", () => {
+    // "API Access" is a public CTA: staff sessions must not hijack it into
+    // /admin — an admin may register a customer account without signing out.
     mockAuth(true, "admin");
     renderPage();
 
-    expect(screen.getByText("ADMIN_AREA")).toBeInTheDocument();
-    expect(screen.queryByText("Create your developer account")).not.toBeInTheDocument();
+    expect(screen.getByText("Create your developer account")).toBeInTheDocument();
+    expect(screen.queryByText("ADMIN_AREA")).not.toBeInTheDocument();
   });
 
-  it("keeps super admins on their admin flow", () => {
+  it("shows the registration form to signed-in super admins", () => {
     mockAuth(true, "super_admin");
     renderPage();
 
-    expect(screen.getByText("ADMIN_AREA")).toBeInTheDocument();
-    expect(screen.queryByText("Create your developer account")).not.toBeInTheDocument();
+    expect(screen.getByText("Create your developer account")).toBeInTheDocument();
+    expect(screen.queryByText("ADMIN_AREA")).not.toBeInTheDocument();
   });
 });
