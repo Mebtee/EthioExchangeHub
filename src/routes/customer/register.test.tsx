@@ -59,6 +59,14 @@ describe("CustomerRegisterPage entry routing", () => {
   });
 
   it("keeps authenticated admins on their admin flow", () => {
+    mockAuth(true, "admin");
+    renderPage();
+
+    expect(screen.getByText("ADMIN_AREA")).toBeInTheDocument();
+    expect(screen.queryByText("Create your developer account")).not.toBeInTheDocument();
+  });
+
+  it("keeps super admins on their admin flow", () => {
     mockAuth(true, "super_admin");
     renderPage();
 
