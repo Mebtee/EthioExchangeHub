@@ -34,7 +34,9 @@ export default function AdminLoginPage() {
     setIsSubmitting(true);
     try {
       const user = await login({ email, password });
-      navigate(from ?? localize(user.role === "customer" ? "/customer" : "/admin"), { replace: true });
+      navigate(from ?? localize(user.role === "customer" ? "/customer" : "/admin"), {
+        replace: true,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.login.errorFallback"));
     } finally {
