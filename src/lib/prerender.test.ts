@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildHtml, esc, renderStaticShell, str } from "../../scripts/prerender-public.mjs";
+import { buildHtml, esc, ld, renderStaticShell, str } from "../../scripts/prerender-public.mjs";
 
 // Minimal head template matching the shape of dist/index.html (the built SPA
 // entry) so the test exercises the real production template transformations.
@@ -23,6 +23,7 @@ const FIXTURE_TEMPLATE = `<!doctype html>
     />
     <meta name="twitter:title" content="Ethio Exchange — Real-time Ethiopian Bank FX Rates" />
     <meta name="twitter:description" content="Ethiopia's leading aggregator for real-time foreign exchange rates and banking insights." />
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Ethio Exchange"},{"@type":"Organization","name":"Ethio Exchange"}]}</script>
   </head>
   <body>
     <div id="root"></div>
@@ -143,5 +144,52 @@ describe("renderStaticShell() crawlable content", () => {
 
   it("localizes the bank section heading", () => {
     expect(body).toContain("<h2>All Ethiopian Banks</h2>");
+  });
+});
+
+describe("prerender ld() structured data", () => {
+  it("strings a JSON-LD script block with escaped closures", () => {
+    const block = ld({ "@context": "https://schema.org", "@type": "FAQPage" });
+    expect(block).toContain('<script type="application/ld+json">');
+    expect(block).toContain('"@type":"FAQPage"');
+    expect(block).toContain("</script>");
+  });
+
+  it("escapes </script> sequences so injected value cannot break the block", () => {
+    const block = ld({ text: "</script><script>alert(1)</script>" });
+    // The JSON value's closing-script sequences are escaped...
+    expect(block).toContain("\\u003c/script");
+    // ...so the block contains only the one real closing tag.
+    expect(block.match(/<\/script>/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe("buildHtml() structured data blocks", () => {
+  const html = buildHtml({
+    template: FIXTURE_TEMPLATE,
+    locale: "en",
+    title: "US Dollar to ETB Exchange Rate Today",
+    description: "Convert USD to ETB and compare Ethiopian bank rates.",
+    canonicalFull: "https://ethioexchange.live/en/usd-to-etb",
+    hreflang: "",
+    headBlocks: [
+      ld({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "What is USD to ETB?",
+            acceptedAnswer: { "@type": "Answer", text: "Live rates." },
+          },
+        ],
+      }),
+    ],
+    body: "<h1>USD to ETB</h1>",
+  });
+
+  it("injects child structured data blocks into <head>", () => {
+    expect(html).toContain('"@type":"FAQPage"');
+    expect(html.match(/application\/ld\+json/g) ?? []).toHaveLength(2); // global graph + FAQ
   });
 });

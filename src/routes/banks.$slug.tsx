@@ -15,6 +15,8 @@ import { getLatestBusinessDate, getLatestUpdate, getRatesForBank } from "@/lib/r
 import { useBankBySlug, useCurrencies, useExchangeRates, useLocale } from "@/hooks";
 import { JsonLd, Seo } from "@/components/shared/seo";
 
+const SITE_URL = "https://ethioexchange.live";
+
 function BankDetails() {
   const { t } = useTranslation();
   const { localize } = useLocale();
@@ -81,24 +83,45 @@ function BankDetails() {
           "@type": "ListItem",
           position: 1,
           name: t("common.home"),
-          item: "https://ethioexchange.live/",
+          item: `${SITE_URL}${localize("/")}`,
         },
         {
           "@type": "ListItem",
           position: 2,
           name: t("common.allEthiopianBanks"),
-          item: "https://ethioexchange.live/banks",
+          item: `${SITE_URL}${localize("/banks")}`,
         },
         {
           "@type": "ListItem",
           position: 3,
           name: bank?.name ?? "",
-          item: `https://ethioexchange.live/banks/${bank?.slug ?? ""}`,
+          item: `${SITE_URL}${localize(`/banks/${bank?.slug ?? ""}`)}`,
         },
       ],
     }),
-    [bank, t],
+    [bank, t, localize],
   );
+
+  /** Per-bank Organization structured data (real identity fields only). */
+  const organization = useMemo(() => {
+    if (!bank) return null;
+    const url = `${SITE_URL}${localize(`/banks/${bank.slug}`)}`;
+    const node: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": url,
+      name: bank.name,
+      url,
+    };
+    if (bank.website) node.sameAs = [bank.website];
+    if (typeof bank.established === "number") {
+      node.foundingDate = String(bank.established);
+    }
+    if (bank.email) node.email = bank.email;
+    if (bank.phone) node.telephone = bank.phone;
+    if (bank.hq) node.address = bank.hq;
+    return node;
+  }, [bank, localize]);
 
   if (bankLoading) {
     return (
@@ -131,6 +154,7 @@ function BankDetails() {
     <SiteShell>
       <Seo title={t("seo.bankDetail.title", { bank: bank.name })} description={metaDescription} />
       <JsonLd id="bank-breadcrumbs" data={breadcrumb} />
+      {organization ? <JsonLd id="bank-organization" data={organization} /> : null}
       <PageContainer>
         <Link
           to={localize("/banks")}

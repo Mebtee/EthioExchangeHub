@@ -58,7 +58,11 @@ const CURRENCY_META_KEYS = {
   },
 } as const;
 
-function buildBreadcrumb(config: CurrencyPageConfig, t: TFunction) {
+function buildBreadcrumb(
+  config: CurrencyPageConfig,
+  t: TFunction,
+  localize: (p: string) => string,
+) {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -67,19 +71,19 @@ function buildBreadcrumb(config: CurrencyPageConfig, t: TFunction) {
         "@type": "ListItem",
         position: 1,
         name: t("common.home"),
-        item: `${SITE_URL}/`,
+        item: `${SITE_URL}${localize("/")}`,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: t("common.exchangeRates"),
-        item: `${SITE_URL}/rankings`,
+        item: `${SITE_URL}${localize("/rankings")}`,
       },
       {
         "@type": "ListItem",
         position: 3,
         name: t("currencyToEtb.pairLabel", { code: config.code }),
-        item: `${SITE_URL}${config.path}`,
+        item: `${SITE_URL}${localize(config.path)}`,
       },
     ],
   };
@@ -131,7 +135,23 @@ function CurrencyToEtbPage({ currency }: { currency: string }) {
     [config.code],
   );
 
-  const breadcrumb = useMemo(() => buildBreadcrumb(config, t), [config, t]);
+  const breadcrumb = useMemo(() => buildBreadcrumb(config, t, localize), [config, t, localize]);
+
+  const faq = useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [1, 2, 3].map((n) => ({
+        "@type": "Question",
+        name: t(`seo.currencyFaq.q${n}`, { name: currencyName, nameLower: currencyNameLower }),
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: t(`seo.currencyFaq.a${n}`, { name: currencyName, nameLower: currencyNameLower }),
+        },
+      })),
+    }),
+    [t, currencyName, currencyNameLower],
+  );
 
   return (
     <SiteShell>
@@ -143,6 +163,7 @@ function CurrencyToEtbPage({ currency }: { currency: string }) {
         })}
       />
       <JsonLd id={`currency-${config.code}`} data={breadcrumb} />
+      <JsonLd id={`currency-faq-${config.code}`} data={faq} />
 
       <PageContainer>
         {/* Breadcrumb */}

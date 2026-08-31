@@ -55,7 +55,7 @@ export function Seo({
     const tail = base === "/" ? "" : base;
 
     for (const locale of LOCALES) {
-      const href = locale === "en" ? `${SITE_URL}${tail}` : `${SITE_URL}/${locale}${tail}`;
+      const href = `${SITE_URL}/${locale}${tail}`;
       let alternate = document.querySelector<HTMLLinkElement>(`link[hreflang="${locale}"]`);
       if (!alternate) {
         alternate = document.createElement("link");
@@ -73,7 +73,7 @@ export function Seo({
     }
     xDefault.rel = "alternate";
     xDefault.hreflang = "x-default";
-    xDefault.href = `${SITE_URL}${tail}`;
+    xDefault.href = `${SITE_URL}/en${tail}`;
   }, [title, description, canonical, pathname]);
 
   return null;
