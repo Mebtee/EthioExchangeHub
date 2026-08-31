@@ -392,6 +392,14 @@
     "currency": {
       "title": "{{code}} to ETB Exchange Rate Today — {{name}} to Ethiopian Birr",
       "description": "Convert {{code}} to ETB and check Ethiopian bank exchange rates for the {{nameLower}} and Ethiopian birr on Ethio Exchange."
+    },
+    "currencyFaq": {
+      "q1": "What is the {{name}} to ETB exchange rate?",
+      "a1": "The {{name}} to Ethiopian birr (ETB) rate is the buying and selling price that Ethiopian banks publish for exchanging {{nameLower}}. Compare each bank's latest figures in the live table on this page.",
+      "q2": "Where can I exchange {{name}} in Ethiopia?",
+      "a2": "You can exchange {{name}} at any licensed Ethiopian commercial bank. This page lists bank-by-bank rates so you can compare them before you visit.",
+      "q3": "How often are the exchange rates updated?",
+      "a3": "Rates are sourced from each bank's latest published figures and are updated on business days when the banks publish new exchange rates."
     }
   },
   "ui": {

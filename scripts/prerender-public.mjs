@@ -149,7 +149,13 @@ function html(...parts) {
   return parts.join("");
 }
 
-/** Build hreflang alternates for a base path (unprefixed, English-canonical). */
+/** Build a JSON-LD <script> block from an object, safely escaping closures. */
+export function ld(data) {
+  const json = JSON.stringify(data).replace(/</g, "\\u003c");
+  return `    <script type="application/ld+json">${json}</script>`;
+}
+
+/** Build hreflang alternates for a base path (all locales are prefixed). */
 function hreflangTags(basePath, fullCanonical) {
   const nonIndexable = [
     "rankings",
@@ -165,8 +171,7 @@ function hreflangTags(basePath, fullCanonical) {
   ];
   // Keep tagset small for listing pages; per-bank pages include alternates.
   return LOCALES.map(
-    (loc) =>
-      `    <link rel="alternate" hreflang="${loc}" href="${SITE_URL}${loc === "en" ? basePath : `/${loc}${basePath}`}" />`,
+    (loc) => `    <link rel="alternate" hreflang="${loc}" href="${SITE_URL}/${loc}${basePath}" />`,
   ).join("\n");
 }
 
@@ -284,8 +289,7 @@ export function prerenderHome(messages, locale, banks) {
 
   const canonicalFull = `${SITE_URL}${prefix}/`;
   const hreflang = LOCALES.map(
-    (loc) =>
-      `<link rel="alternate" hreflang="${loc}" href="${SITE_URL}${loc === "en" ? "/" : `/${loc}/`}" />`,
+    (loc) => `<link rel="alternate" hreflang="${loc}" href="${SITE_URL}/${loc}/" />`,
   ).join("\n");
 
   const content = buildHtml({
@@ -383,6 +387,16 @@ export function prerenderBankDetail(messages, locale, [slug, name]) {
   const canonicalFull = `${SITE_URL}${prefix}${path}`;
   const hreflang = hreflangTags(path, canonicalFull);
 
+  const headBlocks = [
+    ld({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": canonicalFull,
+      name,
+      url: canonicalFull,
+    }),
+  ];
+
   write(
     join(distDir, `${locale}/banks/${slug}/index.html`),
     buildHtml({
@@ -391,6 +405,7 @@ export function prerenderBankDetail(messages, locale, [slug, name]) {
       description,
       canonicalFull,
       hreflang,
+      headBlocks,
       body,
     }),
   );
@@ -411,8 +426,21 @@ export function prerenderCurrency(messages, locale, { code, path }) {
     nameLower: name.toLowerCase(),
   });
 
+  const origin = str(messages, `currencyToEtb.currencies.${code}.origin`);
+  const nameLower = str(messages, `currencyToEtb.currencies.${code}.nameLower`);
+  const aboutP1 = str(messages, "currencyToEtb.aboutP1", {
+    currencyName: esc(name),
+    code: esc(code),
+    origin: esc(origin),
+  });
+  const aboutP2 = str(messages, "currencyToEtb.aboutP2", { currencyNameLower: esc(nameLower) })
+    .replace(/<buy>/g, "<strong>")
+    .replace(/<\/buy>/g, "</strong>")
+    .replace(/<sell>/g, "<strong>")
+    .replace(/<\/sell>/g, "</strong>");
+
   const intro = html(
-    `<p>See the current ${esc(code)} to Ethiopian birr (ETB) exchange rate and which Ethiopian bank offers the best buying and selling rate. Rates load live in the interactive app.</p>`,
+    `<p>See the current ${esc(code)} to Ethiopian birr (ETB) exchange rate and which Ethiopian bank offers the best buying and selling rate. Rates load live in the interactive app.</p><p>${aboutP1}</p><p>${aboutP2}</p>`,
   );
 
   const linkGroups = [
@@ -440,6 +468,25 @@ export function prerenderCurrency(messages, locale, { code, path }) {
   const canonicalFull = `${SITE_URL}${prefix}/${path}`;
   const hreflang = hreflangTags(`/${path}`, canonicalFull);
 
+  const faq = [1, 2, 3].map((n) => {
+    const params = { name, nameLower: name.toLowerCase() };
+    return {
+      "@type": "Question",
+      name: str(messages, `seo.currencyFaq.q${n}`, params),
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: str(messages, `seo.currencyFaq.a${n}`, params),
+      },
+    };
+  });
+  const headBlocks = [
+    ld({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faq,
+    }),
+  ];
+
   write(
     join(distDir, `${locale}/${path}/index.html`),
     buildHtml({
@@ -448,6 +495,7 @@ export function prerenderCurrency(messages, locale, { code, path }) {
       description,
       canonicalFull,
       hreflang,
+      headBlocks,
       body,
     }),
   );
@@ -504,7 +552,16 @@ export function prerenderStaticPage(
  * Single combined <html> assembler (uses the built asset tags)
  * ------------------------------------------------------------------ */
 
-export function buildHtml({ locale, title, description, canonicalFull, hreflang, body, template }) {
+export function buildHtml({
+  locale,
+  title,
+  description,
+  canonicalFull,
+  hreflang,
+  body,
+  template,
+  headBlocks,
+}) {
   const source = template ?? readFileSync(join(distDir, "index.html"), "utf8");
 
   // Replace head-level SEO fields that the SPA's <Seo> would set at runtime.
@@ -548,6 +605,12 @@ export function buildHtml({ locale, title, description, canonicalFull, hreflang,
 
   // Add locale alternates (inject before the closing </head>).
   html = html.replace("</head>", `    ${hreflang}\n  </head>`);
+
+  // Inject per-page structured data blocks (e.g. bank Organization, FAQPage).
+  if (headBlocks && headBlocks.length > 0) {
+    const blocks = headBlocks.join("\n");
+    html = html.replace("</head>", `    ${blocks}\n  </head>`);
+  }
 
   // Place static body inside the root node the SPA hydrates into. The SPA's
   // createRoot().render() replaces this node wholesale on load.
