@@ -811,6 +811,7 @@
       "rpm": "每分钟 {{count}} 次请求",
       "maxKeys": "最多 {{count}} 个 API 密钥",
       "currentBadge": "当前套餐",
+      "pendingBadge": "待付款",
       "subscribePaid": "订阅",
       "subscribeFree": "免费开始",
       "upgrade": "升级套餐",
@@ -823,7 +824,7 @@
     },
     "subscription": {
       "title": "订阅",
-      "subtitle": "当前订阅详情与套餐选择。",
+      "subtitle": "当前订阅详情与账单状态。",
       "planFallback": "套餐",
       "price": "价格",
       "startsAt": "开始时间",
@@ -833,7 +834,10 @@
       "noneMessage": "在下方选择一个套餐即可开始。",
       "selectTitle": "选择套餐",
       "selectedToast": "套餐已选择。",
-      "pendingPaymentNote": "该订阅正在等待付款。请完成银行转账以继续激活流程。"
+      "pendingPaymentNote": "该订阅正在等待付款。请完成银行转账以继续激活流程。",
+      "pendingUpgradeTitle": "待升级",
+      "pendingUpgradeBadge": "升级待处理",
+      "pendingUpgradeNote": "您已选择升级套餐，但在银行转账核实前不会生效。在等待期间，当前套餐权益继续有效。"
     },
     "payments": {
       "title": "支付",

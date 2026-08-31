@@ -811,6 +811,7 @@
       "rpm": "{{count}} requests per minute",
       "maxKeys": "Up to {{count}} API keys",
       "currentBadge": "Current plan",
+      "pendingBadge": "Payment Pending",
       "subscribePaid": "Subscribe",
       "subscribeFree": "Start for free",
       "upgrade": "Upgrade",
@@ -823,7 +824,7 @@
     },
     "subscription": {
       "title": "Subscription",
-      "subtitle": "Your current subscription details and plan selection.",
+      "subtitle": "Your current subscription details and billing status.",
       "planFallback": "Plan",
       "price": "Price",
       "startsAt": "Started",
@@ -833,7 +834,10 @@
       "noneMessage": "Select a plan below to get started.",
       "selectTitle": "Select a plan",
       "selectedToast": "Plan selected.",
-      "pendingPaymentNote": "This subscription is awaiting payment. Complete the bank transfer to finish activation."
+      "pendingPaymentNote": "This subscription is awaiting payment. Complete the bank transfer to finish activation.",
+      "pendingUpgradeTitle": "Pending Upgrade",
+      "pendingUpgradeBadge": "Upgrade Pending",
+      "pendingUpgradeNote": "You've selected an upgrade but it won't take effect until the bank transfer is verified. Current plan benefits continue until then."
     },
     "payments": {
       "title": "Payments",
