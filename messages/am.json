@@ -811,6 +811,7 @@
       "rpm": "{{count}} ጥሪ በየደቂቃው",
       "maxKeys": "እስከ {{count}} የAPI ቁልፎች",
       "currentBadge": "የአሁን እቅድ",
+      "pendingBadge": "በክፍያ ላይ",
       "subscribePaid": "ይመዝገቡ",
       "subscribeFree": "በነጻ ይጀምሩ",
       "upgrade": "ደረጃ አሳድግ",
@@ -823,7 +824,7 @@
     },
     "subscription": {
       "title": "አባሪነት",
-      "subtitle": "የአሁን አባሪነትዎ ዝርዝሮችና የእቅድ ምርጫ።",
+      "subtitle": "የአሁን አባሪነትዎ ዝርዝሮችና የክፍያ ሁኔታ።",
       "planFallback": "እቅድ",
       "price": "ዋጋ",
       "startsAt": "የጀመረበት",
@@ -833,7 +834,10 @@
       "noneMessage": "ለመጀመር ከታች እቅድ ይምረጡ።",
       "selectTitle": "እቅድ ይምረጡ",
       "selectedToast": "እቅዱ ተመርጧል።",
-      "pendingPaymentNote": "ይህ አባሪነት ክፍያ በመጠበቅ ላይ ነው። ለማጠናቀቅ የባንክ ማስተላለፊያውን ይጠናቀቁ።"
+      "pendingPaymentNote": "ይህ አባሪነት ክፍያ በመጠበቅ ላይ ነው። ለማጠናቀቅ የባንክ ማስተላለፊያውን ይጠናቀቁ።",
+      "pendingUpgradeTitle": "የተቀየረ ደረጃ በመጠበቅ ላይ",
+      "pendingUpgradeBadge": "ደረጃ ከፍተዋል",
+      "pendingUpgradeNote": "ደረጃ ከፍታ አመርጧል፤ የባንክ ማስተላለፊያው እስከሚረጋገጥ ድмес የአሁኑ እቅድ ተጠቃሚ ይሆናል።"
     },
     "payments": {
       "title": "ክፍያዎች",

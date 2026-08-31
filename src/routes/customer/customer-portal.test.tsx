@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import CustomerApiKeysPage from "./api-keys";
 import CustomerPaymentsPage from "./payments";
 import CustomerPlansPage from "./plans";
+import CustomerSubscriptionPage from "./subscription";
 import CustomerUsagePage from "./usage";
 import type {
   CustomerApiKey,
@@ -59,13 +60,21 @@ vi.mock("sonner", async (importOriginal) => {
   };
 });
 
-function renderPage(ui: ReactNode) {
+function LocationDisplay() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
+
+function renderPage(ui: ReactNode, initialEntries = ["/"]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
+        <LocationDisplay />
+        {ui}
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -211,7 +220,7 @@ describe("CustomerApiKeysPage - one-time secret handling", () => {
 });
 
 describe("CustomerPlansPage - selection leads to pending payment state", () => {
-  it("calls the mutation for a paid plan and points the customer to payments", async () => {
+  it("calls the mutation for a paid plan and navigates to the payments page", async () => {
     mocks.fetchPlans.mockResolvedValue([PLAN_FREE, PLAN_PRO]);
     mocks.fetchSubscription.mockResolvedValue(null);
     mocks.createSubscription.mockResolvedValue(SUB_PENDING);
@@ -228,6 +237,10 @@ describe("CustomerPlansPage - selection leads to pending payment state", () => {
     expect(mocks.toastInfo).toHaveBeenCalledWith(
       expect.stringContaining("Complete the bank transfer"),
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location").textContent).toContain("/payments");
+    });
   });
 
   it("hides subscribe buttons while a subscription awaits payment", async () => {
@@ -240,7 +253,7 @@ describe("CustomerPlansPage - selection leads to pending payment state", () => {
     expect(screen.queryByRole("button", { name: /subscribe/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /start for free/i })).not.toBeInTheDocument();
     expect(screen.getAllByText(/awaiting verification/i)).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /payment pending/i })).toBeDisabled();
   });
 
   it("enables UPGRADES from an active plan and pins the current one", async () => {
@@ -274,6 +287,42 @@ describe("CustomerPlansPage - selection leads to pending payment state", () => {
     expect(screen.getByRole("button", { name: /subscribe/i })).toBeDisabled();
     expect(screen.getAllByText(/downgrades aren't supported yet/i)).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
+  });
+});
+
+describe("CustomerSubscriptionPage - complementary CTAs", () => {
+  it("shows a Browse Plans link when no subscription exists", async () => {
+    mocks.fetchSubscription.mockResolvedValue(null);
+    mocks.fetchPlans.mockResolvedValue([PLAN_FREE, PLAN_PRO]);
+
+    renderPage(<CustomerSubscriptionPage />);
+    await screen.findByText(/no subscription yet/i);
+
+    const cta = screen.getByRole("link", { name: /choose a plan/i });
+    expect(cta).toHaveAttribute("href", expect.stringContaining("/plans"));
+  });
+
+  it("shows a Complete Payment CTA when the subscription is pending", async () => {
+    mocks.fetchSubscription.mockResolvedValue(SUB_PENDING);
+    mocks.fetchPlans.mockResolvedValue([PLAN_FREE, PLAN_PRO]);
+
+    renderPage(<CustomerSubscriptionPage />);
+    await screen.findByText("Pro");
+
+    expect(screen.getByText(/awaiting payment/i)).toBeInTheDocument();
+    const cta = screen.getByRole("link", { name: /submit reference/i });
+    expect(cta).toHaveAttribute("href", expect.stringContaining("/payments"));
+  });
+
+  it("shows subscription details and status badge for an active subscription", async () => {
+    mocks.fetchSubscription.mockResolvedValue(SUB_ACTIVE_PRO);
+    mocks.fetchPlans.mockResolvedValue([PLAN_FREE, PLAN_PRO]);
+
+    renderPage(<CustomerSubscriptionPage />);
+    await screen.findByText("Pro");
+
+    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Current plan")).toBeInTheDocument();
   });
 });
 

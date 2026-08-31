@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -7,42 +8,49 @@ import { ErrorState, LoadingState } from "@/components/shared/async-states";
 import { PageHeader } from "@/components/shared/page-header";
 import { SurfaceCard } from "@/components/shared/surface-card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCreateCustomerSubscription,
   useCustomerPlans,
   useCustomerSubscription,
 } from "@/hooks/use-customer";
+import { useLocale } from "@/hooks";
 import { formatInt } from "@/lib/format";
 import { planSelectionState } from "@/lib/plans";
 import type { CustomerPlan } from "@/types/customer";
 
 /**
- * Plans & pricing (Phase 6) — the backend catalog is the single source of
+ * Plans & pricing (Phase 6/8) — the backend catalog is the single source of
  * truth; no prices or limits are hardcoded here. An active subscription
  * upgrades to any strictly pricier plan (Free → Starter → Business);
  * same-plan and downgrade buttons stay disabled.
+ *
+ * Phase 8: selecting a paid plan auto-navigates to the Payments page.
+ * Plans always reflect the real backend subscription state including
+ * pending payments and pending upgrades.
  */
 export default function CustomerPlansPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { localize } = useLocale();
   const plans = useCustomerPlans();
   const subscription = useCustomerSubscription();
   const selectPlan = useCreateCustomerSubscription();
 
-  const current = subscription.data ?? null;
+  const sub = subscription.data ?? null;
   const catalog = plans.data ?? [];
-  /** Highlighted plan: the effective (active) one, or the awaited selection. */
-  const highlightedPlanId =
-    current && ["active", "pending", "suspended"].includes(String(current.status))
-      ? current.planId
-      : null;
-  const isActiveSub = current?.status === "active";
+
+  /** The active (effective) plan — always the live subscription plan. */
+  const activePlanId = sub?.status === "active" ? sub.planId : null;
+  /** The plan awaiting payment — pending subscription or pending upgrade. */
+  const pendingPlanId =
+    sub?.status === "pending" ? sub.planId : (sub?.pendingUpgrade?.planId ?? null);
 
   async function handleSubscribe(plan: CustomerPlan) {
     try {
       await selectPlan.mutateAsync(plan.id);
       if (plan.price > 0) {
         toast.info(t("customer.plans.pendingToast"));
+        navigate(localize("/customer/payments"));
       } else {
         toast.success(t("customer.plans.freeActivatedToast"));
       }
@@ -65,17 +73,24 @@ export default function CustomerPlansPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {(plans.data ?? []).map((plan) => {
-            const state = planSelectionState(current, catalog, plan.id);
-            const isCurrent = plan.id === highlightedPlanId;
+            const state = planSelectionState(sub, catalog, plan.id);
+            const isActive = plan.id === activePlanId;
+            const isPending = plan.id === pendingPlanId;
+
             return (
               <SurfaceCard
                 key={plan.id}
-                className={`flex flex-col p-6 ${isCurrent ? "ring-2 ring-primary" : ""}`}
+                className={`flex flex-col p-6 ${
+                  isActive ? "ring-2 ring-primary" : isPending ? "ring-2 ring-gold" : ""
+                }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-lg font-bold">{plan.name}</h3>
-                  {isCurrent && (
+                  {isActive && (
                     <StatusBadge tone="success">{t("customer.plans.currentBadge")}</StatusBadge>
+                  )}
+                  {isPending && (
+                    <StatusBadge tone="warning">{t("customer.plans.pendingBadge")}</StatusBadge>
                   )}
                 </div>
                 {plan.description && (
@@ -107,9 +122,13 @@ export default function CustomerPlansPage() {
                 </ul>
 
                 <div className="mt-6">
-                  {isCurrent ? (
+                  {isActive ? (
                     <Button variant="outline" className="w-full" disabled>
                       {t("customer.plans.currentBadge")}
+                    </Button>
+                  ) : isPending ? (
+                    <Button variant="outline" className="w-full" disabled>
+                      {t("customer.plans.pendingBadge")}
                     </Button>
                   ) : state.selectable ? (
                     <>
@@ -120,7 +139,7 @@ export default function CustomerPlansPage() {
                       >
                         {selectPlan.isPending
                           ? t("common.loading")
-                          : isActiveSub
+                          : sub?.status === "active"
                             ? t("customer.plans.upgrade")
                             : plan.price > 0
                               ? t("customer.plans.subscribePaid")
