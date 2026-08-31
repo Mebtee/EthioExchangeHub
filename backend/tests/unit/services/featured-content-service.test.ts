@@ -225,6 +225,42 @@ describe("FeaturedContentServiceImpl.updateFeaturedContent", () => {
     expect(updated.destination_url).toBe("https://example.com/offers/awash-school");
   });
 
+  it("applies every optional text field present in the patch", async () => {
+    const { service } = makeService([featuredContentFixture()]);
+    const updated = await service.updateFeaturedContent("featured-1", {
+      image_url: "https://cdn.example.com/new.jpg",
+      advertiser_name: "New Advertiser",
+      image_alt: "New alt text",
+      start_at: futureIso(),
+      end_at: futureIso(),
+      created_by: "user-9",
+      feature_1_icon: "bank",
+      feature_1_title: "New feature 1",
+      feature_1_description: "Updated feature 1 copy",
+      feature_2_icon: "shield",
+      feature_2_title: "New feature 2",
+      feature_2_description: "Updated feature 2 copy",
+      feature_3_icon: "star",
+      feature_3_title: "New feature 3",
+      feature_3_description: "Updated feature 3 copy",
+    });
+    expect(updated.image_url).toBe("https://cdn.example.com/new.jpg");
+    expect(updated.advertiser_name).toBe("New Advertiser");
+    expect(updated.image_alt).toBe("New alt text");
+    expect(updated.start_at).toBe(futureIso());
+    expect(updated.end_at).toBe(futureIso());
+    expect(updated.created_by).toBe("user-9");
+    expect(updated.feature_1_icon).toBe("bank");
+    expect(updated.feature_1_title).toBe("New feature 1");
+    expect(updated.feature_1_description).toBe("Updated feature 1 copy");
+    expect(updated.feature_2_icon).toBe("shield");
+    expect(updated.feature_2_title).toBe("New feature 2");
+    expect(updated.feature_2_description).toBe("Updated feature 2 copy");
+    expect(updated.feature_3_icon).toBe("star");
+    expect(updated.feature_3_title).toBe("New feature 3");
+    expect(updated.feature_3_description).toBe("Updated feature 3 copy");
+  });
+
   it("rejects protocol-relative and unsafe destination URLs in the final state", async () => {
     const { service } = makeService([featuredContentFixture()]);
     await expect(
