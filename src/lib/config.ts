@@ -1,14 +1,15 @@
 /**
  * Centralized environment configuration.
- * All values come from Vite env vars (prefixed with VITE_) — no hardcoded URLs.
+ *
+ * The API base URL is set via the VITE_API_BASE_URL env var when present
+ * (e.g. local development). It falls back to the production API so the app
+ * builds and runs on a static host (Vercel) even without a VITE_ env var —
+ * VITE_ variables are public by design, and baking in the public production
+ * URL avoids any build-time configuration drift.
  */
-const apiBaseUrl: string | undefined = import.meta.env.VITE_API_BASE_URL;
+const DEFAULT_API_BASE_URL = "https://api.ethioexchange.live/api/v1";
 
-if (!apiBaseUrl) {
-  throw new Error(
-    "VITE_API_BASE_URL is not defined. Copy .env.example to .env and set VITE_API_BASE_URL (e.g. http://localhost:5000/api/v1).",
-  );
-}
+const apiBaseUrl: string = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 
 // Swagger UI is served on the backend root (/docs), not under /api/v1 —
 // derive it from the same base URL so docs never drift from the deployment.
