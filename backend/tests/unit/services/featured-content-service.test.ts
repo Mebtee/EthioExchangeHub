@@ -227,12 +227,14 @@ describe("FeaturedContentServiceImpl.updateFeaturedContent", () => {
 
   it("applies every optional text field present in the patch", async () => {
     const { service } = makeService([featuredContentFixture()]);
+    const startAt = futureIso();
+    const endAt = futureIso();
     const updated = await service.updateFeaturedContent("featured-1", {
       image_url: "https://cdn.example.com/new.jpg",
       advertiser_name: "New Advertiser",
       image_alt: "New alt text",
-      start_at: futureIso(),
-      end_at: futureIso(),
+      start_at: startAt,
+      end_at: endAt,
       created_by: "user-9",
       feature_1_icon: "bank",
       feature_1_title: "New feature 1",
@@ -247,8 +249,8 @@ describe("FeaturedContentServiceImpl.updateFeaturedContent", () => {
     expect(updated.image_url).toBe("https://cdn.example.com/new.jpg");
     expect(updated.advertiser_name).toBe("New Advertiser");
     expect(updated.image_alt).toBe("New alt text");
-    expect(updated.start_at).toBe(futureIso());
-    expect(updated.end_at).toBe(futureIso());
+    expect(updated.start_at).toBe(startAt);
+    expect(updated.end_at).toBe(endAt);
     expect(updated.created_by).toBe("user-9");
     expect(updated.feature_1_icon).toBe("bank");
     expect(updated.feature_1_title).toBe("New feature 1");
