@@ -80,6 +80,7 @@ export function createApp(): Express {
         callback(null, false);
       },
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
       credentials: false,
     }),
   );
