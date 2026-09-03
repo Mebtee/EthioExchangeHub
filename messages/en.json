@@ -70,9 +70,9 @@
     "privacyPolicy": "Privacy Policy",
     "disclaimer": "Disclaimer",
     "rights": "© {{year}} Ethio Exchange. All rights reserved.",
-    "ariaWebsite": "Visit our website",
-    "ariaEmail": "Contact us by email",
-    "ariaSocial": "Share on social media"
+    "followFacebook": "Follow us on Facebook",
+    "followTwitter": "Follow us on X (Twitter)",
+    "followTelegram": "Join us on Telegram"
   },
   "home": {
     "heroTitle": "Bank Exchange Rates & <highlight>Currency Converter</highlight>",

@@ -70,9 +70,9 @@
     "privacyPolicy": "የግላዊነት ፖሊሲ",
     "disclaimer": "ማስተባበያ",
     "rights": "© {{year}} ኢትዮ ኤክስቸንጅ። ሁሉም መብቶች የተጠበቁ ናቸው።",
-    "ariaWebsite": "ድረ ገጻችንን ይጎብኙ",
-    "ariaEmail": "በኢሜል ያግኙን",
-    "ariaSocial": "በማህበራዊ ሚዲያ ያካፍሉ"
+    "followFacebook": "በFacebook ይከተሉን",
+    "followTwitter": "በX (Twitter) ይከተሉን",
+    "followTelegram": "በTelegram ይቀላቀሉን"
   },
   "home": {
     "heroTitle": "የኢትዮጵያ ባንክ የምንዛሪ ተመኖች እና <highlight>የምንዛሪ መቀየሪያ</highlight>",

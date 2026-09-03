@@ -1,8 +1,40 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Globe, AtSign, Share2 } from "lucide-react";
+import { Facebook, Twitter } from "lucide-react";
 
 import { useLocale } from "@/hooks";
+
+function TelegramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M22 2 11 13" />
+      <path d="m22 2-7 20-4-9-9-4Z" />
+    </svg>
+  );
+}
+
+const SOCIAL_LINKS = [
+  {
+    href: "https://web.facebook.com/profile.php?id=61593648856881",
+    labelKey: "footer.followFacebook",
+    icon: Facebook,
+  },
+  { href: "https://x.com/ethiobanksx", labelKey: "footer.followTwitter", icon: Twitter },
+  {
+    href: "https://t.me/EthiopianBanksExchange",
+    labelKey: "footer.followTelegram",
+    icon: TelegramIcon,
+  },
+] as const;
 
 export function SiteFooter() {
   const { t } = useTranslation();
@@ -14,27 +46,18 @@ export function SiteFooter() {
           <div className="text-xl font-bold text-primary mb-3">Ethio Exchange</div>
           <p className="text-sm text-muted-foreground max-w-xs">{t("footer.tagline")}</p>
           <div className="mt-5 flex gap-3">
-            <a
-              href="#"
-              aria-label={t("footer.ariaWebsite")}
-              className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
-            >
-              <Globe className="size-4" />
-            </a>
-            <a
-              href="#"
-              aria-label={t("footer.ariaEmail")}
-              className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
-            >
-              <AtSign className="size-4" />
-            </a>
-            <a
-              href="#"
-              aria-label={t("footer.ariaSocial")}
-              className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
-            >
-              <Share2 className="size-4" />
-            </a>
+            {SOCIAL_LINKS.map(({ href, labelKey, icon: Icon }) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t(labelKey)}
+                className="size-9 rounded-full bg-surface-high flex items-center justify-center text-primary hover:opacity-80 transition"
+              >
+                <Icon className="size-4" />
+              </a>
+            ))}
           </div>
         </div>
         <FooterCol
