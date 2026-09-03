@@ -70,9 +70,9 @@
     "privacyPolicy": "隐私政策",
     "disclaimer": "免责声明",
     "rights": "© {{year}} Ethio Exchange。保留所有权利。",
-    "ariaWebsite": "访问我们的网站",
-    "ariaEmail": "通过电子邮件联系我们",
-    "ariaSocial": "在社交媒体上分享"
+    "followFacebook": "关注我们的 Facebook",
+    "followTwitter": "关注我们的 X (Twitter)",
+    "followTelegram": "加入我们的 Telegram"
   },
   "home": {
     "heroTitle": "埃塞俄比亚银行汇率与<highlight>货币换算器</highlight>",
